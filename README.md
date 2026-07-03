@@ -3,7 +3,7 @@
 A friendly **AI stock research assistant** built around the **Model Context
 Protocol (MCP)**. Ask about a stock in plain English and get real data plus
 plain-language explanations. It combines the three skills that matter most for
-modern AI engineering into one project:
+modern AI engineering into one project: Testing
 
 1. **RAG** — retrieval over plain-English company profiles, "what to watch out
    for" notes, and investing-basics explainers.
