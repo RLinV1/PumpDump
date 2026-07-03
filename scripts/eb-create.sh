@@ -48,6 +48,12 @@ else
   echo "[eb-create] Bucket created."
 fi
 
+# New buckets default to Object Ownership "Bucket owner enforced", which
+# disables ACLs. The EB CLI uploads app versions with an ACL, so re-enable
+# them (idempotent — safe to run even if already set).
+aws s3api put-bucket-ownership-controls --bucket "$BUCKET" \
+  --ownership-controls Rules=[{ObjectOwnership=BucketOwnerPreferred}]
+
 echo "[eb-create] Creating EB environment: $ENV_NAME (with secrets pre-loaded)"
 eb create "$ENV_NAME" \
   --instance-type t3.medium \

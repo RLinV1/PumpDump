@@ -47,6 +47,11 @@ jobs:
             fi
             echo "Created s3://$BUCKET."
           fi
+          # New buckets default to Object Ownership "Bucket owner enforced",
+          # which disables ACLs. The EB CLI uploads app versions with an ACL,
+          # so re-enable them (idempotent — safe to run even if already set).
+          aws s3api put-bucket-ownership-controls --bucket "$BUCKET" \
+            --ownership-controls Rules=[{ObjectOwnership=BucketOwnerPreferred}]
 
       - name: Set up Python
         uses: actions/setup-python@v5
