@@ -161,6 +161,17 @@ def auth_enabled() -> bool:
     return bool(os.environ.get("CLERK_JWKS_URL", "").strip())
 
 
+def clerk_secret_key() -> str | None:
+    """Clerk Backend API secret key (Clerk Dashboard -> API Keys -> Secret key).
+
+    JWKS-only verification (``CLERK_JWKS_URL``) is enough for auth and never
+    needs this. This is ONLY used to resolve a real display name/username for
+    the paper-trading leaderboard (``portfolio.clerk_client``); unset it and
+    the leaderboard just falls back to an anonymized handle.
+    """
+    return os.environ.get("CLERK_SECRET_KEY", "").strip() or None
+
+
 def unlimited_user_ids() -> set[str]:
     """Clerk user IDs granted unlimited prompts (admins / comped accounts).
 

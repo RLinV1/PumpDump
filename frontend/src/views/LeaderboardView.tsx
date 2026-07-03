@@ -5,9 +5,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { fmtSignedPct, fmtUSD } from "../utils";
 
-/** Shortens a Clerk user ID ("user_2abc...xyz") to a stable, readable handle
- *  without exposing the whole opaque ID. */
-function handleFor(userId: string): string {
+/** Prefers the real Clerk username/name (resolved server-side); falls back to
+ *  an anonymized handle when that lookup isn't configured or fails. */
+function labelFor(userId: string, displayName: string | null): string {
+  if (displayName) return displayName;
   if (userId === "anonymous") return "Anonymous";
   const tail = userId.replace(/^user_/, "").slice(-6);
   return `Trader ${tail}`;
@@ -77,7 +78,7 @@ export default function LeaderboardView() {
                         {MEDAL[r.rank - 1] ?? `#${r.rank}`}
                       </td>
                       <td className="py-2 pr-3 font-bold">
-                        {handleFor(r.user_id)}
+                        {labelFor(r.user_id, r.display_name)}
                         {you && (
                           <span className="ml-1.5 rounded-sm bg-primary px-1 py-0.5 text-[0.5625rem] font-bold text-primary-foreground">
                             YOU

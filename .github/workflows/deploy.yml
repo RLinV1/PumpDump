@@ -94,10 +94,16 @@ jobs:
             --query SecretString --output text | _parse)
           CLERK_JWKS=""
           CLERK_PK=""
+          CLERK_SECRET=""
           TURNSTILE_KEY=""
           if aws secretsmanager describe-secret --secret-id plutus/clerk-jwks-url 2>/dev/null; then
             CLERK_JWKS=$(aws secretsmanager get-secret-value \
               --secret-id plutus/clerk-jwks-url \
+              --query SecretString --output text | _parse)
+          fi
+          if aws secretsmanager describe-secret --secret-id plutus/clerk-secret-key 2>/dev/null; then
+            CLERK_SECRET=$(aws secretsmanager get-secret-value \
+              --secret-id plutus/clerk-secret-key \
               --query SecretString --output text | _parse)
           fi
           if aws secretsmanager describe-secret --secret-id plutus/clerk-publishable-key 2>/dev/null; then
@@ -144,7 +150,7 @@ jobs:
 
           # Mask secret values in logs, then hand them to later steps via
           # outputs (fetched ONCE, here — before any container ever boots).
-          for v in "$ANTHROPIC_KEY" "$POSTGRES_PASS" "$CLERK_JWKS" "$CLERK_PK" "$TURNSTILE_KEY" \
+          for v in "$ANTHROPIC_KEY" "$POSTGRES_PASS" "$CLERK_JWKS" "$CLERK_PK" "$CLERK_SECRET" "$TURNSTILE_KEY" \
                    "$STRIPE_KEY" "$STRIPE_WH" "$STRIPE_PRO" "$STRIPE_PRO_MAX" "$UNLIMITED_IDS" "$ADMIN_KEY"; do
             if [ -n "$v" ]; then
               echo "::add-mask::$v"
@@ -155,6 +161,7 @@ jobs:
             echo "postgres_pass=$POSTGRES_PASS"
             echo "clerk_jwks=$CLERK_JWKS"
             echo "clerk_pk=$CLERK_PK"
+            echo "clerk_secret=$CLERK_SECRET"
             echo "turnstile_key=$TURNSTILE_KEY"
             echo "stripe_key=$STRIPE_KEY"
             echo "stripe_wh=$STRIPE_WH"
@@ -184,7 +191,7 @@ jobs:
               --single \
               --platform "Docker running on 64bit Amazon Linux 2023" \
               --region "${{ env.AWS_REGION }}" \
-              --envvars "ANTHROPIC_API_KEY=${{ steps.secrets.outputs.anthropic_key }},POSTGRES_PASSWORD=${{ steps.secrets.outputs.postgres_pass }},CLERK_JWKS_URL=${{ steps.secrets.outputs.clerk_jwks }},VITE_CLERK_PUBLISHABLE_KEY=${{ steps.secrets.outputs.clerk_pk }},VITE_TURNSTILE_SITE_KEY=${{ steps.secrets.outputs.turnstile_key }},STRIPE_SECRET_KEY=${{ steps.secrets.outputs.stripe_key }},STRIPE_WEBHOOK_SECRET=${{ steps.secrets.outputs.stripe_wh }},STRIPE_PRICE_PRO=${{ steps.secrets.outputs.stripe_pro }},STRIPE_PRICE_PRO_MAX=${{ steps.secrets.outputs.stripe_pro_max }},UNLIMITED_USER_IDS=${{ steps.secrets.outputs.unlimited_ids }},ADMIN_API_KEY=${{ steps.secrets.outputs.admin_key }}"
+              --envvars "ANTHROPIC_API_KEY=${{ steps.secrets.outputs.anthropic_key }},POSTGRES_PASSWORD=${{ steps.secrets.outputs.postgres_pass }},CLERK_JWKS_URL=${{ steps.secrets.outputs.clerk_jwks }},CLERK_SECRET_KEY=${{ steps.secrets.outputs.clerk_secret }},VITE_CLERK_PUBLISHABLE_KEY=${{ steps.secrets.outputs.clerk_pk }},VITE_TURNSTILE_SITE_KEY=${{ steps.secrets.outputs.turnstile_key }},STRIPE_SECRET_KEY=${{ steps.secrets.outputs.stripe_key }},STRIPE_WEBHOOK_SECRET=${{ steps.secrets.outputs.stripe_wh }},STRIPE_PRICE_PRO=${{ steps.secrets.outputs.stripe_pro }},STRIPE_PRICE_PRO_MAX=${{ steps.secrets.outputs.stripe_pro_max }},UNLIMITED_USER_IDS=${{ steps.secrets.outputs.unlimited_ids }},ADMIN_API_KEY=${{ steps.secrets.outputs.admin_key }}"
           fi
 
       - name: Wake environment if paused
@@ -204,6 +211,7 @@ jobs:
             ANTHROPIC_API_KEY="${{ steps.secrets.outputs.anthropic_key }}" \
             POSTGRES_PASSWORD="${{ steps.secrets.outputs.postgres_pass }}" \
             CLERK_JWKS_URL="${{ steps.secrets.outputs.clerk_jwks }}" \
+            CLERK_SECRET_KEY="${{ steps.secrets.outputs.clerk_secret }}" \
             VITE_CLERK_PUBLISHABLE_KEY="${{ steps.secrets.outputs.clerk_pk }}" \
             VITE_TURNSTILE_SITE_KEY="${{ steps.secrets.outputs.turnstile_key }}" \
             STRIPE_SECRET_KEY="${{ steps.secrets.outputs.stripe_key }}" \

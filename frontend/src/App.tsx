@@ -33,10 +33,51 @@ const AskView = lazy(() => import("./views/AskView"));
 
 // Only rendered when inside ClerkProvider (guaranteed when clerkEnabled=true)
 function ClerkTokenSync() {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const queryClient = useQueryClient();
+  const pushNotification = useStream((s) => s.pushNotification);
+
   useEffect(() => {
     setTokenGetter(() => getToken());
   }, [getToken]);
+
+  // Reconcile the plan immediately when Stripe redirects back from Checkout,
+  // instead of relying solely on the async webhook (which can be delayed, or
+  // never arrive if the endpoint isn't configured in the Stripe dashboard).
+  // Gated on isLoaded/isSignedIn: firing before Clerk finishes hydrating the
+  // session (fresh full-page load, not a SPA transition) means getToken()
+  // can't produce a valid token yet, so the request would silently 401.
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    if (!sessionId || params.get("upgraded") !== "1") return;
+    api
+      .billingSyncSession(sessionId)
+      .catch((e: unknown) => {
+        pushNotification({
+          id: -Date.now(),
+          ticker: "",
+          kind: "billing",
+          title: "Couldn't confirm your upgrade",
+          body: `We couldn't verify the checkout with Stripe (${String((e as Error)?.message ?? e)}). If your card was charged, contact support — your plan will also update automatically once Stripe's webhook arrives.`,
+          read: false,
+          created_at: new Date().toISOString(),
+        });
+      })
+      .finally(() => {
+        queryClient.invalidateQueries({ queryKey: ["billing"] });
+        params.delete("session_id");
+        params.delete("upgraded");
+        const qs = params.toString();
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
+        );
+      });
+  }, [isLoaded, isSignedIn, queryClient, pushNotification]);
+
   return null;
 }
 
@@ -137,29 +178,6 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, [setBillingOpen]);
-
-  // Reconcile the plan immediately when Stripe redirects back from Checkout,
-  // instead of relying solely on the async webhook (which can be delayed, or
-  // never arrive if the endpoint isn't configured in the Stripe dashboard).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session_id");
-    if (!sessionId || params.get("upgraded") !== "1") return;
-    api
-      .billingSyncSession(sessionId)
-      .catch(() => null)
-      .finally(() => {
-        queryClient.invalidateQueries({ queryKey: ["billing"] });
-        params.delete("session_id");
-        params.delete("upgraded");
-        const qs = params.toString();
-        window.history.replaceState(
-          null,
-          "",
-          window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
-        );
-      });
-  }, [queryClient]);
 
   const ask = async (question: string) => {
     if (!question.trim() || chatBusy) return;

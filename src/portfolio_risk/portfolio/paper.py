@@ -125,7 +125,7 @@ def leaderboard(limit: int = 100) -> list[dict]:
     per user so the numbers always agree with what that user sees on their own
     PAPER TRADE tab.
     """
-    from . import store
+    from . import clerk_client, store
 
     rows = []
     for pf in store.list_portfolios():
@@ -139,6 +139,7 @@ def leaderboard(limit: int = 100) -> list[dict]:
         rows.append(
             {
                 "user_id": user_id,
+                "display_name": clerk_client.display_name(user_id),
                 "total_value": acct["total_value"],
                 "profit": round(acct["total_value"] - acct["start_cash"], 2),
                 "return_pct": acct["return_pct"],

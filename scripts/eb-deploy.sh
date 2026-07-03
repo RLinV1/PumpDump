@@ -48,6 +48,12 @@ if aws secretsmanager describe-secret --secret-id plutus/clerk-jwks-url &>/dev/n
     --secret-id plutus/clerk-jwks-url \
     --query SecretString --output text)")
 fi
+CLERK_SECRET=""
+if aws secretsmanager describe-secret --secret-id plutus/clerk-secret-key &>/dev/null; then
+  CLERK_SECRET=$(_parse_secret "$(aws secretsmanager get-secret-value \
+    --secret-id plutus/clerk-secret-key \
+    --query SecretString --output text)")
+fi
 if aws secretsmanager describe-secret --secret-id plutus/clerk-publishable-key &>/dev/null; then
   CLERK_PK=$(_parse_secret "$(aws secretsmanager get-secret-value \
     --secret-id plutus/clerk-publishable-key \
@@ -96,6 +102,7 @@ eb setenv \
   ANTHROPIC_API_KEY="$ANTHROPIC_KEY" \
   POSTGRES_PASSWORD="$PGPASS" \
   CLERK_JWKS_URL="$CLERK_JWKS" \
+  CLERK_SECRET_KEY="$CLERK_SECRET" \
   VITE_CLERK_PUBLISHABLE_KEY="$CLERK_PK" \
   VITE_TURNSTILE_SITE_KEY="$TURNSTILE_KEY" \
   STRIPE_SECRET_KEY="$STRIPE_KEY" \

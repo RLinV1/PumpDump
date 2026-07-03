@@ -424,6 +424,7 @@ export interface PaperTradeResult {
 export interface LeaderboardEntry {
   rank: number;
   user_id: string;
+  display_name: string | null;
   total_value: number;
   profit: number;
   return_pct: number;
