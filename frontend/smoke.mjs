@@ -51,9 +51,15 @@ async function runFlow(page, outDir, { mobile }) {
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${outDir}/3b-paper.png`, fullPage: true });
 
+  // 3c) LEADERBOARD view.
+  await page.keyboard.press("5");
+  await page.waitForSelector("text=/LEADERBOARD|No simulated trades yet/", { timeout: 30000 });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${outDir}/3c-leaderboard.png`, fullPage: true });
+
   // 4) SCENARIO LAB. The default portfolio starts empty (only the demo tab
   // has seed holdings), so accept either the populated or empty-state copy.
-  await page.keyboard.press("5");
+  await page.keyboard.press("6");
   await page.waitForSelector("text=/ESTIMATED IMPACT|nothing to stress test/", { timeout: 30000 });
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${outDir}/4-scenario.png`, fullPage: true });
@@ -67,7 +73,7 @@ async function runFlow(page, outDir, { mobile }) {
   await page.keyboard.press("Escape");
 
   // 6) Alerts view (notifications from the live loop).
-  await page.keyboard.press("6");
+  await page.keyboard.press("7");
   await page.waitForSelector("text=ARMED RULES", { timeout: 15000 });
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${outDir}/6-alerts.png`, fullPage: true });

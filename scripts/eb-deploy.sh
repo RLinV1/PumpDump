@@ -85,6 +85,11 @@ if aws secretsmanager describe-secret --secret-id plutus/unlimited-user-ids &>/d
   UNLIMITED_IDS=$(_parse_secret "$(aws secretsmanager get-secret-value \
     --secret-id plutus/unlimited-user-ids --query SecretString --output text)")
 fi
+ADMIN_KEY=""
+if aws secretsmanager describe-secret --secret-id plutus/admin-api-key &>/dev/null; then
+  ADMIN_KEY=$(_parse_secret "$(aws secretsmanager get-secret-value \
+    --secret-id plutus/admin-api-key --query SecretString --output text)")
+fi
 
 echo "[eb-deploy] Pushing env vars to EB..."
 eb setenv \
@@ -97,7 +102,8 @@ eb setenv \
   STRIPE_WEBHOOK_SECRET="$STRIPE_WH" \
   STRIPE_PRICE_PRO="$STRIPE_PRO" \
   STRIPE_PRICE_PRO_MAX="$STRIPE_PRO_MAX" \
-  UNLIMITED_USER_IDS="$UNLIMITED_IDS"
+  UNLIMITED_USER_IDS="$UNLIMITED_IDS" \
+  ADMIN_API_KEY="$ADMIN_KEY"
 
 echo "[eb-deploy] Backing up $ORIG → $BACKUP"
 cp "$ORIG" "$BACKUP"

@@ -421,6 +421,22 @@ export interface PaperTradeResult {
   error?: string;
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  total_value: number;
+  profit: number;
+  return_pct: number;
+  realized_pnl: number;
+  n_trades: number;
+}
+
+export interface LeaderboardResult {
+  leaderboard: LeaderboardEntry[];
+  you: string;
+  error?: string;
+}
+
 /* ---------------- Market view + fundamentals ---------------- */
 
 export interface MarketIndex {

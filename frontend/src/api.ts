@@ -9,6 +9,7 @@ import type {
   DividendInfo,
   EquityCurve,
   Fundamentals,
+  LeaderboardResult,
   MarketOverview,
   MoverCategory,
   MoversResult,
@@ -145,6 +146,7 @@ export const api = {
     sendJSON<PaperTradeResult>("/api/paper/trade", { side, ticker, shares }),
   paperReset: () =>
     sendJSON<{ reset: boolean; deleted: number }>("/api/paper/reset", {}),
+  paperLeaderboard: () => getJSON<LeaderboardResult>("/api/paper/leaderboard"),
   notifications: (unread = false) =>
     getJSON<{ notifications: Notification[] }>(
       `/api/notifications?unread=${unread ? 1 : 0}&limit=50`,
@@ -164,4 +166,6 @@ export const api = {
       { plan },
     ),
   billingPortal: () => sendJSON<{ url: string }>("/api/billing/portal", {}),
+  billingSyncSession: (sessionId: string) =>
+    sendJSON<BillingStatus>("/api/billing/sync_session", { session_id: sessionId }),
 };

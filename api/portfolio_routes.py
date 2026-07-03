@@ -218,6 +218,16 @@ def paper_reset(user_id: str = Depends(get_user_id)) -> dict:
     return _safe(paper.reset_account, user_id)
 
 
+@router.get("/paper/leaderboard")
+def paper_leaderboard(user_id: str = Depends(get_user_id)) -> dict:
+    from portfolio_risk.portfolio import paper
+
+    rows = _safe(paper.leaderboard)
+    if isinstance(rows, dict):  # _safe caught an exception -> {"error": ...}
+        return rows
+    return {"leaderboard": rows, "you": user_id}
+
+
 # --- Alerts & notifications -------------------------------------------------- #
 @router.get("/alerts")
 def alerts(user_id: str = Depends(get_user_id)) -> dict:

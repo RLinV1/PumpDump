@@ -86,6 +86,17 @@ function PaperSkeleton() {
   );
 }
 
+function LeaderboardSkeleton() {
+  return (
+    <div className="space-y-2">
+      <Skeleton className="h-6 w-64" />
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  );
+}
+
 function ScenarioSkeleton() {
   return (
     <div className="space-y-3">
@@ -138,6 +149,8 @@ export function ViewSkeleton({ view }: { view?: View }) {
       return <PortfolioSkeleton />;
     case "paper":
       return <PaperSkeleton />;
+    case "leaderboard":
+      return <LeaderboardSkeleton />;
     case "scenario":
       return <ScenarioSkeleton />;
     case "alerts":

@@ -206,6 +206,23 @@ const PAGES: GuidePage[] = [
     ],
   },
   {
+    id: "leaderboard",
+    label: "LEADERBOARD",
+    intro: "See who's up the most on paper — bragging rights only.",
+    sections: [
+      {
+        heading: "Ranking",
+        body: (
+          <>
+            Every simulated paper account, ranked by total profit (current value
+            minus its starting cash), highest first. Your own row is marked YOU.
+            Accounts with no trades yet don't appear.
+          </>
+        ),
+      },
+    ],
+  },
+  {
     id: "scenario",
     label: "SCENARIO LAB",
     intro: "Stress tests and experiments — nothing here is ever saved.",

@@ -62,13 +62,17 @@ def _quota_exempt_dev(user_id: str) -> bool:
 def get_plan(user_id: str) -> str:
     """The user's effective plan.
 
-    'unlimited' when the user is in ``UNLIMITED_USER_IDS`` or has an 'unlimited'
-    DB plan (admin-comped); otherwise their active paid plan; else 'free'.
+    'unlimited' when the user is in ``UNLIMITED_USER_IDS`` (env, requires a
+    redeploy to change), OR has ``comped_unlimited`` set in the DB (instant,
+    see ``set_unlimited``), OR has an 'unlimited' Stripe plan; otherwise their
+    active paid plan; else 'free'.
     """
     if user_id in config.unlimited_user_ids():
         return "unlimited"
     with session() as s:
         row = s.query(UserPlanModel).filter_by(clerk_user_id=user_id).one_or_none()
+        if row and row.comped_unlimited:
+            return "unlimited"
         if row and row.status in _ACTIVE:
             if row.plan == "unlimited" or row.plan in config.plan_limits():
                 return row.plan
@@ -78,6 +82,21 @@ def get_plan(user_id: str) -> str:
 def is_unlimited(user_id: str) -> bool:
     """Whether the user bypasses the daily quota (admin / comped / local dev)."""
     return _quota_exempt_dev(user_id) or get_plan(user_id) == "unlimited"
+
+
+def set_unlimited(user_id: str, enabled: bool) -> None:
+    """Admin comp toggle: instant, independent of the Stripe plan/status fields.
+
+    No redeploy, no AWS secret edit -- takes effect on the user's very next
+    request. Intended to be called from ``api/admin_routes.py`` (shared-secret
+    protected), not from any end-user-facing route.
+    """
+    with session() as s:
+        row = s.query(UserPlanModel).filter_by(clerk_user_id=user_id).one_or_none()
+        if row is None:
+            row = UserPlanModel(clerk_user_id=user_id, plan="free")
+            s.add(row)
+        row.comped_unlimited = enabled
 
 
 def limit_for(plan: str) -> int:
@@ -342,6 +361,50 @@ def cancel_subscription(user_id: str) -> dict:
             log.warning("cancel of %s failed (continuing): %s", sub_id, exc)
     set_plan(user_id, "free", status="canceled", subscription_id=None)
     return {"switched": True, "plan": "free"}
+
+
+def sync_checkout_session(user_id: str, session_id: str) -> dict:
+    """Reconcile a just-completed Checkout session right away.
+
+    The webhook (``handle_webhook``) is the system of record for subscription
+    lifecycle events, but it's async and depends on Stripe's endpoint being
+    configured/reachable — if it's delayed or misconfigured the DB plan never
+    updates even though the user paid. The frontend calls this immediately
+    after Stripe redirects back to ``billing_success_url()`` (which carries
+    ``session_id={CHECKOUT_SESSION_ID}``), so the upgrade reflects in the DB
+    without waiting on (or solely depending on) the webhook.
+    """
+    stripe = _stripe()
+    try:
+        sess = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
+    except Exception as exc:  # noqa: BLE001
+        raise BillingError(f"Could not verify checkout session: {exc}") from exc
+
+    meta = dict(sess.metadata) if sess.metadata else {}
+    owner = sess.client_reference_id or meta.get("clerk_user_id")
+    if owner != user_id:
+        raise BillingError("This checkout session does not belong to you.")
+
+    if sess.status != "complete":
+        return get_status(user_id)  # not actually done yet — nothing to reconcile
+
+    plan = meta.get("plan") or "pro"
+    sub = sess.subscription
+    period_end = (
+        datetime.fromtimestamp(sub.current_period_end, tz=timezone.utc).replace(tzinfo=None)
+        if sub and sub.current_period_end
+        else None
+    )
+    set_plan(
+        user_id,
+        plan,
+        status="active",
+        customer_id=sess.customer,
+        subscription_id=sub.id if sub else None,
+        period_end=period_end,
+    )
+    log.info("reconciled checkout session %s for %s -> plan=%s", session_id, user_id, plan)
+    return get_status(user_id)
 
 
 def create_portal(user_id: str) -> str:

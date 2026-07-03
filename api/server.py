@@ -26,6 +26,7 @@ from portfolio_risk.data.market_data import get_ohlc, get_prices
 
 from portfolio_risk.portfolio import billing
 
+from .admin_routes import router as admin_router
 from .auth import get_user_id
 from .billing_routes import router as billing_router
 from .portfolio_routes import router as portfolio_router
@@ -63,6 +64,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Stock Research Assistant API", version="2.0.0", lifespan=lifespan)
 app.include_router(portfolio_router)
 app.include_router(billing_router)
+app.include_router(admin_router)
 
 
 def _enforce_daily_quota(user_id: str) -> None:

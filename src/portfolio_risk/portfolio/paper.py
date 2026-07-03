@@ -117,6 +117,42 @@ def execute_trade(side: str, ticker: str, shares: float, user_id: str = "anonymo
     return {"fill": fill, "account": account_state(user_id)}
 
 
+def leaderboard(limit: int = 100) -> list[dict]:
+    """Rank every paper-trading account by total profit, highest first.
+
+    Only accounts with at least one fill are included so freshly-created (still
+    at starting cash) accounts don't clutter the board. Reuses ``account_state``
+    per user so the numbers always agree with what that user sees on their own
+    PAPER TRADE tab.
+    """
+    from . import store
+
+    rows = []
+    for pf in store.list_portfolios():
+        name = pf["name"]
+        if name != PAPER_PORTFOLIO and not name.startswith(f"{PAPER_PORTFOLIO}:"):
+            continue
+        user_id = "anonymous" if name == PAPER_PORTFOLIO else name.split(":", 1)[1]
+        acct = account_state(user_id)
+        if acct.get("n_trades", 0) == 0:
+            continue
+        rows.append(
+            {
+                "user_id": user_id,
+                "total_value": acct["total_value"],
+                "profit": round(acct["total_value"] - acct["start_cash"], 2),
+                "return_pct": acct["return_pct"],
+                "realized_pnl": acct["realized_pnl"],
+                "n_trades": acct["n_trades"],
+            }
+        )
+    rows.sort(key=lambda r: r["profit"], reverse=True)
+    rows = rows[:limit]
+    for i, r in enumerate(rows, start=1):
+        r["rank"] = i
+    return rows
+
+
 def reset_account(user_id: str = "anonymous") -> dict:
     """Wipe all paper trades and start over from the full cash balance."""
     from . import store

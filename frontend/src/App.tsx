@@ -19,13 +19,14 @@ import { useStream } from "./stores/streamStore";
 import { VIEWS, VIEW_LABEL, useWorkspace, type View } from "./stores/workspace";
 import type { ChatMsg } from "./views/AskView";
 import { cn } from "@/lib/utils";
-import { authHeaders, setTokenGetter } from "./api";
+import { api, authHeaders, setTokenGetter } from "./api";
 import { SignIn, SignUp, UserButton, useAuth } from "@clerk/react";
 
 const ResearchView = lazy(() => import("./views/ResearchView"));
 const MarketView = lazy(() => import("./views/MarketView"));
 const PortfolioView = lazy(() => import("./views/PortfolioView"));
 const PaperView = lazy(() => import("./views/PaperView"));
+const LeaderboardView = lazy(() => import("./views/LeaderboardView"));
 const ScenarioView = lazy(() => import("./views/ScenarioView"));
 const AlertsView = lazy(() => import("./views/AlertsView"));
 const AskView = lazy(() => import("./views/AskView"));
@@ -136,6 +137,29 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, [setBillingOpen]);
+
+  // Reconcile the plan immediately when Stripe redirects back from Checkout,
+  // instead of relying solely on the async webhook (which can be delayed, or
+  // never arrive if the endpoint isn't configured in the Stripe dashboard).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    if (!sessionId || params.get("upgraded") !== "1") return;
+    api
+      .billingSyncSession(sessionId)
+      .catch(() => null)
+      .finally(() => {
+        queryClient.invalidateQueries({ queryKey: ["billing"] });
+        params.delete("session_id");
+        params.delete("upgraded");
+        const qs = params.toString();
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
+        );
+      });
+  }, [queryClient]);
 
   const ask = async (question: string) => {
     if (!question.trim() || chatBusy) return;
@@ -288,6 +312,7 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
           {view === "market" && <MarketView />}
           {view === "portfolio" && <PortfolioView onAsk={askAbout} />}
           {view === "paper" && <PaperView />}
+          {view === "leaderboard" && <LeaderboardView />}
           {view === "scenario" && <ScenarioView onAsk={askAbout} />}
           {view === "alerts" && <AlertsView />}
           {view === "ask" && (

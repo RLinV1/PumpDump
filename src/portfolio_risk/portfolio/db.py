@@ -135,6 +135,9 @@ class UserPlanModel(PortfolioBase):
     )
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Admin comp flag, independent of the Stripe plan/status above -- flipping
+    # this takes effect on the user's very next request, no redeploy needed.
+    comped_unlimited: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=_utcnow, onupdate=_utcnow
     )
@@ -231,6 +234,7 @@ def migrate_schema() -> None:
     cols = [
         ("alert_rules", "clerk_user_id", "VARCHAR(64)"),
         ("notifications", "clerk_user_id", "VARCHAR(64)"),
+        ("user_plans", "comped_unlimited", "BOOLEAN DEFAULT FALSE"),
     ]
     with engine.begin() as conn:
         for table, col, typ in cols:

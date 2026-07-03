@@ -172,6 +172,14 @@ def unlimited_user_ids() -> set[str]:
     return {x.strip() for x in raw.split(",") if x.strip()}
 
 
+def admin_api_key() -> str | None:
+    """Shared secret gating the admin endpoints (``api/admin_routes.py``).
+
+    Unset => admin endpoints are disabled (503), never left silently open.
+    """
+    return os.environ.get("ADMIN_API_KEY", "").strip() or None
+
+
 def stripe_secret_key() -> str | None:
     return os.environ.get("STRIPE_SECRET_KEY", "").strip() or None
 
@@ -198,8 +206,15 @@ def billing_enabled() -> bool:
 
 
 def billing_success_url() -> str:
+    """Where Stripe redirects after a successful Checkout.
+
+    Includes the ``{CHECKOUT_SESSION_ID}`` template Stripe substitutes with the
+    real session ID, so the frontend can call ``/api/billing/sync_session`` and
+    reconcile the plan immediately instead of waiting on the async webhook.
+    """
     return os.environ.get(
-        "BILLING_SUCCESS_URL", "https://plutustrading.tech/?upgraded=1"
+        "BILLING_SUCCESS_URL",
+        "https://plutustrading.tech/?upgraded=1&session_id={CHECKOUT_SESSION_ID}",
     ).strip()
 
 

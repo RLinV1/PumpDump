@@ -21,8 +21,8 @@ const STEPS: TourStep[] = [
   {
     view: "research",
     selector: "[data-tour=nav]",
-    quote: "“Seven rooms, one keyboard.”",
-    text: "These are the seven views. The number next to each name is its hotkey — press 1 through 7 to jump.",
+    quote: "“Eight rooms, one keyboard.”",
+    text: "These are the eight views. The number next to each name is its hotkey — press 1 through 8 to jump.",
   },
   {
     view: "research",

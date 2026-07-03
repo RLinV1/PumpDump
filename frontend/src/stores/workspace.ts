@@ -1,6 +1,15 @@
 import { create } from "zustand";
 
-export const VIEWS = ["research", "market", "portfolio", "paper", "scenario", "alerts", "ask"] as const;
+export const VIEWS = [
+  "research",
+  "market",
+  "portfolio",
+  "paper",
+  "leaderboard",
+  "scenario",
+  "alerts",
+  "ask",
+] as const;
 export type View = (typeof VIEWS)[number];
 
 export const VIEW_LABEL: Record<View, string> = {
@@ -8,6 +17,7 @@ export const VIEW_LABEL: Record<View, string> = {
   market: "MARKET",
   portfolio: "PORTFOLIO",
   paper: "PAPER TRADE",
+  leaderboard: "LEADERBOARD",
   scenario: "SCENARIO LAB",
   alerts: "ALERTS",
   ask: "PLUTUS AI",

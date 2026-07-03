@@ -136,11 +136,16 @@ jobs:
             UNLIMITED_IDS=$(aws secretsmanager get-secret-value \
               --secret-id plutus/unlimited-user-ids --query SecretString --output text | _parse)
           fi
+          ADMIN_KEY=""
+          if aws secretsmanager describe-secret --secret-id plutus/admin-api-key 2>/dev/null; then
+            ADMIN_KEY=$(aws secretsmanager get-secret-value \
+              --secret-id plutus/admin-api-key --query SecretString --output text | _parse)
+          fi
 
           # Mask secret values in logs, then hand them to later steps via
           # outputs (fetched ONCE, here — before any container ever boots).
           for v in "$ANTHROPIC_KEY" "$POSTGRES_PASS" "$CLERK_JWKS" "$CLERK_PK" "$TURNSTILE_KEY" \
-                   "$STRIPE_KEY" "$STRIPE_WH" "$STRIPE_PRO" "$STRIPE_PRO_MAX" "$UNLIMITED_IDS"; do
+                   "$STRIPE_KEY" "$STRIPE_WH" "$STRIPE_PRO" "$STRIPE_PRO_MAX" "$UNLIMITED_IDS" "$ADMIN_KEY"; do
             if [ -n "$v" ]; then
               echo "::add-mask::$v"
             fi
@@ -156,6 +161,7 @@ jobs:
             echo "stripe_pro=$STRIPE_PRO"
             echo "stripe_pro_max=$STRIPE_PRO_MAX"
             echo "unlimited_ids=$UNLIMITED_IDS"
+            echo "admin_key=$ADMIN_KEY"
           } >> "$GITHUB_OUTPUT"
 
       - name: Ensure environment exists (recreate if terminated)
@@ -178,7 +184,7 @@ jobs:
               --single \
               --platform "Docker running on 64bit Amazon Linux 2023" \
               --region "${{ env.AWS_REGION }}" \
-              --envvars "ANTHROPIC_API_KEY=${{ steps.secrets.outputs.anthropic_key }},POSTGRES_PASSWORD=${{ steps.secrets.outputs.postgres_pass }},CLERK_JWKS_URL=${{ steps.secrets.outputs.clerk_jwks }},VITE_CLERK_PUBLISHABLE_KEY=${{ steps.secrets.outputs.clerk_pk }},VITE_TURNSTILE_SITE_KEY=${{ steps.secrets.outputs.turnstile_key }},STRIPE_SECRET_KEY=${{ steps.secrets.outputs.stripe_key }},STRIPE_WEBHOOK_SECRET=${{ steps.secrets.outputs.stripe_wh }},STRIPE_PRICE_PRO=${{ steps.secrets.outputs.stripe_pro }},STRIPE_PRICE_PRO_MAX=${{ steps.secrets.outputs.stripe_pro_max }},UNLIMITED_USER_IDS=${{ steps.secrets.outputs.unlimited_ids }}"
+              --envvars "ANTHROPIC_API_KEY=${{ steps.secrets.outputs.anthropic_key }},POSTGRES_PASSWORD=${{ steps.secrets.outputs.postgres_pass }},CLERK_JWKS_URL=${{ steps.secrets.outputs.clerk_jwks }},VITE_CLERK_PUBLISHABLE_KEY=${{ steps.secrets.outputs.clerk_pk }},VITE_TURNSTILE_SITE_KEY=${{ steps.secrets.outputs.turnstile_key }},STRIPE_SECRET_KEY=${{ steps.secrets.outputs.stripe_key }},STRIPE_WEBHOOK_SECRET=${{ steps.secrets.outputs.stripe_wh }},STRIPE_PRICE_PRO=${{ steps.secrets.outputs.stripe_pro }},STRIPE_PRICE_PRO_MAX=${{ steps.secrets.outputs.stripe_pro_max }},UNLIMITED_USER_IDS=${{ steps.secrets.outputs.unlimited_ids }},ADMIN_API_KEY=${{ steps.secrets.outputs.admin_key }}"
           fi
 
       - name: Wake environment if paused
@@ -204,7 +210,8 @@ jobs:
             STRIPE_WEBHOOK_SECRET="${{ steps.secrets.outputs.stripe_wh }}" \
             STRIPE_PRICE_PRO="${{ steps.secrets.outputs.stripe_pro }}" \
             STRIPE_PRICE_PRO_MAX="${{ steps.secrets.outputs.stripe_pro_max }}" \
-            UNLIMITED_USER_IDS="${{ steps.secrets.outputs.unlimited_ids }}"
+            UNLIMITED_USER_IDS="${{ steps.secrets.outputs.unlimited_ids }}" \
+            ADMIN_API_KEY="${{ steps.secrets.outputs.admin_key }}"
 
       - name: Wait for environment to be ready
         run: |

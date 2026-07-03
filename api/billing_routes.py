@@ -57,6 +57,25 @@ def change(payload: dict, user_id: str = Depends(get_user_id)) -> dict:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.post("/sync_session")
+def sync_session(payload: dict, user_id: str = Depends(get_user_id)) -> dict:
+    """Reconcile a just-completed Checkout session immediately.
+
+    Called by the frontend right after Stripe redirects back with
+    ``?session_id=...`` — a fallback so the plan updates even if the async
+    webhook is delayed or not configured.
+    """
+    session_id = (payload or {}).get("session_id", "")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    if user_id == "anonymous":
+        raise HTTPException(status_code=401, detail="Sign in to sync billing.")
+    try:
+        return billing.sync_checkout_session(user_id, session_id)
+    except billing.BillingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/portal")
 def portal(user_id: str = Depends(get_user_id)) -> dict:
     """Open the Stripe billing portal to manage/cancel a subscription."""
