@@ -1,5 +1,6 @@
 # PortfolioRisk MCP — reproducible dev/runtime image.
 # Python 3.13 (matches the project's requires-python ">=3.10,<3.14").
+#
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 \
