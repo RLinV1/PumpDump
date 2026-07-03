@@ -35,7 +35,7 @@ const AskView = lazy(() => import("./views/AskView"));
 function ClerkTokenSync() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
-  const pushNotification = useStream((s) => s.pushNotification);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     setTokenGetter(() => getToken());
@@ -55,15 +55,7 @@ function ClerkTokenSync() {
     api
       .billingSyncSession(sessionId)
       .catch((e: unknown) => {
-        pushNotification({
-          id: -Date.now(),
-          ticker: "",
-          kind: "billing",
-          title: "Couldn't confirm your upgrade",
-          body: `We couldn't verify the checkout with Stripe (${String((e as Error)?.message ?? e)}). If your card was charged, contact support — your plan will also update automatically once Stripe's webhook arrives.`,
-          read: false,
-          created_at: new Date().toISOString(),
-        });
+        setSyncError(String((e as Error)?.message ?? e));
       })
       .finally(() => {
         queryClient.invalidateQueries({ queryKey: ["billing"] });
@@ -76,9 +68,35 @@ function ClerkTokenSync() {
           window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
         );
       });
-  }, [isLoaded, isSignedIn, queryClient, pushNotification]);
+  }, [isLoaded, isSignedIn, queryClient]);
 
-  return null;
+  if (!syncError) return null;
+  // A standalone banner -- deliberately NOT routed through the alerts
+  // notification store, which would also add it to the Alerts tab list and
+  // bump its unread badge. This is a one-off billing hiccup, not an alert.
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-12 z-[70] flex justify-center px-4">
+      <div className="toast-in pointer-events-auto flex w-full max-w-xl items-start gap-3 border border-down/60 bg-card/95 px-4 py-2.5 shadow-2xl shadow-black/60 backdrop-blur">
+        <span className="micro shrink-0 text-down">⚠ BILLING</span>
+        <span className="min-w-0 flex-1 text-xs leading-relaxed">
+          <span className="block font-semibold">Couldn't confirm your upgrade</span>
+          <span className="block text-muted-foreground">
+            We couldn't verify the checkout with Stripe ({syncError}). If your card was
+            charged, contact support — your plan will also update automatically once
+            Stripe's webhook arrives.
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={() => setSyncError(null)}
+          className="shrink-0 font-mono text-sm text-muted-foreground hover:text-foreground"
+          aria-label="Dismiss"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ClerkGate({ children }: { children: React.ReactNode }) {

@@ -377,32 +377,36 @@ def sync_checkout_session(user_id: str, session_id: str) -> dict:
     stripe = _stripe()
     try:
         sess = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
-    except Exception as exc:  # noqa: BLE001
-        raise BillingError(f"Could not verify checkout session: {exc}") from exc
 
-    meta = dict(sess.metadata) if sess.metadata else {}
-    owner = sess.client_reference_id or meta.get("clerk_user_id")
-    if owner != user_id:
-        raise BillingError("This checkout session does not belong to you.")
+        meta = dict(sess.metadata) if sess.metadata else {}
+        owner = sess.client_reference_id or meta.get("clerk_user_id")
+        if owner != user_id:
+            raise BillingError("This checkout session does not belong to you.")
 
-    if sess.status != "complete":
-        return get_status(user_id)  # not actually done yet — nothing to reconcile
+        if sess.status != "complete":
+            return get_status(user_id)  # not actually done yet — nothing to reconcile
 
-    plan = meta.get("plan") or "pro"
-    sub = sess.subscription
-    period_end = (
-        datetime.fromtimestamp(sub.current_period_end, tz=timezone.utc).replace(tzinfo=None)
-        if sub and sub.current_period_end
-        else None
-    )
-    set_plan(
-        user_id,
-        plan,
-        status="active",
-        customer_id=sess.customer,
-        subscription_id=sub.id if sub else None,
-        period_end=period_end,
-    )
+        plan = meta.get("plan") or "pro"
+        sub = sess.subscription
+        period_end = (
+            datetime.fromtimestamp(sub.current_period_end, tz=timezone.utc).replace(tzinfo=None)
+            if sub and sub.current_period_end
+            else None
+        )
+        set_plan(
+            user_id,
+            plan,
+            status="active",
+            customer_id=sess.customer,
+            subscription_id=sub.id if sub else None,
+            period_end=period_end,
+        )
+    except BillingError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - surface a real message instead of a bare 500
+        log.exception("sync_checkout_session failed: user=%s session=%s", user_id, session_id)
+        raise BillingError(f"Could not sync checkout session ({type(exc).__name__}: {exc})") from exc
+
     log.info("reconciled checkout session %s for %s -> plan=%s", session_id, user_id, plan)
     return get_status(user_id)
 

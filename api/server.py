@@ -13,6 +13,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
+import sys
 from contextlib import asynccontextmanager
 
 import pandas as pd
@@ -32,6 +34,13 @@ from .billing_routes import router as billing_router
 from .portfolio_routes import router as portfolio_router
 from .ws import alerts_quotes_loop, hub, stream_endpoint
 
+log = logging.getLogger("api.server")
+if not log.handlers:  # stderr only -- stdio MCP shares this process tree
+    _h = logging.StreamHandler(stream=sys.stderr)
+    _h.setFormatter(logging.Formatter("%(name)s %(levelname)s: %(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,13 +51,17 @@ async def lifespan(app: FastAPI):
         if db.db_enabled():
             db.init_db()
     except Exception:  # noqa: BLE001
-        pass
+        log.exception("news/pgvector db.init_db() failed at boot")
     try:
         from portfolio_risk.portfolio.db import init_portfolio_db
 
         init_portfolio_db()
     except Exception:  # noqa: BLE001
-        pass
+        # Swallowed on purpose (a transient DB hiccup at boot shouldn't crash the
+        # whole app), but logged loudly -- if this fails, migrate_schema() never
+        # ran, so a newly-added column (e.g. comped_unlimited) won't exist yet and
+        # every query touching it will 500 until the next successful boot.
+        log.exception("portfolio db init_portfolio_db() failed at boot -- schema may be stale")
     task = (
         asyncio.create_task(alerts_quotes_loop()) if config.run_alerts_loop() else None
     )
