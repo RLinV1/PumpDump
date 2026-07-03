@@ -10,6 +10,7 @@ import { applyScale, useSettings } from "./stores/settings";
 import { StatusBar } from "./components/terminal/StatusBar";
 import { BootSplash, ViewSkeleton } from "./components/terminal/AppSkeleton";
 import { PlanBadge } from "./components/terminal/PlanBadge";
+import { BottomNav } from "./components/terminal/BottomNav";
 import { PricingPage } from "./components/terminal/PricingPage";
 import { TickerTape } from "./components/terminal/TickerTape";
 import { Kbd } from "./components/terminal/Kbd";
@@ -227,11 +228,11 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
 
   const shell = (
     <div className="flex h-full flex-col">
-      <header className="flex h-14 items-center gap-5 border-b border-border bg-card px-4">
+      <header className="flex h-14 items-center gap-2 border-b border-border bg-card px-2 sm:gap-3 sm:px-4 md:gap-5">
         <span className="font-mono text-lg font-bold tracking-tight text-primary">
           ▌PLUTUS
         </span>
-        <nav data-tour="nav" className="flex gap-1" aria-label="Views">
+        <nav data-tour="nav" className="hidden gap-1 md:flex" aria-label="Views">
           {VIEWS.map((v: View, i) => (
             <button
               key={v}
@@ -256,7 +257,7 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
         <button
           data-tour="search"
           onClick={() => setPaletteOpen(true)}
-          className="ml-auto hidden h-9 w-72 items-center gap-2 border border-border bg-background px-3 font-mono text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground sm:flex"
+          className="ml-auto flex h-9 w-9 items-center justify-center gap-2 border border-border bg-background font-mono text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground md:w-72 md:justify-start md:px-3"
           aria-label="Search tickers and commands"
         >
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
@@ -268,8 +269,8 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
               strokeLinecap="round"
             />
           </svg>
-          <span className="truncate">Search ticker, view, or command…</span>
-          <span className="ml-auto flex gap-1">
+          <span className="hidden truncate md:inline">Search ticker, view, or command…</span>
+          <span className="ml-auto hidden gap-1 md:flex">
             <Kbd>/</Kbd>
             <Kbd>⌘K</Kbd>
           </span>
@@ -281,7 +282,7 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
 
       <TickerTape />
 
-      <main className="chat-scroll flex-1 overflow-y-auto p-3">
+      <main className="chat-scroll flex-1 overflow-y-auto p-3 pb-20 md:pb-3">
         <Suspense fallback={<ViewSkeleton view={view} />}>
           {view === "research" && <ResearchView />}
           {view === "market" && <MarketView />}
@@ -301,6 +302,7 @@ export default function App({ clerkEnabled }: { clerkEnabled: boolean }) {
       </main>
 
       <StatusBar />
+      <BottomNav />
       <CommandPalette onAsk={askAbout} />
       <HelpOverlay />
       <Tour />

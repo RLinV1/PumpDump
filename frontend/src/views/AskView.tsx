@@ -48,7 +48,7 @@ export default function AskView({
 
   return (
     <Panel title="ADVISOR SESSION" bodyClassName="p-0">
-      <div className="flex h-[calc(100vh-220px)] min-h-[420px] flex-col p-3">
+      <div className="flex h-[calc(100dvh-248px)] min-h-[420px] flex-col p-3 md:h-[calc(100vh-220px)]">
         <div ref={scrollRef} className="chat-scroll flex-1 space-y-3 overflow-y-auto pr-2">
           {msgs.length === 0 && (
             <div className="text-sm text-muted-foreground">

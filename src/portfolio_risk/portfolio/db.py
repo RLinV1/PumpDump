@@ -261,3 +261,16 @@ def session():
         raise
     finally:
         s.close()
+
+
+def ping() -> bool:
+    """Lightweight connectivity check for ``/api/health`` — never raises."""
+    from sqlalchemy import text
+
+    try:
+        with session() as s:
+            s.execute(text("SELECT 1"))
+        return True
+    except Exception:  # noqa: BLE001
+        log.warning("portfolio DB ping failed", exc_info=True)
+        return False

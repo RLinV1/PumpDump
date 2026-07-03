@@ -41,6 +41,22 @@ export default function PaperView() {
     .filter((h) => h.shares > 0)
     .map((h) => ({ symbol: h.ticker, name: `${h.shares} sh held` }));
 
+  if (acct?.error) {
+    return (
+      <Panel title="PAPER ACCOUNT">
+        <p className="text-sm text-down">{acct.error}</p>
+      </Panel>
+    );
+  }
+
+  if (acct?.error) {
+    return (
+      <Panel title="PAPER ACCOUNT">
+        <p className="text-sm text-down">{acct.error}</p>
+      </Panel>
+    );
+  }
+
   const trade = async () => {
     setBusy(true);
     setMsg("");

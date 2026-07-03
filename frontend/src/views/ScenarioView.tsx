@@ -87,7 +87,7 @@ function StressTest({
             key={s.id}
             onClick={() => setSelected(s.id)}
             className={cn(
-              "border px-2 py-1 font-mono text-[0.6875rem]",
+              "border px-2.5 py-1.5 font-mono text-[0.6875rem] sm:px-2 sm:py-1",
               selected === s.id
                 ? "border-primary bg-primary/15 text-primary"
                 : "border-border text-muted-foreground hover:text-foreground",
@@ -128,32 +128,34 @@ function StressTest({
             )}
           </div>
 
-          <table className="mt-3 w-full font-mono text-xs">
-            <thead>
-              <tr className="micro border-b border-border text-left">
-                <th className="py-1">TICKER</th>
-                <th className="py-1 text-right">VALUE</th>
-                <th className="py-1 text-right">BETA</th>
-                <th className="py-1 text-right">EST. MOVE</th>
-                <th className="py-1 text-right">EST. $</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.positions.map((p) => (
-                <tr key={p.ticker} className="border-b border-border/40">
-                  <td className="py-1 font-bold">{p.ticker}</td>
-                  <td className="tnum py-1 text-right">{fmtUSD(p.market_value, 0)}</td>
-                  <td className="tnum py-1 text-right">{p.beta.toFixed(2)}</td>
-                  <td className="tnum py-1 text-right text-down">
-                    {p.estimated_move_pct.toFixed(1)}%
-                  </td>
-                  <td className="tnum py-1 text-right text-down">
-                    {fmtUSD(p.estimated_change, 0)}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full font-mono text-xs">
+              <thead>
+                <tr className="micro border-b border-border text-left">
+                  <th className="py-1">TICKER</th>
+                  <th className="py-1 text-right">VALUE</th>
+                  <th className="py-1 text-right">BETA</th>
+                  <th className="py-1 text-right">EST. MOVE</th>
+                  <th className="py-1 text-right">EST. $</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.positions.map((p) => (
+                  <tr key={p.ticker} className="border-b border-border/40">
+                    <td className="py-1 font-bold">{p.ticker}</td>
+                    <td className="tnum py-1 text-right">{fmtUSD(p.market_value, 0)}</td>
+                    <td className="tnum py-1 text-right">{p.beta.toFixed(2)}</td>
+                    <td className="tnum py-1 text-right text-down">
+                      {p.estimated_move_pct.toFixed(1)}%
+                    </td>
+                    <td className="tnum py-1 text-right text-down">
+                      {fmtUSD(p.estimated_change, 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-2 text-[0.6875rem] leading-relaxed text-muted-foreground">
             {result.note}
           </p>
@@ -189,14 +191,14 @@ function WhatIf({ portfolio }: { portfolio: string }) {
 
   return (
     <Panel tourId="whatif" title="WHAT-IF TRADE — SANDBOX, NOTHING IS SAVED">
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex gap-1">
           {(["BUY", "SELL"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setSide(s)}
               className={cn(
-                "h-9 border px-3 font-mono text-xs font-bold",
+                "h-9 flex-1 border px-3 font-mono text-xs font-bold sm:flex-none",
                 side === s
                   ? s === "BUY"
                     ? "border-up bg-up/15 text-up"
@@ -214,7 +216,7 @@ function WhatIf({ portfolio }: { portfolio: string }) {
           type="number"
           min="0"
           step="any"
-          className="w-24 font-mono"
+          className="w-full font-mono sm:w-24"
           value={shares}
           onChange={(e) => setShares(e.target.value)}
         />
@@ -222,9 +224,13 @@ function WhatIf({ portfolio }: { portfolio: string }) {
           value={ticker}
           onChange={setTicker}
           placeholder="Ticker"
-          className="w-40"
+          className="w-full sm:w-40"
         />
-        <Button onClick={run} disabled={busy || !ticker.trim() || Number(shares) <= 0}>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={run}
+          disabled={busy || !ticker.trim() || Number(shares) <= 0}
+        >
           {busy ? "Simulating…" : "Simulate"}
         </Button>
       </div>
@@ -255,46 +261,48 @@ function WhatIf({ portfolio }: { portfolio: string }) {
       )}
 
       {result && !result.error && result.before && (
-        <table className="mt-3 w-full font-mono text-xs">
-          <thead>
-            <tr className="micro border-b border-border text-left">
-              <th className="py-1">METRIC</th>
-              <th className="py-1 text-right">BEFORE</th>
-              <th className="py-1 text-right">AFTER</th>
-              <th className="py-1 text-right">Δ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([label, key, unit]) => {
-              const b = result.before![key];
-              const a = result.after[key];
-              const d = a - b;
-              return (
-                <tr key={key} className="border-b border-border/40">
-                  <td className="py-1 text-muted-foreground">{label}</td>
-                  <td className="tnum py-1 text-right">
-                    {b.toFixed(2)}
-                    {unit}
-                  </td>
-                  <td className="tnum py-1 text-right font-bold">
-                    {a.toFixed(2)}
-                    {unit}
-                  </td>
-                  <td
-                    className={cn(
-                      "tnum py-1 text-right",
-                      (key === "sharpe" ? d >= 0 : d <= 0) ? "text-up" : "text-down",
-                    )}
-                  >
-                    {d >= 0 ? "+" : ""}
-                    {d.toFixed(2)}
-                    {unit}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="mt-3 w-full font-mono text-xs">
+            <thead>
+              <tr className="micro border-b border-border text-left">
+                <th className="py-1">METRIC</th>
+                <th className="py-1 text-right">BEFORE</th>
+                <th className="py-1 text-right">AFTER</th>
+                <th className="py-1 text-right">Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([label, key, unit]) => {
+                const b = result.before![key];
+                const a = result.after[key];
+                const d = a - b;
+                return (
+                  <tr key={key} className="border-b border-border/40">
+                    <td className="py-1 text-muted-foreground">{label}</td>
+                    <td className="tnum py-1 text-right">
+                      {b.toFixed(2)}
+                      {unit}
+                    </td>
+                    <td className="tnum py-1 text-right font-bold">
+                      {a.toFixed(2)}
+                      {unit}
+                    </td>
+                    <td
+                      className={cn(
+                        "tnum py-1 text-right",
+                        (key === "sharpe" ? d >= 0 : d <= 0) ? "text-up" : "text-down",
+                      )}
+                    >
+                      {d >= 0 ? "+" : ""}
+                      {d.toFixed(2)}
+                      {unit}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
       {result && !result.error && (
         <p className="mt-2 text-[0.6875rem] text-muted-foreground">

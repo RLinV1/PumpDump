@@ -91,7 +91,7 @@ export function HoldingsTable({
                   <td className="py-1.5 pl-2 text-right">
                     <button
                       onClick={() => onSell(h, price)}
-                      className="border border-down/50 px-2 py-0.5 font-mono text-[0.625rem] font-bold text-down hover:bg-down/15"
+                      className="border border-down/50 px-3 py-1.5 font-mono text-[0.625rem] font-bold text-down hover:bg-down/15 sm:px-2 sm:py-0.5"
                       title={`Sell ${h.ticker} — preloads the trade form with all ${h.shares} shares at the current price`}
                     >
                       SELL

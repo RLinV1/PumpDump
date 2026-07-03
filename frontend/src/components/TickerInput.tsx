@@ -98,7 +98,7 @@ export function TickerInput({
         className="h-9 w-full border border-input bg-background px-2 font-mono text-sm uppercase outline-none placeholder:normal-case placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
       />
       {open && matches.length > 0 && (
-        <ul className="absolute z-30 mt-1 w-64 max-w-[80vw] overflow-hidden border border-border bg-popover shadow-2xl">
+        <ul className="absolute z-30 mt-1 max-h-64 w-64 max-w-[80vw] overflow-y-auto border border-border bg-popover shadow-2xl">
           {matches.map((m, i) => (
             <li
               key={m.symbol}

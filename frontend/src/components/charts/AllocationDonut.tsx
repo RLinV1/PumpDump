@@ -21,7 +21,7 @@ export function AllocationDonut({ holdings }: { holdings: Holding[] }) {
     weight: h.weight ?? 0,
   }));
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-center gap-4 sm:flex-row">
       <div className="h-44 w-44 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

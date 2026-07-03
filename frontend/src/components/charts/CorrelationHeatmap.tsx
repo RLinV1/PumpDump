@@ -20,19 +20,21 @@ export function CorrelationHeatmap({
     return `hsl(39 100% 52% / ${(t * 0.85).toFixed(2)})`;
   };
   return (
-    <div
-      className="grid gap-px font-mono text-[0.625rem]"
-      style={{ gridTemplateColumns: `3.2rem repeat(${tickers.length}, minmax(2.4rem, 1fr))` }}
-    >
-      <div />
-      {tickers.map((t) => (
-        <div key={`h-${t}`} className="px-1 py-0.5 text-center font-bold text-muted-foreground">
-          {t}
-        </div>
-      ))}
-      {tickers.map((row, i) => (
-        <RowCells key={row} row={row} i={i} tickers={tickers} matrix={matrix} color={color} />
-      ))}
+    <div className="overflow-x-auto">
+      <div
+        className="grid gap-px font-mono text-[0.625rem]"
+        style={{ gridTemplateColumns: `3.2rem repeat(${tickers.length}, minmax(2.4rem, 1fr))` }}
+      >
+        <div />
+        {tickers.map((t) => (
+          <div key={`h-${t}`} className="px-1 py-0.5 text-center font-bold text-muted-foreground">
+            {t}
+          </div>
+        ))}
+        {tickers.map((row, i) => (
+          <RowCells key={row} row={row} i={i} tickers={tickers} matrix={matrix} color={color} />
+        ))}
+      </div>
     </div>
   );
 }

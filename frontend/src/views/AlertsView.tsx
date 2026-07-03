@@ -66,7 +66,7 @@ export default function AlertsView() {
                 key={r.id}
                 onClick={() => setRuleType(r.id)}
                 className={cn(
-                  "border px-2 py-1 font-mono text-[0.6875rem]",
+                  "border px-2.5 py-1.5 font-mono text-[0.6875rem] sm:px-2 sm:py-1",
                   ruleType === r.id
                     ? "border-primary bg-primary/15 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground",
@@ -77,23 +77,27 @@ export default function AlertsView() {
             ))}
           </div>
           <p className="mt-1.5 text-[0.6875rem] text-muted-foreground">{selected.hint}</p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <TickerInput
               value={ticker}
               onChange={setTicker}
               placeholder="Ticker or company…"
-              className="w-44"
+              className="w-full sm:w-44"
             />
             <Input
               aria-label="Threshold"
               placeholder="Threshold"
               type="number"
               step="any"
-              className="w-32 font-mono"
+              className="w-full font-mono sm:w-32"
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
             />
-            <Button onClick={create} disabled={busy || !ticker.trim() || !threshold}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={create}
+              disabled={busy || !ticker.trim() || !threshold}
+            >
               {busy ? "Checking…" : "Arm it"}
             </Button>
           </div>
@@ -118,7 +122,10 @@ export default function AlertsView() {
           {rules.length ? (
             <ul className="space-y-1 font-mono text-xs">
               {rules.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 border-b border-border/40 pb-1">
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border/40 pb-1"
+                >
                   <button
                     role="switch"
                     aria-checked={r.enabled}
@@ -141,14 +148,14 @@ export default function AlertsView() {
                   <span className="text-muted-foreground">{r.rule_type}</span>
                   <span className="tnum">{r.threshold}</span>
                   {r.last_triggered_at && (
-                    <span className="text-[0.625rem] text-muted-foreground">
+                    <span className="hidden text-[0.625rem] text-muted-foreground sm:inline">
                       last: {r.last_triggered_at.slice(0, 16).replace("T", " ")}
                     </span>
                   )}
                   <button
                     aria-label={`Delete rule ${r.id}`}
                     title="Delete this rule"
-                    className="ml-auto grid h-7 w-7 shrink-0 place-items-center border border-border text-base leading-none text-muted-foreground hover:border-down/60 hover:bg-down/10 hover:text-down"
+                    className="ml-auto grid h-9 w-9 shrink-0 place-items-center border border-border text-base leading-none text-muted-foreground hover:border-down/60 hover:bg-down/10 hover:text-down sm:h-7 sm:w-7"
                     onClick={async () => {
                       await api.deleteAlert(r.id);
                       qc.invalidateQueries({ queryKey: ["alerts"] });

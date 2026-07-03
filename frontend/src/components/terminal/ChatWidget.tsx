@@ -48,7 +48,7 @@ export function ChatWidget({
         onClick={() => setOpen(true)}
         aria-label="Open advisor chat"
         data-tour="chatbubble"
-        className="fixed bottom-12 right-4 z-40 grid h-12 w-12 place-items-center rounded-full border border-primary/60 bg-card text-primary shadow-lg shadow-black/50 transition-transform hover:scale-105"
+        className="fixed bottom-20 right-4 z-40 grid h-12 w-12 place-items-center rounded-full border border-primary/60 bg-card text-primary shadow-lg shadow-black/50 transition-transform hover:scale-105 md:bottom-12"
       >
         {busy ? (
           <Spinner className="h-5 w-5" />
@@ -71,7 +71,7 @@ export function ChatWidget({
   }
 
   return (
-    <div className="fixed bottom-12 right-4 z-40 flex max-h-[70vh] w-[min(380px,calc(100vw-2rem))] flex-col border border-primary/40 bg-card shadow-2xl shadow-black/60">
+    <div className="fixed bottom-20 right-4 z-40 flex max-h-[70vh] w-[min(380px,calc(100vw-2rem))] flex-col border border-primary/40 bg-card shadow-2xl shadow-black/60 md:bottom-12">
       <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-secondary/40 px-3">
         <span className="micro text-info">✦ ADVISOR</span>
         <button

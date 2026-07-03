@@ -15,11 +15,22 @@ export const PLAN_LABEL: Record<string, string> = {
  *  page (#/pricing). Always clickable, even when unlimited. */
 export function PlanBadge() {
   const setBillingOpen = useWorkspace((s) => s.setBillingOpen);
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ["billing"],
     queryFn: api.billingStatus,
     staleTime: 15_000,
   });
+  if (error) {
+    return (
+      <button
+        onClick={() => setBillingOpen(true)}
+        title="Couldn't load your plan — click to view billing"
+        className="rounded border border-down/60 px-2 py-1 font-mono text-[0.625rem] text-down"
+      >
+        PLAN ERR
+      </button>
+    );
+  }
   if (!data) return null;
 
   const open = () => setBillingOpen(true);

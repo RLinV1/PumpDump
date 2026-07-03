@@ -22,7 +22,7 @@ export function StatusBar() {
   });
 
   return (
-    <footer className="flex h-7 items-center gap-4 border-t border-border bg-card px-3 font-mono text-[0.6875rem] text-muted-foreground">
+    <footer className="hidden h-7 items-center gap-4 border-t border-border bg-card px-3 font-mono text-[0.6875rem] text-muted-foreground md:flex">
       <span className="flex items-center gap-1.5">
         <span
           className={cn(

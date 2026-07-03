@@ -135,6 +135,9 @@ export function Tour() {
   const setView = useWorkspace((s) => s.setView);
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  // The header's [data-tour=nav] is hidden below `md`; point that one step at
+  // the mobile bottom nav bar instead so the spotlight has something to find.
+  const [mobileNav] = useState(() => window.matchMedia("(max-width: 767px)").matches);
 
   // First-ever visit: start the tour automatically.
   useEffect(() => {
@@ -157,6 +160,8 @@ export function Tour() {
   useEffect(() => {
     if (!open) return;
     const step = STEPS[idx];
+    const selector =
+      mobileNav && step.selector === "[data-tour=nav]" ? "[data-tour=nav-mobile]" : step.selector;
     step.prep?.();
     setView(step.view);
     setRect(null);
@@ -165,7 +170,7 @@ export function Tour() {
     let cancelled = false;
     const find = () => {
       if (cancelled) return;
-      const el = document.querySelector(step.selector) as HTMLElement | null;
+      const el = document.querySelector(selector) as HTMLElement | null;
       if (el && el.getBoundingClientRect().width > 0) {
         el.scrollIntoView({ block: "center" });
         requestAnimationFrame(() => {
@@ -177,7 +182,7 @@ export function Tour() {
     };
     find();
     const remeasure = () => {
-      const el = document.querySelector(step.selector);
+      const el = document.querySelector(selector);
       if (el) setRect(el.getBoundingClientRect());
     };
     window.addEventListener("resize", remeasure);
@@ -190,7 +195,7 @@ export function Tour() {
       window.removeEventListener("resize", remeasure);
       window.clearInterval(follow);
     };
-  }, [open, idx, setView]);
+  }, [open, idx, setView, mobileNav]);
 
   useEffect(() => {
     if (!open) return;

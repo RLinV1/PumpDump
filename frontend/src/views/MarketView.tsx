@@ -115,13 +115,13 @@ export default function MarketView() {
       <Panel
         title="TODAY'S MOVERS"
         right={
-          <div className="flex gap-0.5">
+          <div className="flex flex-wrap gap-0.5">
             {CATEGORIES.map((c) => (
               <button
                 key={c.key}
                 onClick={() => setCategory(c.key)}
                 className={cn(
-                  "px-2 py-0.5 font-mono text-[0.625rem] font-bold",
+                  "px-2.5 py-1.5 font-mono text-[0.6875rem] font-bold sm:px-2 sm:py-0.5 sm:text-[0.625rem]",
                   category === c.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -140,51 +140,53 @@ export default function MarketView() {
             ))}
           </div>
         ) : movers.rows.length ? (
-          <table className="w-full font-mono text-xs">
-            <thead>
-              <tr className="micro text-left">
-                <th className="pb-1.5">TICKER</th>
-                <th className="pb-1.5">NAME</th>
-                <th className="pb-1.5 text-right">PRICE</th>
-                <th className="pb-1.5 text-right">TODAY</th>
-                <th className="hidden pb-1.5 text-right sm:table-cell">VOLUME</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movers.rows.map((r) => {
-                const up = (r.change_pct ?? 0) >= 0;
-                return (
-                  <tr
-                    key={r.ticker}
-                    onClick={() => openTicker(r.ticker)}
-                    className="cursor-pointer border-t border-border/60 hover:bg-primary/10"
-                    title={`Open ${r.ticker} in RESEARCH`}
-                  >
-                    <td className="py-1.5 font-bold text-primary">{r.ticker}</td>
-                    <td className="max-w-[18rem] truncate py-1.5 text-foreground/85">
-                      {r.name}
-                    </td>
-                    <td className="tnum py-1.5 text-right">{fmtUSD(r.price)}</td>
-                    <td
-                      className={cn(
-                        "tnum py-1.5 text-right",
-                        up ? "text-up" : "text-down",
-                      )}
+          <div className="overflow-x-auto">
+            <table className="w-full font-mono text-xs">
+              <thead>
+                <tr className="micro text-left">
+                  <th className="pb-1.5">TICKER</th>
+                  <th className="pb-1.5">NAME</th>
+                  <th className="pb-1.5 text-right">PRICE</th>
+                  <th className="pb-1.5 text-right">TODAY</th>
+                  <th className="hidden pb-1.5 text-right sm:table-cell">VOLUME</th>
+                </tr>
+              </thead>
+              <tbody>
+                {movers.rows.map((r) => {
+                  const up = (r.change_pct ?? 0) >= 0;
+                  return (
+                    <tr
+                      key={r.ticker}
+                      onClick={() => openTicker(r.ticker)}
+                      className="cursor-pointer border-t border-border/60 hover:bg-primary/10"
+                      title={`Open ${r.ticker} in RESEARCH`}
                     >
-                      {fmtSignedPct(r.change_pct)}
-                    </td>
-                    <td className="tnum hidden py-1.5 text-right text-muted-foreground sm:table-cell">
-                      {r.volume != null
-                        ? r.volume >= 1e6
-                          ? `${(r.volume / 1e6).toFixed(1)}M`
-                          : r.volume.toLocaleString()
-                        : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <td className="py-1.5 font-bold text-primary">{r.ticker}</td>
+                      <td className="max-w-[8rem] truncate py-1.5 text-foreground/85 sm:max-w-[18rem]">
+                        {r.name}
+                      </td>
+                      <td className="tnum py-1.5 text-right">{fmtUSD(r.price)}</td>
+                      <td
+                        className={cn(
+                          "tnum py-1.5 text-right",
+                          up ? "text-up" : "text-down",
+                        )}
+                      >
+                        {fmtSignedPct(r.change_pct)}
+                      </td>
+                      <td className="tnum hidden py-1.5 text-right text-muted-foreground sm:table-cell">
+                        {r.volume != null
+                          ? r.volume >= 1e6
+                            ? `${(r.volume / 1e6).toFixed(1)}M`
+                            : r.volume.toLocaleString()
+                          : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p className="text-xs text-muted-foreground">
             {movers.note ?? "No mover data right now."}

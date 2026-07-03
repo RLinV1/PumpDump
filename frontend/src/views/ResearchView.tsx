@@ -215,7 +215,7 @@ export default function ResearchView() {
               tourId="chart"
               title={`PRICE · ${ticker} · ${intraday ? INTERVAL_LABEL[bar].toUpperCase() + " BARS" : "DAILY"}`}
               right={
-                <div className="flex items-center gap-0.5">
+                <div className="flex flex-wrap items-center gap-0.5">
                   {intraday && (
                     <>
                       {INTERVALS.map((iv) => (
@@ -223,7 +223,7 @@ export default function ResearchView() {
                           key={iv}
                           onClick={() => setBar(iv)}
                           className={cn(
-                            "px-2 py-0.5 font-mono text-[0.625rem] font-bold",
+                            "px-2.5 py-1.5 font-mono text-[0.6875rem] font-bold sm:px-2 sm:py-0.5 sm:text-[0.625rem]",
                             bar === iv
                               ? "bg-info/80 text-primary-foreground"
                               : "text-muted-foreground hover:text-foreground",
@@ -240,7 +240,7 @@ export default function ResearchView() {
                       key={p}
                       onClick={() => setPeriod(p)}
                       className={cn(
-                        "px-2 py-0.5 font-mono text-[0.625rem] font-bold",
+                        "px-2.5 py-1.5 font-mono text-[0.6875rem] font-bold sm:px-2 sm:py-0.5 sm:text-[0.625rem]",
                         period === p
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:text-foreground",
