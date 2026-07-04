@@ -326,6 +326,68 @@ def _ensure_customer(user_id: str, stripe) -> str:
     return cust.id
 
 
+_PLAN_RANK = {"free": 0, "pro": 1, "pro_max": 2}
+
+
+def _now_ts() -> int:
+    return int(datetime.now(timezone.utc).timestamp())
+
+
+def _unused_fraction(sub, now_ts: int) -> float:
+    """Fraction of the current billing period still remaining, in [0, 1]."""
+    try:
+        item = sub["items"]["data"][0]
+        start, end = item["current_period_start"], item["current_period_end"]
+    except (KeyError, TypeError, IndexError):
+        return 0.0
+    if not start or not end or end <= start:
+        return 0.0
+    return max(0.0, min(1.0, (end - now_ts) / (end - start)))
+
+
+def _latest_paid_invoice(sub_id: str):
+    stripe = _stripe()
+    try:
+        invoices = stripe.Invoice.list(subscription=sub_id, status="paid", limit=1)
+        data = invoices["data"]
+        return data[0] if data else None
+    except Exception:  # noqa: BLE001 - refund math is best-effort
+        return None
+
+
+def _price_unit_amount(price_id: str) -> int:
+    stripe = _stripe()
+    try:
+        return stripe.Price.retrieve(price_id)["unit_amount"] or 0
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def _issue_prorated_refund(user_id: str, sub_id: str, refund_cents: int) -> None:
+    """Refund real money for unused time on a downgrade, instead of leaving
+    it as an invoice credit the user may never redeem. Best-effort: a refund
+    failure (e.g. charge past Stripe's refund window) never blocks the
+    downgrade itself — it's already reflected in the DB by the caller.
+    """
+    if refund_cents <= 0:
+        return
+    stripe = _stripe()
+    try:
+        inv = _latest_paid_invoice(sub_id)
+        if not inv:
+            log.warning("no paid invoice for subscription %s; skipping refund", sub_id)
+            return
+        pi = inv["payment_intent"]
+        if not pi:
+            log.warning("invoice %s has no payment_intent; skipping refund", inv["id"])
+            return
+        amount = min(refund_cents, inv["amount_paid"])
+        stripe.Refund.create(payment_intent=pi, amount=amount)
+        log.info("refunded %s cents for subscription %s (user %s)", amount, sub_id, user_id)
+    except Exception as exc:  # noqa: BLE001 - best-effort, see docstring
+        log.warning("refund failed for subscription %s (user %s): %s", sub_id, user_id, exc)
+
+
 def create_checkout(user_id: str, plan: str) -> str:
     """Create a Stripe Checkout session and return its hosted URL."""
     price = config.stripe_price_ids().get(plan)
@@ -362,10 +424,12 @@ def change_plan(user_id: str, plan: str) -> dict:
         raise BillingError(f"No Stripe price configured for plan '{plan}'.")
 
     sub_id = None
+    current_plan = None
     with session() as s:
         row = s.query(UserPlanModel).filter_by(clerk_user_id=user_id).one_or_none()
         if row and row.status in _ACTIVE:
             sub_id = row.stripe_subscription_id
+            current_plan = row.plan
     if not sub_id:
         # Nothing to modify — start a fresh Checkout for this plan instead.
         return {"url": create_checkout(user_id, plan)}
@@ -374,12 +438,29 @@ def change_plan(user_id: str, plan: str) -> dict:
     # Subscript access (not ``.get``) — Stripe objects don't support ``.get``.
     sub = stripe.Subscription.retrieve(sub_id)
     item_id = sub["items"]["data"][0]["id"]
-    stripe.Subscription.modify(
-        sub_id,
-        items=[{"id": item_id, "price": price}],
-        proration_behavior="create_prorations",
-        metadata={"clerk_user_id": user_id, "plan": plan},
-    )
+    is_downgrade = _PLAN_RANK.get(plan, 0) < _PLAN_RANK.get(current_plan, 0)
+    if is_downgrade:
+        # Refund the unused time on the old (pricier) plan, net of what the
+        # new (cheaper) plan would cost for that same remaining time — as
+        # real money back, not a credit toward a future invoice.
+        fraction = _unused_fraction(sub, _now_ts())
+        inv = _latest_paid_invoice(sub_id)
+        paid_cents = inv["amount_paid"] if inv else 0
+        refund_cents = round(paid_cents * fraction) - round(_price_unit_amount(price) * fraction)
+        stripe.Subscription.modify(
+            sub_id,
+            items=[{"id": item_id, "price": price}],
+            proration_behavior="none",
+            metadata={"clerk_user_id": user_id, "plan": plan},
+        )
+        _issue_prorated_refund(user_id, sub_id, max(0, refund_cents))
+    else:
+        stripe.Subscription.modify(
+            sub_id,
+            items=[{"id": item_id, "price": price}],
+            proration_behavior="create_prorations",
+            metadata={"clerk_user_id": user_id, "plan": plan},
+        )
     # Reflect immediately for a snappy UI; the subscription.updated webhook
     # reconciles it again shortly after.
     set_plan(user_id, plan, status="active", subscription_id=sub_id)
@@ -399,7 +480,13 @@ def cancel_subscription(user_id: str) -> dict:
     if sub_id:
         stripe = _stripe()
         try:
+            sub = stripe.Subscription.retrieve(sub_id)
+            refund_cents = round(
+                (_latest_paid_invoice(sub_id) or {"amount_paid": 0})["amount_paid"]
+                * _unused_fraction(sub, _now_ts())
+            )
             stripe.Subscription.cancel(sub_id)
+            _issue_prorated_refund(user_id, sub_id, refund_cents)
         except Exception as exc:  # noqa: BLE001 - e.g. already canceled/deleted
             log.warning("cancel of %s failed (continuing): %s", sub_id, exc)
     set_plan(user_id, "free", status="canceled", subscription_id=None)

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api";
 import type { UniverseItem } from "../types";
 import { cn } from "@/lib/utils";
 
@@ -9,15 +10,22 @@ interface Props {
   autoFocus?: boolean;
 }
 
-/** Type-to-search combobox: filters the known universe, and also accepts any
- *  ticker the user types that isn't in the list. */
+const DEBOUNCE_MS = 200;
+
+/** Type-to-search combobox. Ranks the small local "trending" universe for
+ *  instant feedback, then — once the user has typed enough to be specific —
+ *  swaps in live results from Yahoo's own search (any listed equity/ETF, not
+ *  just a hand-picked list). Also accepts any raw ticker typed that matches
+ *  neither. */
 export function SearchBar({ universe, onSelect, placeholder, autoFocus }: Props) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [liveMatches, setLiveMatches] = useState<UniverseItem[] | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const requestSeq = useRef(0);
 
-  const matches = useMemo(() => {
+  const localMatches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return universe.slice(0, 8);
     // Rank by relevance so prefix matches win: a ticker symbol starting with the
@@ -40,6 +48,38 @@ export function SearchBar({ universe, onSelect, placeholder, autoFocus }: Props)
       .slice(0, 8)
       .map((x) => x.u);
   }, [query, universe]);
+
+  // Live autosearch: debounced, and stale responses (a fast typer outrunning
+  // an earlier request) are dropped via the sequence counter.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setLiveMatches(null);
+      return;
+    }
+    const seq = ++requestSeq.current;
+    const t = setTimeout(() => {
+      api
+        .search(q)
+        .then((results) => {
+          if (requestSeq.current === seq) setLiveMatches(results);
+        })
+        .catch(() => {
+          if (requestSeq.current === seq) setLiveMatches(null);
+        });
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Live results win once they arrive (broader than the local list); until
+  // then, or if the query is empty, fall back to the instant local ranking.
+  const matches = query.trim() && liveMatches?.length ? liveMatches : localMatches;
+
+  // Keep the highlighted row in bounds when the result set swaps out from
+  // under it (local ranking -> live results arriving with a shorter list).
+  useEffect(() => {
+    setActive((a) => Math.min(a, Math.max(matches.length - 1, 0)));
+  }, [matches.length]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {

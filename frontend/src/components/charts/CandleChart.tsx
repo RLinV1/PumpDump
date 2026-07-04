@@ -4,9 +4,12 @@ import {
   ColorType,
   HistogramSeries,
   LineSeries,
+  LineStyle,
   TickMarkType,
   createChart,
   createSeriesMarkers,
+  type IChartApi,
+  type ISeriesApi,
   type SeriesMarker,
   type Time,
 } from "lightweight-charts";
@@ -62,6 +65,13 @@ export function CandleChart({ points, height = 360 }: { points: OhlcPoint[]; hei
   // The 0–2 candles picked for the measurement window.
   const [range, setRange] = useState<Anchor[]>([]);
   const markersRef = useRef<ReturnType<typeof createSeriesMarkers> | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const measureLineRef = useRef<ISeriesApi<"Line"> | null>(null);
+  // Pixel bounds (within the chart's plot area, excluding the price-scale
+  // gutter) of the two measurement anchors — drives the dim/highlight overlay.
+  const [band, setBand] = useState<{ left: number; right: number; scaleWidth: number } | null>(
+    null,
+  );
 
   // time -> index, so a click (which yields a time) can resolve to a candle.
   const idxByTime = useMemo(
@@ -137,6 +147,18 @@ export function CandleChart({ points, height = 360 }: { points: OhlcPoint[]; hei
     );
     // Measurement markers ride on the candle series; updated by the effect below.
     markersRef.current = createSeriesMarkers(candles, []);
+    chartRef.current = chart;
+
+    // A→B connector for the measure tool — a 2-point line series, populated
+    // (and cleared) by the effect below whenever the selection changes.
+    measureLineRef.current = chart.addSeries(LineSeries, {
+      color: AMBER,
+      lineWidth: 2,
+      lineStyle: LineStyle.Dashed,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
 
     const volume = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
@@ -190,27 +212,57 @@ export function CandleChart({ points, height = 360 }: { points: OhlcPoint[]; hei
     chart.timeScale().fitContent();
     return () => {
       markersRef.current = null;
+      chartRef.current = null;
+      measureLineRef.current = null;
       chart.remove();
     };
   }, [points, height, idxByTime]);
 
-  // Reflect the current selection as markers on the candle series.
+  // Reflect the current selection as markers + a connecting line on the chart.
   useEffect(() => {
     const prim = markersRef.current;
     if (!prim) return;
-    const markers: SeriesMarker<Time>[] = range
+    const sorted = range
       .filter((a) => idxByTime.has(a.p.t))
       .slice()
-      .sort((a, b) => a.i - b.i)
-      .map((a, n) => ({
-        time: a.p.t as Time,
-        position: "belowBar",
-        color: AMBER,
-        shape: "arrowUp",
-        text: n === 0 ? "A" : "B",
-      }));
+      .sort((a, b) => a.i - b.i);
+    const markers: SeriesMarker<Time>[] = sorted.map((a, n) => ({
+      time: a.p.t as Time,
+      position: "belowBar",
+      color: AMBER,
+      shape: "arrowUp",
+      text: n === 0 ? "A" : "B",
+    }));
     prim.setMarkers(markers);
+    measureLineRef.current?.setData(
+      sorted.length === 2 ? sorted.map((a) => ({ time: a.p.t as Time, value: a.p.c })) : [],
+    );
   }, [range, idxByTime]);
+
+  // Shaded-region overlay: pixel bounds of the two anchors, recomputed on
+  // selection change and whenever the visible window pans/zooms.
+  useEffect(() => {
+    const chart = chartRef.current;
+    const el = ref.current;
+    if (!chart || !el || range.length < 2) {
+      setBand(null);
+      return;
+    }
+    const [a, b] = [...range].sort((x, y) => x.i - y.i);
+    const recompute = () => {
+      const scaleWidth = chart.priceScale("right").width();
+      const plotWidth = el.clientWidth - scaleWidth;
+      const xa = chart.timeScale().timeToCoordinate(a.p.t as Time);
+      const xb = chart.timeScale().timeToCoordinate(b.p.t as Time);
+      const clamp = (x: number) => Math.max(0, Math.min(x, plotWidth));
+      const left = xa === null ? 0 : clamp(xa);
+      const right = xb === null ? plotWidth : clamp(xb);
+      setBand({ left: Math.min(left, right), right: Math.max(left, right), scaleWidth });
+    };
+    recompute();
+    chart.timeScale().subscribeVisibleLogicalRangeChange(recompute);
+    return () => chart.timeScale().unsubscribeVisibleLogicalRangeChange(recompute);
+  }, [range]);
 
   // The completed measurement (A→B in chronological order), if two are picked.
   const measure = useMemo(() => {
@@ -276,7 +328,23 @@ export function CandleChart({ points, height = 360 }: { points: OhlcPoint[]; hei
         </div>
       )}
 
-      <div ref={ref} style={{ height }} />
+      {/* Chart canvas + the measurement dim overlay share this box so the
+          overlay's pixel math lines up with the chart's own coordinates. */}
+      <div className="relative" style={{ height }}>
+        <div ref={ref} className="absolute inset-0" />
+        {band && (
+          <>
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 z-[5] bg-black/55"
+              style={{ width: band.left }}
+            />
+            <div
+              className="pointer-events-none absolute inset-y-0 z-[5] bg-black/55"
+              style={{ right: band.scaleWidth, width: `calc(100% - ${band.scaleWidth}px - ${band.right}px)` }}
+            />
+          </>
+        )}
+      </div>
       <div className="mt-1 flex gap-4 font-mono text-[0.625rem] text-muted-foreground">
         <span>
           <span style={{ color: AMBER }}>—</span> SMA 50

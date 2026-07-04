@@ -507,6 +507,36 @@ def generate_movers(category: str = "gainers") -> list[dict]:
     return rows[:5]
 
 
+def generate_search(query: str, limit: int = 8) -> list[dict]:
+    """Deterministic offline ticker search — mirrors market_data.get_ticker_search.
+
+    Filters the small known-ticker table instead of hitting Yahoo's search API,
+    ranked so symbol-prefix matches win (typing "AA" -> AAPL before ORCL).
+    """
+    q = query.strip().lower()
+    if not q:
+        return []
+
+    def rank(sym: str, name: str) -> int:
+        if sym.lower().startswith(q):
+            return 0
+        if name.lower().startswith(q):
+            return 1
+        if q in sym.lower():
+            return 2
+        if q in name.lower():
+            return 3
+        return 99
+
+    rows = [
+        {"symbol": sym, "name": name, "exchange": "", "type": "EQUITY", "_r": rank(sym, name)}
+        for sym, (name, _sector, _desc) in _KNOWN_INFO.items()
+    ]
+    rows = [r for r in rows if r["_r"] < 99]
+    rows.sort(key=lambda r: (r["_r"], r["symbol"]))
+    return [{k: v for k, v in r.items() if k != "_r"} for r in rows[:limit]]
+
+
 def generate_prices(
     tickers: list[str],
     days: int = 504,

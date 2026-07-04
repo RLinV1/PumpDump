@@ -24,7 +24,7 @@ from fastapi.responses import StreamingResponse
 
 from portfolio_risk import config, tools
 from portfolio_risk.agent.client import run_agent, stream_agent_events
-from portfolio_risk.data.market_data import get_ohlc, get_prices
+from portfolio_risk.data.market_data import get_ohlc, get_prices, get_ticker_search
 
 from portfolio_risk.portfolio import billing
 
@@ -286,6 +286,13 @@ def health() -> dict:
 @app.get("/api/universe")
 def universe() -> dict:
     return {"tickers": [{"symbol": s, "name": n} for s, n in sorted(UNIVERSE.items())]}
+
+
+@app.get("/api/search")
+def search(q: str = "") -> dict:
+    """Live ticker/company autocomplete (Yahoo search) — any listed
+    equity/ETF, not just the curated UNIVERSE list above."""
+    return {"results": get_ticker_search(q)}
 
 
 @app.get("/api/snapshot")

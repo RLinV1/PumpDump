@@ -622,6 +622,53 @@ def get_movers(category: str = "gainers") -> list[dict]:
     return rows
 
 
+_SEARCH_TTL_SEC = 300.0
+
+
+def get_ticker_search(query: str, limit: int = 8) -> list[dict]:
+    """Live ticker/company autocomplete via Yahoo's search (free, keyless).
+
+    Replaces a hand-curated ticker list with whatever Yahoo Finance actually
+    knows about, so any listed equity/ETF is searchable by symbol or name —
+    not just a fixed set of pre-picked companies.
+    """
+    q = (query or "").strip()
+    if not q:
+        return []
+    if config.use_mock_data():
+        return mock_data.generate_search(q, limit)
+
+    key = f"search:v1:{q.lower()}:{limit}"
+    cached = cache.cache_get_json(key)
+    if cached is not None:
+        return cached
+
+    rows: list[dict] = []
+    try:
+        import yfinance as yf
+
+        quotes = yf.Search(q, max_results=limit).quotes or []
+        for item in quotes:
+            sym = item.get("symbol")
+            qtype = (item.get("quoteType") or "").upper()
+            if not sym or qtype not in ("EQUITY", "ETF"):
+                continue
+            rows.append(
+                {
+                    "symbol": str(sym).upper(),
+                    "name": item.get("longname") or item.get("shortname") or str(sym).upper(),
+                    "exchange": item.get("exchDisp") or item.get("exchange") or "",
+                    "type": qtype,
+                }
+            )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Ticker search failed for %r: %s", q, exc)
+    rows = rows[:limit]
+    if rows:
+        cache.cache_set_json(key, rows, _SEARCH_TTL_SEC)
+    return rows
+
+
 def _parse_news_item(item: dict) -> dict | None:
     """Normalize a yfinance news item (handles old flat + new nested schemas)."""
     content = item.get("content") if isinstance(item, dict) else None

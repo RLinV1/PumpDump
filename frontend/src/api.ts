@@ -67,6 +67,8 @@ const q = (s: string) => encodeURIComponent(s);
 export const api = {
   universe: () =>
     getJSON<{ tickers: UniverseItem[] }>("/api/universe").then((d) => d.tickers),
+  search: (query: string) =>
+    getJSON<{ results: UniverseItem[] }>(`/api/search?q=${q(query)}`).then((d) => d.results),
   snapshot: (t: string) => getJSON<Snapshot>(`/api/snapshot?ticker=${q(t)}`),
   performance: (t: string, p: string) =>
     getJSON<Performance>(`/api/performance?ticker=${q(t)}&period=${q(p)}`),
