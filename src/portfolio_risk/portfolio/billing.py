@@ -259,6 +259,32 @@ def _plan_for_price(price_id: str | None) -> str | None:
     return None
 
 
+def _current_period_end_ts(sub) -> int | None:
+    """Current-period end (unix ts) for a subscription, or ``None``.
+
+    Stripe API version 2025-03-31 ("Basil") removed ``current_period_end``
+    from the Subscription object and moved it onto each subscription item
+    (``items.data[0].current_period_end``); accessing it at the top level
+    now raises instead of just being absent. Try the item first, then fall
+    back to the legacy top-level field for accounts still pinned to an older
+    API version. ``sub`` may be a Stripe SDK object (subscript-only — newer
+    versions don't support ``.get()``) or a plain dict from webhook JSON, so
+    this only ever uses ``[]``.
+    """
+    if not sub:
+        return None
+    try:
+        data = sub["items"]["data"]
+        if data:
+            return data[0]["current_period_end"]
+    except (KeyError, TypeError, IndexError):
+        pass
+    try:
+        return sub["current_period_end"]
+    except (KeyError, TypeError):
+        return None
+
+
 # --------------------------------------------------------------------------- #
 # Stripe
 # --------------------------------------------------------------------------- #
@@ -388,9 +414,10 @@ def sync_checkout_session(user_id: str, session_id: str) -> dict:
 
         plan = meta.get("plan") or "pro"
         sub = sess.subscription
+        period_end_ts = _current_period_end_ts(sub)
         period_end = (
-            datetime.fromtimestamp(sub.current_period_end, tz=timezone.utc).replace(tzinfo=None)
-            if sub and sub.current_period_end
+            datetime.fromtimestamp(period_end_ts, tz=timezone.utc).replace(tzinfo=None)
+            if period_end_ts
             else None
         )
         set_plan(
@@ -436,10 +463,10 @@ def _sync_subscription(sub: dict) -> None:
     items = (sub.get("items") or {}).get("data") or []
     price_id = (items[0].get("price") or {}).get("id") if items else None
     plan = _plan_for_price(price_id) or (sub.get("metadata") or {}).get("plan", "free")
-    period_end = sub.get("current_period_end")
+    period_end_ts = _current_period_end_ts(sub)
     pe = (
-        datetime.fromtimestamp(period_end, tz=timezone.utc).replace(tzinfo=None)
-        if period_end
+        datetime.fromtimestamp(period_end_ts, tz=timezone.utc).replace(tzinfo=None)
+        if period_end_ts
         else None
     )
     active = status in _ACTIVE
