@@ -259,6 +259,23 @@ def _plan_for_price(price_id: str | None) -> str | None:
     return None
 
 
+def _meta_get(meta, key: str, default=None):
+    """Safe lookup on a Stripe ``metadata`` object.
+
+    Newer stripe-python objects support ``obj[key]`` but not ``.get()`` or
+    ``dict()`` — ``dict(obj)`` falls back to the legacy sequence-iteration
+    protocol (probing ``obj[0]``, ``obj[1]``, ...) since the object has no
+    ``.keys()``, and since metadata is string-keyed, ``obj[0]`` immediately
+    raises ``KeyError: 0``. Only ever use ``[]`` here.
+    """
+    if not meta:
+        return default
+    try:
+        return meta[key]
+    except (KeyError, TypeError):
+        return default
+
+
 def _current_period_end_ts(sub) -> int | None:
     """Current-period end (unix ts) for a subscription, or ``None``.
 
@@ -404,15 +421,14 @@ def sync_checkout_session(user_id: str, session_id: str) -> dict:
     try:
         sess = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
 
-        meta = dict(sess.metadata) if sess.metadata else {}
-        owner = sess.client_reference_id or meta.get("clerk_user_id")
+        owner = sess.client_reference_id or _meta_get(sess.metadata, "clerk_user_id")
         if owner != user_id:
             raise BillingError("This checkout session does not belong to you.")
 
         if sess.status != "complete":
             return get_status(user_id)  # not actually done yet — nothing to reconcile
 
-        plan = meta.get("plan") or "pro"
+        plan = _meta_get(sess.metadata, "plan") or "pro"
         sub = sess.subscription
         period_end_ts = _current_period_end_ts(sub)
         period_end = (
