@@ -1,0 +1,21 @@
+# build output
+target/
+*.class
+
+# secrets and local config
+.env
+.env.*
+*.pem
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# editors and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# claude local settings
+.claude/settings.local.json
