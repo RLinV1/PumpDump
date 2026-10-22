@@ -87,8 +87,8 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
 
 export function Contrast() {
   return (
-    <section className="px-4 py-24 md:px-8 md:py-32">
-      <div className="mx-auto max-w-[1400px]">
+    <section className="py-24 md:py-32">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-8">
         <h2 className={`${heading} max-w-3xl`}>Not every spike is a pump.</h2>
         <div className="mt-12 grid gap-12 md:grid-cols-2 md:gap-16">
           {CASES.map((c) => {

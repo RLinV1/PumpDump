@@ -18,7 +18,7 @@ const STATUS = [
 export default function Home() {
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-line bg-bg/95">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-line material">
         <nav className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 md:px-8">
           <a href="#" className="text-lg font-semibold tracking-tight">
             Pumpwatch
@@ -50,9 +50,9 @@ export default function Home() {
         <RidgeDivider seed={5} hot />
         <Contrast />
 
-        <section id="status" className="relative isolate overflow-hidden border-t border-line px-4 pb-72 pt-24 md:px-8 md:pb-80 md:pt-32">
+        <section id="status" className="relative isolate overflow-hidden border-t border-line pb-72 pt-24 md:pb-80 md:pt-32">
           <RidgeField variant="calm" />
-          <div data-hero-copy className="relative mx-auto max-w-[1400px]">
+          <div data-hero-copy className="relative mx-auto max-w-[1400px] px-4 md:px-8">
             <h2 className={`${heading} max-w-3xl`}>The scorer is next.</h2>
             <p className="vr mt-4 max-w-[52ch] text-pretty leading-relaxed text-mute">
               Each piece is written as a spec before any code. Two are specified. Next is training the
@@ -80,8 +80,8 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-line px-4 py-8 md:px-8">
-        <div className="mx-auto grid max-w-[1400px] gap-2 text-sm text-mute md:grid-cols-2">
+      <footer className="border-t border-line py-8">
+        <div className="mx-auto grid max-w-[1400px] gap-2 px-4 text-sm md:px-8 text-mute md:grid-cols-2">
           <p>All symbols, prices and scores on this page are invented.</p>
           <p className="md:text-right">
             Pumpwatch flags risk signals. It is not investment advice, and it connects to no broker.

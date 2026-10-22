@@ -29,8 +29,8 @@ const FEEDS = [
 export function Feeds() {
   const { W, H } = TRACE_BOX;
   return (
-    <section id="feeds" className="px-4 py-24 md:px-8 md:py-32">
-      <div className="mx-auto max-w-[1400px]">
+    <section id="feeds" className="py-24 md:py-32">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-8">
         <h2 className={`${heading} max-w-3xl`}>What it reads.</h2>
         <p className="mt-4 max-w-[56ch] text-pretty leading-relaxed text-mute">
           Four feeds, matched to the same ticker and the same clock. Every record keeps the time it

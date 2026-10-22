@@ -62,8 +62,8 @@ export function Detector() {
   const factor = explained ? CATALYST_FACTOR : 1;
 
   return (
-    <section id="detector" className="border-t border-line px-4 py-24 md:px-8 md:py-32">
-      <div className="mx-auto grid max-w-[1400px] gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+    <section id="detector" className="border-t border-line py-24 md:py-32">
+      <div className="mx-auto grid max-w-[1400px] gap-12 px-4 md:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
         <div>
           <h2 className={heading}>Try the detector.</h2>
           <p className="mt-4 max-w-[46ch] text-pretty leading-relaxed text-mute">

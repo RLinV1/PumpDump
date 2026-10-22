@@ -76,6 +76,26 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui), system-ui, sans-serif;
+  font-optical-sizing: auto;
+  /* Light text on a dark screen reads tighter than it is, so body gets a touch of tracking. Headings set their own. */
+  letter-spacing: 0.005em;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+dd {
+  text-wrap: pretty;
+}
+
+/* Every number lines up in columns, and a zero never reads as the letter O in a ticker. */
+.font-mono {
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0;
 }
 
 ::selection {
@@ -127,6 +147,19 @@ body {
 
 .seg[data-on="1"] {
   background: var(--amber);
+}
+
+/* Floating chrome is a translucent material, so content scrolls under it. It goes solid when the user asks. */
+.material {
+  background: rgb(11 11 10 / 0.72);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .material {
+    background: var(--bg);
+    backdrop-filter: none;
+  }
 }
 
 /* Hero entrance is CSS only, so the headline paints on first frame and never waits on JavaScript. */
