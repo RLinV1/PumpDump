@@ -10,7 +10,7 @@ The output is a risk signal with its evidence. It is not buy or sell advice.
 
 1. **Ingest.** Connectors publish normalized records to Kafka topics:
    - `raw-posts`: Reddit posts
-   - `ticks`: Alpaca trades, keyed by ticker
+   - `ticks`: Alpaca trade ticks (quotes are out of scope for now), keyed by ticker
    - `raw-news`: Alpaca News, Finnhub and press-release RSS
    - `raw-filings`: SEC EDGAR 8-K filings
    - `ingest-dlq`: records that failed validation

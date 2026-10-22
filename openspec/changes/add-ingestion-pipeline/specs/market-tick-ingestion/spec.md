@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Collects live trades and quotes from Alpaca for a configurable watchlist and publishes them as normalized, ticker-keyed records for joining with social activity.
+Collects live trades from Alpaca for a configurable watchlist and publishes them as normalized, ticker-keyed records for joining with social activity.
 
 ## ADDED Requirements
 
