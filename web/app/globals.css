@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Poster palette: paper and ink with one hazard accent. Sections alternate paper and ink as colour blocks. */
+:root {
+  --paper: #ececea;
+  --ink: #0b0b0b;
+  --accent: #ff4a1c;
+  --mute: #5c5c58;
+  --mute-ink: #a3a39e;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-accent: var(--accent);
+  --color-mute: var(--mute);
+  --color-mute-ink: var(--mute-ink);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bigshoulders), Impact, sans-serif;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  overflow-x: clip;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Film grain: fixed, non-interactive, never on a scrolling container. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+.grid-pattern {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.dot-pattern {
+  background-image: radial-gradient(color-mix(in srgb, var(--paper) 22%, transparent) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink {
+    animation: none;
+  }
+}
+
+/* Sharp range slider for the detector. */
+.range {
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--paper);
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 28px;
+  margin-top: -12px;
+  background: var(--accent);
+  border: 2px solid var(--paper);
+  border-radius: 0;
+}
+
+.range::-moz-range-track {
+  height: 4px;
+  background: var(--paper);
+}
+
+.range::-moz-range-thumb {
+  width: 14px;
+  height: 24px;
+  background: var(--accent);
+  border: 2px solid var(--paper);
+  border-radius: 0;
+}
+
+.range:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.seg[data-on="1"] {
+  background: var(--accent);
+}
