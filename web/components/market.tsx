@@ -365,7 +365,7 @@ export function Market() {
           className="md:col-span-8"
           title={
             <>
-              <span className="font-mono text-sm font-semibold">BYND</span>
+              <span className="font-mono text-sm font-semibold">YZEN</span>
               <span data-k="last" className="font-mono text-sm tabular-nums" style={{ color: dirColor(lastC.c - base0) }}>
                 {price(lastC.c)}
               </span>
@@ -390,7 +390,7 @@ export function Market() {
           </div>
         </Pane>
 
-        <Pane className="md:col-span-4" title="Why BYND" tag="Evidence, simulated">
+        <Pane className="md:col-span-4" title="Why YZEN" tag="Evidence, simulated">
           <div className="flex flex-1 flex-col gap-4 px-4 py-4">
             <div>
               <p data-k="verdict" className={`text-2xl font-semibold leading-tight tracking-[-0.02em] ${verdict0.tone}`}>

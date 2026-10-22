@@ -1,4 +1,4 @@
-// A simulated market that replays one pump forever, shown under an example ticker. It is deterministic (seeded), so the server and the
+// An invented market that replays one pump forever. It is deterministic (seeded), so the server and the
 // client render the same first frame. Nothing here is market data.
 export type Candle = {
   o: number;
