@@ -119,7 +119,7 @@ social, trades, news, filings -> Kafka raw topics -> extractor -> feature-builde
 
 ## 11. Milestones
 
-1. Project skeleton: shared contracts, Docker Compose with Kafka and Postgres.
+1. Project skeleton: shared contracts, Docker Compose with Kafka and Postgres. Milestones M1 to M8 and their tickets are listed in `docs/roadmap.md`.
 2. Ingestion and replay.
 3. Pipeline with the rule scorer, proven by one recorded synthetic day that yields exactly one flag.
 4. Labels, the first trained pump model, and the evaluation gate.

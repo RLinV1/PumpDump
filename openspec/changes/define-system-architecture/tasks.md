@@ -30,4 +30,4 @@
 ## 5. Milestones
 
 - [ ] 5.1 Order of work: ingestion changes, then the pipeline skeleton with rules, then labels and the first model, then the API and alerts, then web integration, then the one-off cloud smoke test
-- [ ] 5.2 Record the milestone status in the README after each is merged
+- [ ] 5.2 Record the milestone status in the README after each is merged, following `docs/roadmap.md`
