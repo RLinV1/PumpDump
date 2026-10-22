@@ -207,7 +207,7 @@ export function Market() {
       const fi = cands.findIndex((c) => c.flag);
       if (fi >= 0) {
         const x = Math.round(cx(fi)) + 0.5;
-        ctx.strokeStyle = "rgb(255 160 40 / 0.75)";
+        ctx.strokeStyle = "rgb(255 93 93 / 0.75)";
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(x, top);
@@ -216,7 +216,7 @@ export function Market() {
         ctx.setLineDash([]);
         const w = 36;
         const bx = Math.min(x + 5, right - w);
-        ctx.fillStyle = C.accent;
+        ctx.fillStyle = C.down;
         ctx.fillRect(bx, top + 2, w, 16);
         ctx.fillStyle = C.bg;
         ctx.textAlign = "center";
@@ -365,7 +365,7 @@ export function Market() {
           className="md:col-span-8"
           title={
             <>
-              <span className="font-mono text-sm font-semibold">YZEN</span>
+              <span className="font-mono text-sm font-semibold">BYND</span>
               <span data-k="last" className="font-mono text-sm tabular-nums" style={{ color: dirColor(lastC.c - base0) }}>
                 {price(lastC.c)}
               </span>
@@ -390,7 +390,7 @@ export function Market() {
           </div>
         </Pane>
 
-        <Pane className="md:col-span-4" title="Why YZEN" tag="Evidence, simulated">
+        <Pane className="md:col-span-4" title="Why BYND" tag="Evidence, simulated">
           <div className="flex flex-1 flex-col gap-4 px-4 py-4">
             <div>
               <p data-k="verdict" className={`text-2xl font-semibold leading-tight tracking-[-0.02em] ${verdict0.tone}`}>

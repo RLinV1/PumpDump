@@ -277,8 +277,8 @@ export function Story() {
                 Flag level
               </p>
               <div data-a="flag" className="absolute inset-y-0 z-[2]" style={{ left: `${tFlag * 100}%` }}>
-                <span className="absolute inset-y-0 w-px bg-accent" />
-                <span className="absolute right-2 top-1 whitespace-nowrap bg-accent px-1.5 py-0.5 font-mono text-xs font-medium uppercase text-bg">
+                <span className="absolute inset-y-0 w-px bg-down" />
+                <span className="absolute right-2 top-1 whitespace-nowrap bg-down px-1.5 py-0.5 font-mono text-xs font-medium uppercase text-bg">
                   Flag raised
                 </span>
               </div>

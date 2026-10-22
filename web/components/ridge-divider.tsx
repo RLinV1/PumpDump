@@ -35,7 +35,7 @@ export function RidgeDivider({ seed = 1, hot = false }: { seed?: number; hot?: b
               key={i}
               d={line(i, seed)}
               fill="var(--bg)"
-              stroke={isHot ? "var(--accent)" : "var(--text)"}
+              stroke={isHot ? "var(--down)" : "var(--text)"}
               strokeOpacity={isHot ? 1 : 0.12 + i * 0.05}
               strokeWidth={isHot ? 1.6 : 1}
               vectorEffect="non-scaling-stroke"

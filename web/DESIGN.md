@@ -3,7 +3,7 @@
 ## 1. Visual Theme & Atmosphere
 A dark, instrument-like market screen. Density is balanced (about 5): one chart and one evidence panel carry the first view, and the rest of the page is spacious, ruled sections. Variance is moderate: a left-aligned headline over a wide two-pane screen, hairline dividers instead of cards. Motion is calm and purposeful (about 5): the simulated market redraws only when something changes, scroll-driven reveals use CSS, and the page scrolls smoothly. The mood is a trading desk at night, without the clutter of one.
 
-All figures on the page are simulated and labelled as such. No third-party brand names appear anywhere.
+All figures on the page are simulated and labelled as such. The only real name is the example ticker symbol BYND, shown with simulated data.
 
 ## 2. Color Palette & Roles
 - **Night Screen** (#0B0B0A) — page background, never pure black

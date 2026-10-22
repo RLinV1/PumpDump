@@ -82,7 +82,7 @@ export default function Home() {
 
       <footer className="border-t border-line py-8">
         <div className="mx-auto grid max-w-[1400px] gap-2 px-4 text-sm md:px-8 text-mute md:grid-cols-2">
-          <p>All symbols, prices and scores on this page are invented.</p>
+          <p>BYND is an example ticker only. Every price, post count and score on this page is simulated and says nothing about real trading.</p>
           <p className="md:text-right">
             Pumpwatch flags risk signals. It is not investment advice, and it connects to no broker.
           </p>
