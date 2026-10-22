@@ -19,3 +19,9 @@ Thumbs.db
 
 # claude local settings
 .claude/settings.local.json
+
+# local tooling output
+.playwright-mcp/
+screenshots/
+.impeccable/
+.claude/launch.json
