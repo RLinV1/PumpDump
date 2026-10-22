@@ -9,7 +9,6 @@ const SYMBOLS = [
   "NRVX", "OXTR", "PRVD", "QLMT", "RZFA", "SKLN", "TBXO", "UVRI", "VNTQ", "WDLX", "XPRA", "YZEN",
   "ZEFA", "ARQX", "BLTR", "CRVN", "DMXO", "ENTK", "FRYX", "GLQM", "HVRN", "IXTA", "JOKR", "KLVD",
 ];
-const HOT = "NRVX";
 const CYCLE = 16;
 
 const smooth = (a: number, b: number, x: number) => {
@@ -31,10 +30,13 @@ const noise = (x: number, i: number, t: number) => {
   return Math.max(0, v) ** 1.5;
 };
 
-export function RidgeField() {
+// "hero" is the live detection: one ticker erupts and is flagged. "calm" is the same field at rest,
+// used to close the page, with the flagged ticker back to a flat line.
+export function RidgeField({ variant = "hero" }: { variant?: "hero" | "calm" }) {
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const label = useRef<HTMLDivElement>(null);
+  const labelSym = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export function RidgeField() {
     const cv = canvas.current!;
     const ctx = cv.getContext("2d")!;
     const hero = el.parentElement!;
+    const calm = variant === "calm";
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const css = getComputedStyle(document.documentElement);
     const bg = css.getPropertyValue("--bg").trim();
@@ -56,29 +59,39 @@ export function RidgeField() {
     let visible = true;
     let pointer: { x: number; y: number } | null = null;
     const hotRow = () => Math.round(rows * 0.64);
+    const hotSymbol = () => SYMBOLS[hotRow() % SYMBOLS.length];
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
       W = el.clientWidth;
       H = el.clientHeight;
       cv.width = W * dpr;
       cv.height = H * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const small = W < 768;
-      rows = small ? 24 : 36;
-      top0 = H * (small ? 0.62 : 0.52);
+      // Fewer lines on low-core machines; the effect reads the same.
+      const lite = (navigator.hardwareConcurrency || 8) <= 4;
+      rows = calm ? (small ? 16 : 28) : small || lite ? 24 : 36;
+
+      // The field starts below the headline copy, wherever that ends on this screen.
+      const copy = hero.querySelector<HTMLElement>("[data-hero-copy]");
+      const copyBottom = copy ? copy.getBoundingClientRect().bottom - hero.getBoundingClientRect().top : 0;
+      top0 = calm ? Math.max(copyBottom + 56, H * 0.5) : Math.max(copyBottom + 40, H * (small ? 0.46 : 0.5));
       spacing = (H * 0.96 - top0) / (rows - 1);
       rowAmp = Array.from({ length: rows }, (_, i) => 0.55 + 0.45 * Math.abs(Math.sin(i * 12.9898)));
+      if (labelSym.current) labelSym.current.textContent = hotSymbol();
       draw(reduce ? 8 : performance.now() / 1000);
     };
 
-    const draw = (t: number) => {
+    const draw = (time: number) => {
       ctx.clearRect(0, 0, W, H);
+      const t = calm ? time * 0.6 : time;
       const step = W < 768 ? 10 : 7;
-      const A = reduce ? 1 : envelope(t);
+      const A = calm ? 0 : reduce ? 1 : envelope(t);
       const hot = hotRow();
       const xc = 0.7;
       const peak = H * (W < 768 ? 0.18 : 0.27);
+      const ampScale = calm ? 0.6 : 1;
       const hoverRow = pointer ? Math.round((pointer.y - top0) / spacing) : -1;
       let hotTop = 0;
       let tipText = "";
@@ -86,7 +99,7 @@ export function RidgeField() {
       for (let i = 0; i < rows; i++) {
         const base = top0 + i * spacing;
         const edge = new Path2D();
-        const amp = rowAmp[i] * spacing * 3.1;
+        const amp = rowAmp[i] * spacing * 3.1 * ampScale;
         let first = true;
         let tipN = 0;
 
@@ -95,7 +108,7 @@ export function RidgeField() {
           const win = smooth(0, 0.16, u) * smooth(1, 0.84, u);
           const n = noise(x, i, t);
           let y = base - n * amp * win;
-          if (i === hot) {
+          if (i === hot && !calm) {
             const b = Math.exp(-(((u - xc) / 0.035) ** 2)) + 0.5 * Math.exp(-(((u - xc + 0.07) / 0.06) ** 2));
             y -= b * A * peak;
             if (Math.abs(u - xc) < step / W) hotTop = y;
@@ -109,42 +122,54 @@ export function RidgeField() {
           }
         }
 
+        // A ridge only has to hide the lines behind it, and those never dip below this row's own baseline.
+        // Filling just down to the baseline (not to the canvas floor) cuts the painted area by an order of magnitude.
         const fill = new Path2D(edge);
-        fill.lineTo(W + step, H + 10);
-        fill.lineTo(-step, H + 10);
+        fill.lineTo(W + step, base + 2);
+        fill.lineTo(-step, base + 2);
         fill.closePath();
         ctx.fillStyle = bg;
         ctx.fill(fill);
 
-        const depth = 0.16 + 0.5 * (i / (rows - 1));
+        const depth = (calm ? 0.1 : 0.16) + (calm ? 0.34 : 0.5) * (i / (rows - 1));
         if (i === hot) {
+          // The glow is a wide, faint stroke under the line. Canvas shadowBlur does the same job at many times the cost.
+          ctx.globalAlpha = calm ? 0.12 : 0.1 + A * 0.16;
           ctx.strokeStyle = amber;
-          ctx.lineWidth = 1.5 + A * 1.2;
-          ctx.shadowColor = amber;
-          ctx.shadowBlur = 6 + A * 14;
+          ctx.lineWidth = calm ? 5 : 5 + A * 5;
+          ctx.stroke(edge);
+          ctx.globalAlpha = 1;
+          ctx.lineWidth = calm ? 1.4 : 1.5 + A * 1.2;
+          ctx.strokeStyle = amber;
         } else if (i === hoverRow) {
           ctx.strokeStyle = "rgb(241 237 226)";
           ctx.lineWidth = 1.6;
-          ctx.shadowBlur = 0;
         } else {
           ctx.strokeStyle = `rgb(241 237 226 / ${depth})`;
           ctx.lineWidth = 1;
-          ctx.shadowBlur = 0;
         }
         ctx.stroke(edge);
-        ctx.shadowBlur = 0;
 
-        if (i % 3 === 0 && W >= 768) {
-          ctx.fillStyle = "rgb(154 148 134 / 0.55)";
-          ctx.font = "10px var(--font-data), monospace";
+        // The flagged row always carries its own label, in amber, so the chip and the line never disagree.
+        if (!calm && W >= 768 && (i % 3 === 0 || i === hot)) {
+          ctx.fillStyle = i === hot ? amber : "rgb(154 148 134 / 0.55)";
+          ctx.font = `${i === hot ? 600 : 400} 10px var(--font-data), monospace`;
           ctx.fillText(SYMBOLS[i % SYMBOLS.length], 16, base - 4);
         }
         if (i === hoverRow) tipText = `${SYMBOLS[i % SYMBOLS.length]}  ${(1 + tipN * 4).toFixed(1)}x normal chatter`;
       }
 
       if (label.current) {
-        label.current.style.transform = `translate(${xc * W + 18}px, ${hotTop - 6}px)`;
-        label.current.style.opacity = String(smooth(0.45, 0.8, A));
+        if (calm) {
+          label.current.style.opacity = "0";
+        } else {
+          // Keep the chip on screen: if it would run past the right edge, put it left of the peak instead.
+          const w = label.current.offsetWidth;
+          let x = xc * W + 18;
+          if (x + w > W - 8) x = Math.max(8, xc * W - 18 - w);
+          label.current.style.transform = `translate(${x}px, ${hotTop - 6}px)`;
+          label.current.style.opacity = String(smooth(0.45, 0.8, A));
+        }
       }
       if (tip.current) {
         if (pointer && hoverRow >= 0 && hoverRow < rows && hoverRow !== hot) {
@@ -166,8 +191,13 @@ export function RidgeField() {
       pointer = null;
       if (reduce) draw(8);
     };
+    // The field drifts slowly, so 30 frames a second reads the same as 60 at half the cost.
+    let last = 0;
     const tick = () => {
-      if (visible) draw(performance.now() / 1000);
+      const now = performance.now();
+      if (!visible || document.hidden || now - last < 32) return;
+      last = now;
+      draw(now / 1000);
     };
 
     const ro = new ResizeObserver(resize);
@@ -185,18 +215,18 @@ export function RidgeField() {
       hero.removeEventListener("pointerleave", onLeave);
       gsap.ticker.remove(tick);
     };
-  }, []);
+  }, [variant]);
 
   return (
     <div ref={wrap} aria-hidden className="absolute inset-0">
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       <div
         ref={label}
-        className="pointer-events-none absolute left-0 top-0 flex items-center gap-2 whitespace-nowrap font-mono text-xs opacity-0"
+        className="pointer-events-none absolute left-0 top-0 flex items-center gap-2 whitespace-nowrap bg-bg/80 pr-2 font-mono text-xs opacity-0"
       >
         <span className="bg-amber px-1.5 py-0.5 font-medium uppercase text-bg">Flag</span>
-        <span className="text-amber">{HOT}</span>
-        <span className="text-mute">chatter far above normal</span>
+        <span ref={labelSym} className="text-amber" />
+        <span className="hidden text-mute md:inline">chatter far above normal</span>
       </div>
       <div
         ref={tip}

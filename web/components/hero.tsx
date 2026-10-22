@@ -7,7 +7,7 @@ export function Hero() {
   return (
     <section className="relative isolate min-h-[100dvh] overflow-hidden">
       <RidgeField />
-      <div className="relative mx-auto max-w-[1400px] px-4 pt-24 md:px-8">
+      <div data-hero-copy className="relative mx-auto max-w-[1400px] px-4 pt-24 md:px-8">
         <h1 className="rise max-w-[14ch] text-balance text-[clamp(2.6rem,6.4vw,6rem)] font-semibold leading-[1.02] tracking-[-0.04em]">
           See the <span className="text-amber">pump</span> before it dumps.
         </h1>

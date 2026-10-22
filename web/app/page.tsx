@@ -2,10 +2,10 @@ import { Contrast } from "@/components/contrast";
 import { Detector } from "@/components/detector";
 import { Feeds } from "@/components/feeds";
 import { Hero } from "@/components/hero";
-import { Rise, SplitHeading } from "@/components/reveal";
+import { RidgeDivider } from "@/components/ridge-divider";
+import { RidgeField } from "@/components/ridge-field";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { Story } from "@/components/story";
-import { VantaBg } from "@/components/vanta-bg";
 import { REPO_URL, btnPrimary, heading } from "@/lib/ui";
 
 const STATUS = [
@@ -18,7 +18,7 @@ const STATUS = [
 export default function Home() {
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-line bg-bg/80 backdrop-blur">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-line bg-bg/95">
         <nav className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 md:px-8">
           <a href="#" className="text-lg font-semibold tracking-tight">
             Pumpwatch
@@ -44,44 +44,44 @@ export default function Home() {
       <main>
         <Hero />
         <Feeds />
+        <RidgeDivider seed={2} />
         <Story />
         <Detector />
+        <RidgeDivider seed={5} hot />
         <Contrast />
 
-        <section id="status" className="relative isolate overflow-hidden border-t border-line px-4 py-24 md:px-8 md:py-40">
-          <VantaBg />
-          <div className="relative mx-auto max-w-[1400px]">
-            <SplitHeading className={`${heading} max-w-3xl`}>The scorer is next.</SplitHeading>
-            <Rise className="mt-10">
-              <p data-rise className="max-w-[52ch] leading-relaxed text-mute">
-                Each piece is written as a spec before any code. Two are specified, two are still to
-                build.
-              </p>
-              <div data-rise className="mt-8 grid grid-cols-4 gap-[3px]" aria-hidden>
-                {STATUS.map((s) => (
-                  <span key={s.name} className={`h-1.5 ${s.done ? "bg-amber" : "bg-line-strong"}`} />
-                ))}
-              </div>
-              <dl data-rise className="mt-4 grid gap-6 md:grid-cols-4">
-                {STATUS.map((s) => (
-                  <div key={s.name}>
-                    <dt className="font-medium">{s.name}</dt>
-                    <dd className={`font-mono text-xs ${s.done ? "text-amber" : "text-mute"}`}>{s.state}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div data-rise className="mt-10">
-                <a href={REPO_URL} className={btnPrimary}>
-                  View on GitHub
-                </a>
-              </div>
-            </Rise>
+        <section id="status" className="relative isolate overflow-hidden border-t border-line px-4 pb-72 pt-24 md:px-8 md:pb-80 md:pt-32">
+          <RidgeField variant="calm" />
+          <div data-hero-copy className="relative mx-auto max-w-[1400px]">
+            <h2 className={`${heading} max-w-3xl`}>The scorer is next.</h2>
+            <p className="vr mt-4 max-w-[52ch] text-pretty leading-relaxed text-mute">
+              Each piece is written as a spec before any code. Two are specified. Next is training the
+              scorer on labelled pump cases, then wiring alerts.
+            </p>
+            <div className="vr mt-8 grid grid-cols-4 gap-[3px]" aria-hidden>
+              {STATUS.map((s) => (
+                <span key={s.name} className={`h-1.5 ${s.done ? "bg-amber" : "bg-line-strong"}`} />
+              ))}
+            </div>
+            <dl className="vr mt-4 grid gap-6 md:grid-cols-4">
+              {STATUS.map((s) => (
+                <div key={s.name}>
+                  <dt className="font-medium">{s.name}</dt>
+                  <dd className={`text-sm ${s.done ? "text-amber" : "text-mute"}`}>{s.state}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="vr mt-10">
+              <a href={REPO_URL} className={btnPrimary}>
+                View on GitHub
+              </a>
+            </div>
           </div>
         </section>
       </main>
 
       <footer className="border-t border-line px-4 py-8 md:px-8">
-        <div className="mx-auto grid max-w-[1400px] gap-2 text-xs text-mute md:grid-cols-2">
+        <div className="mx-auto grid max-w-[1400px] gap-2 text-sm text-mute md:grid-cols-2">
           <p>All symbols, prices and scores on this page are invented.</p>
           <p className="md:text-right">
             Pumpwatch flags risk signals. It is not investment advice, and it connects to no broker.

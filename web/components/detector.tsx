@@ -4,19 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { CATALYST_FACTOR, WEIGHTS, scoreOf, verdictOf, type Inputs } from "@/lib/verdict";
 import { heading } from "@/lib/ui";
-import { SplitHeading } from "./reveal";
 
 const CONTROLS = [
   { key: "accounts", label: "Posts from new accounts", hint: "Share of posts from accounts under 30 days old" },
   { key: "dupes", label: "Copy-paste posts", hint: "Share of posts with near-identical text" },
   { key: "volume", label: "Volume spike", hint: "Trading volume compared with a normal day" },
 ] as const;
-
-const TERMS = [
-  { term: "Chatter", def: "How much people are talking about a ticker, compared with a normal day." },
-  { term: "Catalyst", def: "A filing or news story that gives a price move a real reason." },
-  { term: "Flag", def: "Chatter and price are both far above normal, and no catalyst explains them." },
-];
 
 const SEGMENTS = 24;
 
@@ -29,11 +22,11 @@ export function Detector() {
 
   const numberEl = useRef<HTMLSpanElement>(null);
   const segs = useRef<HTMLDivElement>(null);
-  const verdictEl = useRef<HTMLSpanElement>(null);
+  const verdictEl = useRef<HTMLDivElement>(null);
   const shown = useRef({ v: 0 });
   const lastLabel = useRef("");
 
-  // The number counts to the new score and the bar follows it, so a slider drag reads as one continuous change.
+  // The bar counts to the new score so a slider drag reads as one continuous change.
   // The verdict only animates when its label actually changes.
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -56,8 +49,8 @@ export function Detector() {
     if (lastLabel.current && lastLabel.current !== verdict.label && verdictEl.current) {
       gsap.fromTo(
         verdictEl.current,
-        { autoAlpha: 0, y: 4 },
-        { autoAlpha: 1, y: 0, duration: 0.18, ease: "power3.out" },
+        { autoAlpha: 0, y: 6 },
+        { autoAlpha: 1, y: 0, duration: 0.2, ease: "power3.out" },
       );
     }
     lastLabel.current = verdict.label;
@@ -72,102 +65,93 @@ export function Detector() {
     <section id="detector" className="border-t border-line px-4 py-24 md:px-8 md:py-32">
       <div className="mx-auto grid max-w-[1400px] gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
         <div>
-          <SplitHeading className={heading}>Try the detector.</SplitHeading>
-          <p className="mt-4 max-w-[44ch] leading-relaxed text-mute">
-            Move the sliders and watch the score react. These weights are a toy for illustration.
-            The real scorer is a trained model and is not built yet.
+          <h2 className={heading}>Try the detector.</h2>
+          <p className="mt-4 max-w-[46ch] text-pretty leading-relaxed text-mute">
+            Move the sliders and watch the verdict change. Chatter is how much people are talking
+            about a ticker compared with a normal day. A catalyst is a filing or news story that gives
+            a move a real reason. These weights are a toy; the real scorer is a trained model and is
+            not built yet.
           </p>
-          <dl className="mt-10 grid gap-5">
-            {TERMS.map((t) => (
-              <div key={t.term} className="border-l border-amber pl-4">
-                <dt className="font-medium">{t.term}</dt>
-                <dd className="text-sm leading-relaxed text-mute">{t.def}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
 
-        <div className="border border-line bg-surface p-5 md:p-8">
-          <div className="grid gap-x-10 gap-y-6 md:grid-cols-2">
-            <div className="grid content-start gap-5">
-              {CONTROLS.map((c) => (
-                <label key={c.key} className="block">
-                  <span className="flex items-baseline justify-between gap-4">
-                    <span className="text-sm font-medium">{c.label}</span>
-                    <span className="font-mono text-sm tabular-nums text-amber">{values[c.key]}</span>
-                  </span>
-                  <span className="block text-xs text-mute">{c.hint}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={values[c.key]}
-                    onChange={(e) => setValues((v) => ({ ...v, [c.key]: Number(e.target.value) }))}
-                    className="range mt-1"
-                  />
-                </label>
-              ))}
-
-              <label className="flex cursor-pointer items-start gap-3 border border-line-strong p-3 transition-colors duration-150 has-[:checked]:border-amber has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-amber">
-                <input
-                  type="checkbox"
-                  checked={explained}
-                  onChange={(e) => setExplained(e.target.checked)}
-                  className="mt-0.5 size-4 shrink-0 accent-amber"
-                />
-                <span>
-                  <span className="block text-sm font-medium">A filing or news story explains the move</span>
-                  <span className="block text-xs text-mute">It lowers the score and never clears it.</span>
-                </span>
-              </label>
+        <div className="grid gap-x-12 gap-y-8 border border-line bg-surface p-5 md:grid-cols-2 md:p-8">
+          {/* On a phone the result stays pinned above the sliders, so dragging one shows its effect. */}
+          <div className="max-md:sticky max-md:top-14 max-md:z-10 max-md:order-first max-md:-mx-5 max-md:border-b max-md:border-line max-md:bg-surface max-md:px-5 max-md:pb-4 md:order-last md:border-l md:border-line md:pl-12">
+            <div ref={verdictEl}>
+              <p className={`text-[clamp(2rem,3.4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em] ${verdict.tone}`}>
+                {verdict.label}.
+              </p>
+              <p className="mt-2 min-h-[2.75rem] max-w-[34ch] text-pretty text-sm leading-relaxed text-mute">{verdict.note}</p>
             </div>
 
-            <div className="flex flex-col justify-between gap-6 border-t border-line pt-6 md:border-l md:border-t-0 md:pl-10 md:pt-0">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wide text-mute">Risk score</p>
-                <p className="mt-1 text-[clamp(6rem,11vw,9.5rem)] font-semibold leading-[0.85] tracking-[-0.06em] tabular-nums">
-                  <span ref={numberEl}>{score}</span>
-                </p>
-                <span
-                  ref={verdictEl}
-                  className={`mt-4 inline-block px-3 py-1.5 font-mono text-xs font-medium uppercase tracking-wide ${verdict.style}`}
-                >
-                  {verdict.label}
-                </span>
+            <div className="mt-4 flex items-center gap-4">
+              <div ref={segs} className="grid flex-1 grid-cols-24 gap-[3px]" aria-hidden>
+                {Array.from({ length: SEGMENTS }, (_, i) => (
+                  <span key={i} className="seg h-2 bg-line-strong" data-on="0" />
+                ))}
               </div>
+              <span ref={numberEl} className="w-7 text-right font-mono text-sm tabular-nums">
+                {score}
+              </span>
+            </div>
 
-              <div>
-                <div ref={segs} className="grid grid-cols-24 gap-[3px]" aria-hidden>
-                  {Array.from({ length: SEGMENTS }, (_, i) => (
-                    <span key={i} className="seg h-2 bg-line-strong" data-on="0" />
-                  ))}
-                </div>
-                <dl className="mt-5 grid gap-3 font-mono text-xs">
-                  {CONTROLS.map((c) => {
-                    const part = WEIGHTS[c.key] * values[c.key] * factor;
-                    const max = WEIGHTS[c.key] * 100;
-                    return (
-                      <div key={c.key}>
-                        <div className="flex justify-between text-mute">
-                          <dt>{c.label}</dt>
-                          <dd className="tabular-nums text-text">{Math.round(part)}</dd>
-                        </div>
-                        <div className="mt-1 h-px bg-line-strong">
-                          <div
-                            className="h-px bg-amber transition-[width] duration-200 ease-out"
-                            style={{ width: `${(part / max) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="flex justify-between border-t border-line pt-2 text-mute">
-                    <dt>Catalyst</dt>
-                    <dd className="tabular-nums text-text">{explained ? `x${CATALYST_FACTOR}` : "none found"}</dd>
+            <dl className="mt-5 hidden gap-3 text-xs md:grid">
+              {CONTROLS.map((c) => {
+                const part = WEIGHTS[c.key] * values[c.key] * factor;
+                const max = WEIGHTS[c.key] * 100;
+                return (
+                  <div key={c.key}>
+                    <div className="flex justify-between text-mute">
+                      <dt>{c.label}</dt>
+                      <dd className="font-mono tabular-nums text-text">{Math.round(part)}</dd>
+                    </div>
+                    <div className="mt-1 h-px bg-line-strong">
+                      <div
+                        className="h-px bg-amber transition-[width] duration-200 ease-out"
+                        style={{ width: `${(part / max) * 100}%` }}
+                      />
+                    </div>
                   </div>
-                </dl>
+                );
+              })}
+              <div className="flex justify-between border-t border-line pt-2 text-mute">
+                <dt>Catalyst</dt>
+                <dd className="font-mono tabular-nums text-text">{explained ? `x${CATALYST_FACTOR}` : "none found"}</dd>
               </div>
-            </div>
+            </dl>
+          </div>
+
+          <div className="grid content-start gap-5">
+            {CONTROLS.map((c) => (
+              <label key={c.key} className="block">
+                <span className="flex items-baseline justify-between gap-4">
+                  <span className="text-sm font-medium">{c.label}</span>
+                  <span className="font-mono text-sm tabular-nums text-amber">{values[c.key]}</span>
+                </span>
+                <span className="block text-xs text-mute">{c.hint}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={values[c.key]}
+                  onChange={(e) => setValues((v) => ({ ...v, [c.key]: Number(e.target.value) }))}
+                  className="range mt-1"
+                />
+              </label>
+            ))}
+
+            <label className="flex cursor-pointer items-start gap-3 border border-line-strong p-3 transition-colors duration-150 has-[:checked]:border-amber">
+              <input
+                type="checkbox"
+                checked={explained}
+                onChange={(e) => setExplained(e.target.checked)}
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span>
+                <span className="block text-sm font-medium">A filing or news story explains the move</span>
+                <span className="block text-xs text-mute">It lowers the score and never clears it.</span>
+              </span>
+            </label>
           </div>
           <p aria-live="polite" className="sr-only">
             Risk score {score}, {verdict.label}

@@ -31,6 +31,44 @@
 
 html {
   background: var(--bg);
+  scrollbar-color: var(--line-strong) var(--bg);
+  scrollbar-width: thin;
+}
+
+/* Browser surfaces carry the palette too: caret, native controls, focus ring and link underlines. */
+input,
+textarea {
+  caret-color: var(--amber);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--amber);
+}
+
+:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 3px;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mute);
 }
 
 body {
@@ -112,6 +150,15 @@ body {
   }
 }
 
+@keyframes wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 .rise {
   animation: rise 0.7s var(--ease-out) both;
   animation-delay: var(--d, 0ms);
@@ -137,6 +184,12 @@ body {
       animation: grow linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 70%;
+    }
+
+    .vclip {
+      animation: wipe linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 85%;
     }
   }
 }

@@ -1,8 +1,27 @@
 // Verdicts use amber only. Green and red are reserved for price direction, so a risk label never reads as buy or sell.
 export function verdictOf(score: number) {
-  if (score >= 65) return { label: "Pump likely", style: "bg-amber text-bg" };
-  if (score >= 35) return { label: "Watch", style: "border border-amber text-amber" };
-  return { label: "Low risk", style: "border border-line-strong text-mute" };
+  if (score >= 65) {
+    return {
+      label: "Pump likely",
+      tone: "text-amber",
+      style: "bg-amber text-bg",
+      note: "Chatter and price are far above normal, and nothing explains them.",
+    };
+  }
+  if (score >= 35) {
+    return {
+      label: "Watch",
+      tone: "text-text",
+      style: "border border-amber text-amber",
+      note: "Elevated, or explained only in part. Worth a look.",
+    };
+  }
+  return {
+    label: "Low risk",
+    tone: "text-mute",
+    style: "border border-line-strong text-mute",
+    note: "Not enough signal to flag.",
+  };
 }
 
 // Toy weights for illustration only. The real scorer is a trained model and is not built yet.
