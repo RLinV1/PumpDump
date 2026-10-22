@@ -174,22 +174,6 @@ dd {
   }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-.field-in {
-  animation: fade-in 1.2s ease-out 0.3s both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .field-in {
-    animation: none;
-  }
-}
-
 @keyframes grow {
   from {
     transform: scaleX(0);
