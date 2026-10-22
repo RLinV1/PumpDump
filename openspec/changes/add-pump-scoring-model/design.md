@@ -6,6 +6,22 @@ See proposal.md for why. The system architecture is in `define-system-architectu
 
 The problem is a classification of ticker-time windows into pump, hype, news-backed move and normal. The signal is the combination: a pump has chatter that is new-account heavy and copy-pasted, a price and volume jump, and an absence of any filing or news that explains it. Hype has chatter and a jump but may have genuine accounts and varied text. A news-backed move has a catalyst. No single feature separates them, which is why a learned model is justified, and why the rule baseline must be beaten rather than assumed.
 
+## Model types you need
+
+| Role | Type | Tool | Why |
+| --- | --- | --- | --- |
+| Main score | Supervised gradient-boosted decision trees (binary or four-class classifier) | LightGBM | Small tabular data, few labels, fast on a CPU, supports monotone constraints |
+| Cold start, before labels exist | Unsupervised anomaly detection: z-scores per feature against its own history, combined by rules, optionally Isolation Forest | scikit-learn | Works with no labels, transparent |
+| Calibration | Isotonic regression | scikit-learn | Makes a score mean an observed rate |
+| Promotional-language feature | Logistic regression on sentence embeddings | scikit-learn with `all-MiniLM-L6-v2` | Small and free; a large language model is not needed |
+| Near-duplicate posts | SimHash (not a learned model) | Plain code | Cheap, deterministic, runs in the stream |
+
+Not needed: deep neural networks, a fine-tuned transformer, reinforcement learning, or any paid model API.
+
+## Data availability, honestly
+
+Free sources do not provide historical social data, so a model cannot be trained on social features for past pumps. The plan is two stages. Version 1 is trained on market and catalyst features, which are available for past episodes from free historical bars and filings. Social features are recorded live from the day recording starts, and a version that includes them is trained once enough recorded days exist. Until then the social features feed the rule baseline and the evidence panel, not the trained model. Sources whose terms forbid training on their content are marked live-scoring only and are excluded from training data.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -39,6 +55,7 @@ The problem is a classification of ticker-time windows into pump, hype, news-bac
 
 ## Risks / Trade-offs
 
+- [No free historical social data, so social features cannot be trained on past pumps] → Two-stage plan above, and record live data from day one.
 - [Too few labeled pumps to train or test] → Minimum-count gate, honest reporting, ship rules if the model cannot be justified, and grow the dataset over time.
 - [Label noise: enforcement dates are broader than the real pump] → Store confidence per episode, widen windows conservatively, and report sensitivity to window choice.
 - [Concept drift: pump playbooks change] → Time-based evaluation shows decay, and the promotion gate allows retraining on recent data.

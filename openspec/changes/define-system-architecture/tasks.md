@@ -4,6 +4,8 @@
 - [ ] 1.2 Define the flag evidence structure (score, model version, top contributors, post and trade counts, catalyst lookback result)
 - [ ] 1.3 Add a run-id header and topic-prefix convention for replay isolation
 
+- [ ] 1.4 Keep `docs/resources-needed.md` current with every account, key, tool, machine, model and dataset a milestone needs
+
 ## 2. Pipeline skeleton
 
 - [ ] 2.1 Add `extractor`, `feature-builder`, `scorer` and `flagger` Spring Boot modules wired through Kafka topics, each reading and writing the shared records

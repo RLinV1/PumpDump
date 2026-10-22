@@ -34,6 +34,13 @@ The system SHALL keep each source's request rate below its published limit with 
 - **WHEN** more requests are queued than the limit allows in a minute
 - **THEN** they are spaced to stay under the limit
 
+### Requirement: Social source permissions
+The system SHALL record for each social source whether its terms allow scoring, storing derived data and training models, SHALL keep sources that forbid training out of every training set, and SHALL keep paid or unconfirmed social sources disabled by default.
+
+#### Scenario: Source forbids training
+- **WHEN** a social source is registered as not permitting model training
+- **THEN** its records feed live scoring only and are excluded from the training export
+
 ### Requirement: Derived social data only
 The system SHALL store, for social content, only the post identifier, the author-age bucket, a text fingerprint, linked tickers and timestamps, SHALL NOT store raw text beyond a configured retention of zero or more days, and SHALL purge a record when the source reports its deletion.
 

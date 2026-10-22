@@ -4,7 +4,7 @@ Audit of whether every dependency, data source and model in Pumpwatch is free to
 
 ## Result in one line
 
-Everything can run at no cost for a non-commercial portfolio project, but three things need care: social data terms, one model that must not be used, and a market-data plan that covers only a small live watchlist.
+Everything can run at no cost for a non-commercial portfolio project, but four things need care: social data terms (and the fact that free sources give no historical social data to train on), one model that must not be used, a market-data plan that covers only a small live watchlist, and several terms that could not be read from official pages.
 
 ## Web app packages (verified from the lockfile)
 
@@ -25,7 +25,10 @@ Everything can run at no cost for a non-commercial portfolio project, but three 
 | SEC EDGAR | Free | Official page: 10 requests per second, descriptive User-Agent required, automated crawling outside policy is managed | Stay well under the limit. |
 | Alpaca market data | Free plan: IEX only, 30 live symbols, historical limited to data older than 15 minutes, 200 calls per minute | Official docs page | Volume is understated because it is one venue. Whether the news API is on the free plan was not stated on any official page read. The news data comes from a third-party provider and redistribution terms were not stated. Unverified. |
 | Finnhub | Free key, 60 calls per minute reported | Third-party sources only. The official pricing and documentation pages returned no plan details. | Reported as personal and non-commercial. Unverified. |
-| Reddit data API | Free tier reported for non-commercial use, about 100 queries per minute with OAuth | Third-party sources only. The official terms pages were not reachable (blocked). | Commercial use reportedly needs a contract. Rules on storing content and on training models were not read. Treat conservatively: store derived data only, show no raw posts, and do not redistribute. Unverified. |
+| Reddit data API | Free tier reported for non-commercial use, about 100 queries per minute with OAuth | Third-party sources only. The official terms pages were not reachable (blocked). | Reported rules: new API tokens need approval, scraping needs prior written consent, training a model on Reddit content needs the rightsholders' permission, and commercial use needs a contract. Treat as live-scoring only, keep its content out of training data, store derived data only and do not redistribute. Unverified. |
+| X (Twitter) API | Reported as paid, pay-per-use since February 2026 | Third-party sources only | Not free. Disabled by default. |
+| StockTwits API | Unclear | Directory sites only | Whether new developers can register in 2026 could not be confirmed. Check the official developer page. |
+| Bluesky Jetstream | Free public firehose, no login | Third-party sources | The feed is not an official part of the protocol and may change. No rate or terms text was found. The finance audience is small. |
 | Press-release feeds | Free public feeds | Not checked in this audit | Check each feed's terms and rate behavior before use. |
 
 ## Models

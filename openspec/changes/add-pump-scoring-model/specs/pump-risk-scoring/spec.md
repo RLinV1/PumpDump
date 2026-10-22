@@ -6,6 +6,20 @@ Turns a ticker's features into a versioned risk score with an explanation, using
 
 ## ADDED Requirements
 
+### Requirement: Model family
+The system SHALL use a supervised gradient-boosted decision-tree classifier as its main scoring model, trained on windowed tabular features, and SHALL NOT depend on a neural network or a hosted language model for the score.
+
+#### Scenario: Scorer inputs
+- **WHEN** the model scores a window
+- **THEN** its inputs are the numeric social, market and catalyst features for that window and nothing else
+
+### Requirement: Cold-start baseline without labels
+The system SHALL score with an unsupervised anomaly baseline (z-scores of each feature against its own history, combined by fixed rules) until enough labeled episodes exist to train the classifier.
+
+#### Scenario: No labeled data yet
+- **WHEN** the dataset has fewer episodes than the minimum
+- **THEN** the system scores with the anomaly baseline and marks every score as rules
+
 ### Requirement: Versioned score
 The system SHALL emit, for each ticker and window, a score from 0 to 100 together with the scorer type (rules or model) and the model version used.
 

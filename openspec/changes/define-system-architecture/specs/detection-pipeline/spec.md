@@ -51,3 +51,10 @@ The system SHALL keep scoring when one source is unavailable, and SHALL mark eve
 #### Scenario: Social feed down
 - **WHEN** the social connector reports unhealthy for five minutes
 - **THEN** scoring continues from trades, news and filings, and each score carries a stale-source marker for social features
+
+### Requirement: Documented resources
+The project SHALL keep a resource list naming every account, key, tool, machine size, model and dataset needed to build and run each milestone, with its cost for a non-commercial project.
+
+#### Scenario: Starting a milestone
+- **WHEN** a contributor starts a milestone
+- **THEN** the resource list tells them every account and tool they need before they begin
