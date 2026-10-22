@@ -201,7 +201,7 @@ export function Story() {
               <Dot k="chatter" tone="bg-amber" />
               <p
                 data-a="chatter"
-                className="absolute top-1 z-[2] whitespace-nowrap font-mono text-xs text-amber"
+                className="absolute top-1 z-[2] whitespace-nowrap text-xs text-amber"
                 style={{ right: `calc(${(1 - tChatterPeak) * 100}% + 40px)` }}
               >
                 Same pitch, new accounts
@@ -225,7 +225,7 @@ export function Story() {
               <Dot k="price" tone="bg-text" />
               <p
                 data-a="price"
-                className="absolute bottom-1 z-[2] whitespace-nowrap font-mono text-xs text-text"
+                className="absolute bottom-1 z-[2] whitespace-nowrap text-xs text-text"
                 style={{ right: `calc(${(1 - tPricePeak) * 100}% + 40px)` }}
               >
                 Price follows
@@ -250,7 +250,7 @@ export function Story() {
               <Cover />
               <div
                 data-a="news"
-                className="absolute inset-y-2 z-[2] flex items-center justify-start border border-dashed border-amber/60 pl-3 font-mono text-xs text-amber"
+                className="absolute inset-y-2 z-[2] flex items-center justify-start border border-dashed border-amber/60 pl-3 text-xs text-amber"
                 style={{ left: `${tChatter * 100}%`, right: "6%" }}
               >
                 No news. No filing.
@@ -273,7 +273,7 @@ export function Story() {
               </svg>
               <Cover />
               <Dot k="score" tone="bg-amber" />
-              <p className="absolute left-0 z-[2] font-mono text-xs text-mute" style={{ top: `calc(${THRESHOLD_Y}% - 18px)` }}>
+              <p className="absolute left-0 z-[2] text-xs text-mute" style={{ top: `calc(${THRESHOLD_Y}% - 18px)` }}>
                 Flag level
               </p>
               <div data-a="flag" className="absolute inset-y-0 z-[2]" style={{ left: `${tFlag * 100}%` }}>

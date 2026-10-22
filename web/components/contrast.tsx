@@ -55,7 +55,7 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
           <>
             <span className="absolute inset-y-0 w-px bg-amber" style={{ left: `${tFiling * 100}%` }} />
             <span
-              className="absolute top-1/2 -translate-y-1/2 font-mono text-xs text-amber"
+              className="absolute top-1/2 -translate-y-1/2 text-xs text-amber"
               style={{ left: `calc(${tFiling * 100}% + 8px)` }}
             >
               8-K filed
@@ -63,7 +63,7 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
           </>
         ) : (
           <span
-            className="absolute inset-y-1.5 flex items-center justify-center border border-dashed border-amber/60 font-mono text-xs text-amber"
+            className="absolute inset-y-1.5 flex items-center justify-center border border-dashed border-amber/60 text-xs text-amber"
             style={{ left: `${tChatter * 100}%`, right: "6%" }}
           >
             No news. No filing.

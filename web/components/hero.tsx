@@ -18,11 +18,11 @@ export function Hero() {
             tickers moving on hype alone and forecasts how far each one may swing.
           </p>
           <div className="rise flex flex-wrap gap-3" style={{ "--d": "140ms" } as React.CSSProperties}>
-            <a href={REPO_URL} className={btnPrimary}>
-              View on GitHub
-            </a>
-            <a href="#detector" className={btnGhost}>
+            <a href="#detector" className={btnPrimary}>
               Try the detector
+            </a>
+            <a href={REPO_URL} className={btnGhost}>
+              View on GitHub
             </a>
           </div>
         </div>
