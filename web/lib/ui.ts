@@ -2,8 +2,11 @@
 // client module receives a client reference, not the string.
 export const REPO_URL = "https://github.com/RLinV1/PumpDump";
 
-export const keyBtn =
-  "inline-flex h-11 items-center border border-amber px-5 text-sm font-bold uppercase tracking-wide transition-[background-color,color,scale] duration-150 ease-out active:scale-[0.97] focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-amber";
+const btn =
+  "inline-flex h-11 items-center px-5 text-sm font-medium transition-[background-color,color,border-color,scale] duration-150 ease-out active:scale-[0.97] focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-amber";
+
+export const btnPrimary = `${btn} bg-amber text-bg hover:bg-text`;
+export const btnGhost = `${btn} border border-line-strong text-text hover:border-text`;
 
 export const heading =
-  "max-w-5xl text-[clamp(1.75rem,4vw,3.5rem)] font-bold uppercase leading-[1.1] tracking-tight text-amber";
+  "text-[clamp(1.9rem,4.2vw,3.25rem)] font-semibold leading-[1.08] tracking-[-0.03em]";

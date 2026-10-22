@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
-/* Terminal palette: near-black screen, one amber accent. Green and red appear only as price-direction semantics. */
+/* Near-black screen, warm off-white text. Amber is the single signal colour; green and red only mean price direction. */
 :root {
-  --bg: #070706;
-  --panel: #0e0d0a;
-  --line: #3b2e14;
+  --bg: #0b0b0a;
+  --surface: #121210;
+  --line: rgb(241 237 226 / 0.12);
+  --line-strong: rgb(241 237 226 / 0.24);
+  --text: #f1ede2;
+  --mute: #9a9486;
   --amber: #ffa028;
-  --amber-dim: #b9791c;
-  --text: #ece6d4;
-  --mute: #948a70;
-  --up: #35e070;
-  --down: #ff5050;
+  --up: #3ddc84;
+  --down: #ff5d5d;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-panel: var(--panel);
+  --color-surface: var(--surface);
   --color-line: var(--line);
-  --color-amber: var(--amber);
-  --color-amber-dim: var(--amber-dim);
+  --color-line-strong: var(--line-strong);
   --color-text: var(--text);
   --color-mute: var(--mute);
+  --color-amber: var(--amber);
   --color-up: var(--up);
   --color-down: var(--down);
-  --font-mono: var(--font-plex), ui-monospace, monospace;
-  --font-sans: var(--font-plex), ui-monospace, monospace;
+  --font-sans: var(--font-ui), system-ui, sans-serif;
+  --font-mono: var(--font-data), ui-monospace, monospace;
 }
 
 html {
@@ -36,78 +37,49 @@ body {
   overflow-x: clip;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-plex), ui-monospace, monospace;
-  font-feature-settings: "zero" 1;
+  font-family: var(--font-ui), system-ui, sans-serif;
 }
 
-/* CRT scanlines and vignette: fixed, non-interactive, never on a scrolling container. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.1) 0 1px, transparent 1px 4px),
-    radial-gradient(120% 90% at 50% 40%, transparent 65%, rgb(0 0 0 / 0.4));
+::selection {
+  background: var(--amber);
+  color: var(--bg);
 }
 
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
-}
-
-.blink {
-  animation: blink 1s steps(1) infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .blink {
-    animation: none;
-  }
-}
-
-/* Monitor rows: flagged rows light their score. */
-.mrow[data-flag="1"] [data-s] {
-  color: var(--amber);
-}
-
-/* Sharp amber range slider for the detector. */
+/* Thin range slider for the detector. */
 .range {
   appearance: none;
   width: 100%;
-  height: 28px;
+  height: 24px;
   background: transparent;
   cursor: pointer;
 }
 
 .range::-webkit-slider-runnable-track {
   height: 2px;
-  background: var(--amber-dim);
+  background: var(--line-strong);
 }
 
 .range::-webkit-slider-thumb {
   appearance: none;
-  width: 12px;
-  height: 24px;
-  margin-top: -11px;
+  width: 10px;
+  height: 20px;
+  margin-top: -9px;
   background: var(--amber);
   border: 0;
-  border-radius: 0;
+  border-radius: 1px;
 }
 
 .range::-moz-range-track {
   height: 2px;
-  background: var(--amber-dim);
+  background: var(--line-strong);
 }
 
 .range::-moz-range-thumb {
-  width: 12px;
-  height: 24px;
+  width: 10px;
+  height: 20px;
   background: var(--amber);
   border: 0;
-  border-radius: 0;
+  border-radius: 1px;
 }
 
 .range:focus-visible {
@@ -117,4 +89,61 @@ body::after {
 
 .seg[data-on="1"] {
   background: var(--amber);
+}
+
+/* Hero entrance is CSS only, so the headline paints on first frame and never waits on JavaScript. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.rise {
+  animation: rise 0.7s var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* Scroll-driven reveals for the feeds list: no JavaScript, and a plain static list where unsupported. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .vr {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+
+    .vline {
+      transform-origin: left;
+      animation: grow linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
+}
+
+/* Captions stack in one cell and crossfade while the story is pinned. Otherwise they read as a plain list. */
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .cap-stack > * {
+    grid-area: 1 / 1;
+  }
 }

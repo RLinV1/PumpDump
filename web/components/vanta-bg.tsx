@@ -2,48 +2,70 @@
 
 import { useEffect, useRef } from "react";
 
-const hexToInt = (value: string) => parseInt(value.trim().replace("#", ""), 16);
-
-// Vanta needs WebGL and runs a render loop, so it is hero-only and skipped under reduced motion.
-// Dim amber lines on the black screen read as a market network behind the terminal windows.
+// Vanta needs three.js and WebGL, which is the heaviest code on the page. So it loads only when the closing
+// section is within reach, stops when it leaves the screen, and never runs under reduced motion.
+// A slowly moving wave surface reads as a volatility surface: the market at rest.
 export function VantaBg() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const el = ref.current!;
 
     let effect: { destroy: () => void } | undefined;
-    let cancelled = false;
+    let starting = false;
 
-    (async () => {
-      const [THREE, vanta] = await Promise.all([
-        import("three"),
-        import("vanta/dist/vanta.net.min"),
-      ]);
-      if (cancelled || !ref.current) return;
-
-      const css = getComputedStyle(document.documentElement);
+    const start = async () => {
+      if (effect || starting) return;
+      starting = true;
+      // Some Vanta effects read window.THREE when their module loads, so THREE has to be there before the import.
+      const THREE = await import("three");
+      (window as unknown as { THREE: unknown }).THREE = THREE;
+      const vanta = await import("vanta/dist/vanta.waves.min");
+      starting = false;
+      if (!el.isConnected || effect || !visible) return;
       effect = vanta.default({
-        el: ref.current,
+        el,
         THREE,
         mouseControls: true,
         touchControls: false,
         gyroControls: false,
         scale: 1,
         scaleMobile: 1,
-        points: 10,
-        maxDistance: 22,
-        spacing: 18,
-        color: hexToInt(css.getPropertyValue("--amber")),
-        backgroundColor: hexToInt(css.getPropertyValue("--bg")),
+        color: 0x2a1a04,
+        shininess: 22,
+        waveHeight: 14,
+        waveSpeed: 0.55,
+        zoom: 0.85,
       });
-    })();
+    };
+    const stop = () => {
+      effect?.destroy();
+      effect = undefined;
+    };
+
+    let visible = false;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        if (visible) void start();
+        else stop();
+      },
+      { rootMargin: "400px 0px" },
+    );
+    io.observe(el);
 
     return () => {
-      cancelled = true;
-      effect?.destroy();
+      io.disconnect();
+      stop();
     };
   }, []);
 
-  return <div ref={ref} data-vanta aria-hidden className="absolute inset-0 opacity-40" />;
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className="absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent,black_30%)]"
+    />
+  );
 }

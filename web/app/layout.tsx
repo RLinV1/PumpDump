@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono } from "next/font/google";
+import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import "./globals.css";
 
-const plex = IBM_Plex_Mono({
-  variable: "--font-plex",
+const ui = Instrument_Sans({
+  variable: "--font-ui",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+});
+
+const data = JetBrains_Mono({
+  variable: "--font-data",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -17,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${plex.variable} h-full antialiased`}>
+    <html lang="en" className={`${ui.variable} ${data.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <SmoothScroll />
         {children}

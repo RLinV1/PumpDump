@@ -19,10 +19,10 @@ export function SplitHeading({ children, className }: { children: string; classN
       autoSplit: true,
       onSplit: (self) =>
         gsap.from(self.lines, {
-          yPercent: 115,
-          duration: 1,
+          yPercent: 105,
+          duration: 0.9,
           ease: "power4.out",
-          stagger: 0.1,
+          stagger: 0.08,
           scrollTrigger: { trigger: ref.current, start: "top 88%", once: true },
         }),
     });
@@ -36,16 +36,8 @@ export function SplitHeading({ children, className }: { children: string; classN
   );
 }
 
-// Fade-and-lift for a block, optionally growing a rule beside it first.
-export function Rise({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
+// Children marked data-rise fade up in a short stagger the first time the block enters the viewport.
+export function Rise({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,18 +45,17 @@ export function Rise({
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        delay,
-        scrollTrigger: { trigger: ref.current, start: "top 88%", once: true },
+      gsap.from("[data-rise]", {
+        y: 16,
+        autoAlpha: 0,
+        duration: 0.6,
+        ease: "power3.out",
+        stagger: 0.06,
+        scrollTrigger: { trigger: ref.current, start: "top 85%", once: true },
       });
-      tl.from("[data-bar]", { scaleY: 0, transformOrigin: "top", duration: 0.7, ease: "power3.out" }).from(
-        "[data-rise]",
-        { y: 24, autoAlpha: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 },
-        0.1,
-      );
     }, ref);
     return () => ctx.revert();
-  }, [delay]);
+  }, []);
 
   return (
     <div ref={ref} className={className}>
