@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Panel } from "./panel";
-import { heading } from "./pipeline";
+import { heading } from "@/lib/ui";
 
 const STEPS = [
   {

@@ -6,9 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import { Panel } from "./panel";
 import { SplitHeading } from "./reveal";
-
-export const heading =
-  "max-w-5xl text-[clamp(1.75rem,4vw,3.5rem)] font-bold uppercase leading-[1.1] tracking-tight text-amber";
+import { heading } from "@/lib/ui";
 
 const FEEDS = [
   { name: "Social posts", note: "Account age and repeated text" },

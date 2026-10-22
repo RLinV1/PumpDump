@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { Panel } from "./panel";
-import { heading } from "./pipeline";
 import { SplitHeading } from "./reveal";
+import { heading } from "@/lib/ui";
 
 const CONTROLS = [
   { key: "accounts", label: "Posts from new accounts", hint: "Accounts made in the last 30 days" },
@@ -58,12 +58,12 @@ export function Detector() {
     }
 
     const target = shown.current;
-    gsap.to(target, { v: score, duration: 0.6, ease: "power3.out", onUpdate: paint });
+    gsap.to(target, { v: score, duration: 0.25, ease: "power3.out", onUpdate: paint });
     if (lastLabel.current !== verdict.label && stamp.current) {
       gsap.fromTo(
         stamp.current,
-        { scale: 1.8, autoAlpha: 0 },
-        { scale: 1, autoAlpha: 1, duration: 0.3, ease: "back.out(2.2)" },
+        { scale: 1.5, autoAlpha: 0 },
+        { scale: 1, autoAlpha: 1, duration: 0.2, ease: "power3.out" },
       );
     }
     lastLabel.current = verdict.label;

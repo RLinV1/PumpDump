@@ -1,12 +1,13 @@
 import { Detector } from "@/components/detector";
-import { Hero, REPO_URL, keyBtn } from "@/components/hero";
+import { Hero } from "@/components/hero";
 import { MagneticLink } from "@/components/magnetic-link";
 import { Panel } from "@/components/panel";
-import { Pipeline, heading } from "@/components/pipeline";
+import { Pipeline } from "@/components/pipeline";
 import { Rise, SplitHeading } from "@/components/reveal";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { SignalTimeline } from "@/components/signal-timeline";
 import { Tape } from "@/components/tape";
+import { REPO_URL, heading, keyBtn } from "@/lib/ui";
 
 const STATUS = [
   { name: "Ingestion pipeline", state: "Specified", done: true },
@@ -95,8 +96,8 @@ export default function Home() {
               <p data-rise className="max-w-[52ch] text-sm leading-relaxed text-mute">
                 Each piece is written as a spec before any code. This is where they stand.
               </p>
-              <div data-rise className="mt-6 max-w-3xl">
-                <Panel title="Build status" tag="Live from the repo plan">
+              <div data-rise className="mt-6 grid gap-px bg-line md:grid-cols-[3fr_2fr]">
+                <Panel title="Build status" tag="From the repo plan" className="border-0">
                   <dl>
                     {STATUS.map((item) => (
                       <div
@@ -110,6 +111,13 @@ export default function Home() {
                       </div>
                     ))}
                   </dl>
+                </Panel>
+                <Panel title="Disclosures" tag="Read first" className="border-0">
+                  <ul className="grid gap-3 p-4 text-sm leading-relaxed text-mute">
+                    <li>All symbols, prices and scores on this page are invented.</li>
+                    <li>Pumpwatch flags risk signals. It does not tell anyone what to buy or sell.</li>
+                    <li>No broker connection, no order execution, no personal advice.</li>
+                  </ul>
                 </Panel>
               </div>
               <div data-rise className="mt-8">

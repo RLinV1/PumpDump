@@ -7,11 +7,7 @@ import { SplitText } from "gsap/SplitText";
 import { VantaBg } from "./vanta-bg";
 import { MagneticLink } from "./magnetic-link";
 import { Monitor } from "./monitor";
-
-export const REPO_URL = "https://github.com/RLinV1/PumpDump";
-
-export const keyBtn =
-  "inline-flex h-11 items-center border border-amber px-5 text-sm font-bold uppercase tracking-wide transition-[background-color,color,scale] active:scale-[0.98] focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-amber";
+import { REPO_URL, keyBtn } from "@/lib/ui";
 
 export function Hero() {
   const root = useRef<HTMLElement>(null);
