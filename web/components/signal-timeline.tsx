@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Panel } from "./panel";
+import { heading } from "./pipeline";
 
 const STEPS = [
   {
@@ -65,24 +67,22 @@ export function SignalTimeline() {
   return (
     <section
       ref={root}
-      className="flex min-h-[100dvh] w-full flex-col justify-center gap-10 px-4 py-20 md:grid md:grid-cols-[5fr_7fr] md:items-center md:gap-14 md:px-8"
+      className="flex min-h-[100dvh] w-full flex-col justify-center gap-10 border-b border-line px-4 py-20 md:grid md:grid-cols-[5fr_7fr] md:items-center md:gap-12 md:px-8"
     >
       <div>
-        <h2 className="font-display text-6xl font-black uppercase leading-[0.9] tracking-tight md:text-8xl">
-          A pump has a shape.
-        </h2>
-        <div data-cap-list className="relative mt-8 h-48 md:h-44">
+        <h2 className={heading}>A pump has a shape.</h2>
+        <div data-cap-list className="relative mt-8 h-52 md:h-48">
           {STEPS.map((step) => (
             <div key={step.title} data-cap className="absolute inset-x-0 top-0">
-              <h3 className="font-display text-3xl font-black uppercase leading-none">{step.title}</h3>
-              <p className="mt-3 max-w-[44ch] leading-relaxed text-mute">{step.body}</p>
+              <h3 className="font-bold uppercase tracking-wide text-text">{step.title}</h3>
+              <p className="mt-3 max-w-[44ch] text-sm leading-relaxed text-mute">{step.body}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <figure>
-        <div className="border-2 border-ink p-4">
+      <Panel title="Chatter vs price" tag="Illustrative">
+        <figure className="p-4">
           <svg
             viewBox="0 0 800 400"
             role="img"
@@ -90,17 +90,17 @@ export function SignalTimeline() {
             className="w-full overflow-visible"
           >
             {[100, 200, 300].map((y) => (
-              <line key={y} x1="0" y1={y} x2="800" y2={y} stroke="var(--ink)" strokeOpacity="0.15" strokeDasharray="3 7" />
+              <line key={y} x1="0" y1={y} x2="800" y2={y} stroke="var(--line)" strokeDasharray="3 7" />
             ))}
-            <line x1="0" y1="380" x2="800" y2="380" stroke="var(--ink)" strokeWidth="3" />
+            <line x1="0" y1="380" x2="800" y2="380" stroke="var(--amber-dim)" strokeWidth="1.5" />
             <path
               data-line
               data-price
               d="M0 310 C140 308 250 300 330 290 S470 130 560 105 S650 250 800 345"
               pathLength={1}
               fill="none"
-              stroke="var(--ink)"
-              strokeWidth="5"
+              stroke="var(--up)"
+              strokeWidth="3"
               strokeDasharray="1"
             />
             <path
@@ -109,25 +109,25 @@ export function SignalTimeline() {
               d="M0 345 C120 340 210 330 270 285 S400 85 480 60 S610 170 800 255"
               pathLength={1}
               fill="none"
-              stroke="var(--accent)"
-              strokeWidth="5"
+              stroke="var(--amber)"
+              strokeWidth="3"
               strokeDasharray="1"
             />
             <g data-flag>
-              <line x1="560" y1="40" x2="560" y2="380" stroke="var(--ink)" strokeWidth="2" strokeDasharray="4 6" />
-              <rect x="572" y="34" width="150" height="34" fill="var(--ink)" />
-              <text x="584" y="58" fill="var(--paper)" fontSize="20" className="font-display" fontWeight="900">
+              <line x1="560" y1="40" x2="560" y2="380" stroke="var(--down)" strokeWidth="1.5" strokeDasharray="4 6" />
+              <rect x="572" y="34" width="170" height="30" fill="var(--down)" />
+              <text x="584" y="55" fill="var(--bg)" fontSize="17" className="font-mono" fontWeight="700">
                 FLAG RAISED
               </text>
             </g>
           </svg>
-        </div>
-        <figcaption className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-sm">
-          <span className="text-accent">Chatter</span>
-          <span>Price</span>
-          <span className="text-mute">Illustrative shape, not market data.</span>
-        </figcaption>
-      </figure>
+          <figcaption className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
+            <span className="text-amber">CHATTER</span>
+            <span className="text-up">PRICE</span>
+            <span className="text-mute">Illustrative shape, not market data.</span>
+          </figcaption>
+        </figure>
+      </Panel>
     </section>
   );
 }

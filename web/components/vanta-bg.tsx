@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 const hexToInt = (value: string) => parseInt(value.trim().replace("#", ""), 16);
 
 // Vanta needs WebGL and runs a render loop, so it is hero-only and skipped under reduced motion.
-// Ink lines on paper read as a technical drawing of the network rather than a glowing backdrop.
+// Dim amber lines on the black screen read as a market network behind the terminal windows.
 export function VantaBg() {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,11 +31,11 @@ export function VantaBg() {
         gyroControls: false,
         scale: 1,
         scaleMobile: 1,
-        points: 11,
-        maxDistance: 24,
-        spacing: 20,
-        color: hexToInt(css.getPropertyValue("--ink")),
-        backgroundColor: hexToInt(css.getPropertyValue("--paper")),
+        points: 10,
+        maxDistance: 22,
+        spacing: 18,
+        color: hexToInt(css.getPropertyValue("--amber")),
+        backgroundColor: hexToInt(css.getPropertyValue("--bg")),
       });
     })();
 
@@ -45,5 +45,5 @@ export function VantaBg() {
     };
   }, []);
 
-  return <div ref={ref} data-vanta aria-hidden className="absolute inset-0 opacity-70" />;
+  return <div ref={ref} data-vanta aria-hidden className="absolute inset-0 opacity-40" />;
 }

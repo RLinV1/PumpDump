@@ -4,7 +4,11 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+import { Panel } from "./panel";
 import { SplitHeading } from "./reveal";
+
+export const heading =
+  "max-w-5xl text-[clamp(1.75rem,4vw,3.5rem)] font-bold uppercase leading-[1.1] tracking-tight text-amber";
 
 const FEEDS = [
   { name: "Social posts", note: "Account age and repeated text" },
@@ -85,8 +89,8 @@ export function Pipeline() {
         })
         .fromTo(
           "[data-stamp]",
-          { scale: 2.4, rotation: -14, autoAlpha: 0, svgOrigin: "1095 332" },
-          { scale: 1, rotation: -5, autoAlpha: 1, duration: 0.35, ease: "back.out(2.2)", svgOrigin: "1095 332" },
+          { scale: 2.2, autoAlpha: 0, svgOrigin: "1095 332" },
+          { scale: 1, autoAlpha: 1, duration: 0.3, ease: "back.out(2.2)", svgOrigin: "1095 332" },
           1.9,
         )
         .to("[data-stamp]", { autoAlpha: 0, duration: 0.3 }, 5.2);
@@ -105,83 +109,82 @@ export function Pipeline() {
   }, []);
 
   return (
-    <section
-      id="how"
-      ref={root}
-      className="overflow-x-clip border-y-2 border-ink bg-accent px-4 py-24 text-ink md:px-8 md:py-32"
-    >
+    <section id="how" ref={root} className="overflow-x-clip border-b border-line px-4 py-20 md:px-8 md:py-28">
       <div className="mx-auto max-w-[1600px]">
-        <SplitHeading className="max-w-4xl font-display text-6xl font-black uppercase leading-[0.9] tracking-tight md:text-8xl">
-          Four feeds in. One flag out.
-        </SplitHeading>
+        <SplitHeading className={heading}>Four feeds in. One flag out.</SplitHeading>
 
-        {/* Desktop: the animated diagram. */}
-        <svg
-          viewBox="0 0 1200 520"
-          role="img"
-          aria-label="Four feeds, social posts, live trades, news and company filings, are joined by ticker, scored, and flagged."
-          className="mt-14 hidden w-full overflow-visible md:block"
-        >
-          {FEEDS.map((feed, i) => (
-            <g key={feed.name}>
-              <path
-                data-line
-                data-feed
-                d={`M300 ${ROW_Y[i]} C 420 ${ROW_Y[i]}, 430 ${MID_Y}, 520 ${MID_Y}`}
-                pathLength={1}
-                strokeDasharray="1"
-                fill="none"
-                stroke="var(--ink)"
-                strokeWidth="3"
-              />
-              <rect x="0" y={ROW_Y[i] - 42} width="300" height="84" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3" />
-              <text x="18" y={ROW_Y[i] - 6} className="font-display" fontSize="36" fontWeight="900" fill="var(--ink)" style={{ textTransform: "uppercase" }}>
-                {feed.name}
-              </text>
-              <text x="18" y={ROW_Y[i] + 22} className="font-mono" fontSize="15" fill="var(--mute)">
-                {feed.note}
-              </text>
-              <circle data-pulse={i} r="8" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3" cx="0" cy="0" />
+        <Panel title="Data flow" tag="Simulated" className="mt-10">
+          {/* Desktop: the animated diagram. */}
+          <svg
+            viewBox="0 0 1200 460"
+            role="img"
+            aria-label="Four feeds, social posts, live trades, news and company filings, are joined by ticker, scored, and flagged."
+            className="hidden w-full overflow-visible p-6 md:block"
+          >
+            {FEEDS.map((feed, i) => (
+              <g key={feed.name}>
+                <path
+                  data-line
+                  data-feed
+                  d={`M300 ${ROW_Y[i]} C 420 ${ROW_Y[i]}, 430 ${MID_Y}, 520 ${MID_Y}`}
+                  pathLength={1}
+                  strokeDasharray="1"
+                  fill="none"
+                  stroke="var(--amber-dim)"
+                  strokeWidth="2"
+                />
+                <rect x="0" y={ROW_Y[i] - 42} width="300" height="84" fill="var(--bg)" stroke="var(--amber-dim)" strokeWidth="1.5" />
+                <text x="18" y={ROW_Y[i] - 6} className="font-mono" fontSize="24" fontWeight="700" fill="var(--amber)" style={{ textTransform: "uppercase" }}>
+                  {feed.name}
+                </text>
+                <text x="18" y={ROW_Y[i] + 22} className="font-mono" fontSize="13" fill="var(--mute)">
+                  {feed.note}
+                </text>
+                <circle data-pulse={i} r="7" fill="var(--amber)" cx="0" cy="0" />
+              </g>
+            ))}
+
+            <path d={`M690 ${MID_Y} H760`} stroke="var(--amber-dim)" strokeWidth="2" fill="none" data-line pathLength={1} strokeDasharray="1" />
+            <path d={`M950 ${MID_Y} H990`} stroke="var(--amber-dim)" strokeWidth="2" fill="none" data-line pathLength={1} strokeDasharray="1" />
+            <path data-chain d={`M520 ${MID_Y} H1010`} fill="none" stroke="none" />
+
+            <rect x="520" y="185" width="170" height="110" fill="var(--amber)" />
+            <text x="540" y="228" className="font-mono" fontSize="26" fontWeight="700" fill="var(--bg)">JOIN BY</text>
+            <text x="540" y="262" className="font-mono" fontSize="26" fontWeight="700" fill="var(--bg)">TICKER</text>
+
+            <rect x="760" y="185" width="190" height="110" fill="var(--bg)" stroke="var(--amber)" strokeWidth="1.5" />
+            <text x="778" y="215" className="font-mono" fontSize="13" fill="var(--mute)">RISK SCORE</text>
+            <text data-score x="778" y="276" className="font-mono" fontSize="64" fontWeight="700" fill="var(--amber)">94</text>
+
+            <rect x="990" y="150" width="210" height="180" fill="var(--bg)" stroke="var(--amber-dim)" strokeWidth="1.5" />
+            <text x="1008" y="184" className="font-mono" fontSize="13" fill="var(--mute)">ALERT</text>
+            <text x="1008" y="226" className="font-mono" fontSize="34" fontWeight="700" fill="var(--text)">XXXX</text>
+            <text x="1008" y="256" className="font-mono" fontSize="13" fill="var(--down)">Chatter up, no filing</text>
+            <text x="1008" y="280" className="font-mono" fontSize="13" fill="var(--mute)">Simulated example</text>
+
+            <g data-stamp>
+              <rect x="1000" y="304" width="190" height="56" fill="var(--down)" />
+              <text x="1095" y="342" textAnchor="middle" className="font-mono" fontSize="30" fontWeight="700" fill="var(--bg)">FLAGGED</text>
             </g>
-          ))}
 
-          <path d={`M690 ${MID_Y} H760`} stroke="var(--ink)" strokeWidth="3" fill="none" data-line pathLength={1} strokeDasharray="1" />
-          <path d={`M950 ${MID_Y} H990`} stroke="var(--ink)" strokeWidth="3" fill="none" data-line pathLength={1} strokeDasharray="1" />
-          <path data-chain d={`M520 ${MID_Y} H1010`} fill="none" stroke="none" />
+            <circle data-pulse="chain" r="8" fill="var(--text)" cx="0" cy="0" />
+          </svg>
 
-          <rect x="520" y="185" width="170" height="110" fill="var(--ink)" />
-          <text x="540" y="228" className="font-display" fontSize="34" fontWeight="900" fill="var(--paper)">JOIN BY</text>
-          <text x="540" y="266" className="font-display" fontSize="34" fontWeight="900" fill="var(--paper)">TICKER</text>
-
-          <rect x="760" y="185" width="190" height="110" fill="var(--ink)" />
-          <text x="778" y="218" className="font-mono" fontSize="14" fill="var(--mute-ink)">RISK SCORE</text>
-          <text data-score x="778" y="278" className="font-display" fontSize="72" fontWeight="900" fill="var(--accent)">94</text>
-
-          <rect x="990" y="150" width="210" height="180" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3" />
-          <text x="1008" y="190" className="font-mono" fontSize="14" fill="var(--mute)">ALERT</text>
-          <text x="1008" y="238" className="font-display" fontSize="44" fontWeight="900" fill="var(--ink)">XXXX</text>
-          <text x="1008" y="268" className="font-mono" fontSize="14" fill="var(--mute)">Chatter up, no filing</text>
-          <text x="1008" y="292" className="font-mono" fontSize="14" fill="var(--mute)">Simulated example</text>
-
-          <g data-stamp>
-            <rect x="1000" y="304" width="190" height="56" fill="var(--ink)" />
-            <text x="1095" y="346" textAnchor="middle" className="font-display" fontSize="42" fontWeight="900" fill="var(--accent)">FLAGGED</text>
-          </g>
-
-          <circle data-pulse="chain" r="9" fill="var(--paper)" stroke="var(--ink)" strokeWidth="3" cx="0" cy="0" />
-        </svg>
-
-        {/* Mobile: the same story as a stack, since the diagram text would be too small. */}
-        <ol className="mt-10 grid gap-3 md:hidden">
-          {[...FEEDS.map((f) => ({ name: f.name, note: f.note })), { name: "Join by ticker", note: "Feeds meet on one clock" }, { name: "Risk score", note: "Chatter, trading and news together" }, { name: "Flagged", note: "A pump signal with its evidence" }].map(
-            (step) => (
-              <li key={step.name} className="border-2 border-ink bg-paper p-4">
-                <p className="font-display text-3xl font-black uppercase leading-none">{step.name}</p>
-                <p className="mt-1 font-mono text-sm text-mute">{step.note}</p>
+          {/* Mobile: the same story as a stack, since the diagram text would be too small. */}
+          <ol className="grid gap-px bg-line md:hidden">
+            {[
+              ...FEEDS.map((f) => ({ name: f.name, note: f.note })),
+              { name: "Join by ticker", note: "Feeds meet on one clock" },
+              { name: "Risk score", note: "Chatter, trading and news together" },
+              { name: "Flagged", note: "A pump signal with its evidence" },
+            ].map((step) => (
+              <li key={step.name} className="bg-bg p-4">
+                <p className="font-bold uppercase text-amber">{step.name}</p>
+                <p className="mt-1 text-sm text-mute">{step.note}</p>
               </li>
-            ),
-          )}
-        </ol>
+            ))}
+          </ol>
+        </Panel>
       </div>
     </section>
   );

@@ -1,64 +1,60 @@
 @import "tailwindcss";
 
-/* Poster palette: paper and ink with one hazard accent. Sections alternate paper and ink as colour blocks. */
+/* Terminal palette: near-black screen, one amber accent. Green and red appear only as price-direction semantics. */
 :root {
-  --paper: #ececea;
-  --ink: #0b0b0b;
-  --accent: #ff4a1c;
-  --mute: #5c5c58;
-  --mute-ink: #a3a39e;
-  color-scheme: light;
+  --bg: #070706;
+  --panel: #0e0d0a;
+  --line: #3b2e14;
+  --amber: #ffa028;
+  --amber-dim: #b9791c;
+  --text: #ece6d4;
+  --mute: #948a70;
+  --up: #35e070;
+  --down: #ff5050;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-paper: var(--paper);
-  --color-ink: var(--ink);
-  --color-accent: var(--accent);
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-line: var(--line);
+  --color-amber: var(--amber);
+  --color-amber-dim: var(--amber-dim);
+  --color-text: var(--text);
   --color-mute: var(--mute);
-  --color-mute-ink: var(--mute-ink);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-bigshoulders), Impact, sans-serif;
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --font-mono: var(--font-plex), ui-monospace, monospace;
+  --font-sans: var(--font-plex), ui-monospace, monospace;
 }
 
 html {
-  background: var(--paper);
+  background: var(--bg);
 }
 
 body {
   overflow-x: clip;
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-plex), ui-monospace, monospace;
+  font-feature-settings: "zero" 1;
 }
 
-/* Film grain: fixed, non-interactive, never on a scrolling container. */
+/* CRT scanlines and vignette: fixed, non-interactive, never on a scrolling container. */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 60;
   pointer-events: none;
-  opacity: 0.09;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-}
-
-.grid-pattern {
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-.dot-pattern {
-  background-image: radial-gradient(color-mix(in srgb, var(--paper) 22%, transparent) 1.5px, transparent 1.5px);
-  background-size: 18px 18px;
+  background:
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.1) 0 1px, transparent 1px 4px),
+    radial-gradient(120% 90% at 50% 40%, transparent 65%, rgb(0 0 0 / 0.4));
 }
 
 @keyframes blink {
   50% {
-    opacity: 0.2;
+    opacity: 0;
   }
 }
 
@@ -72,7 +68,12 @@ body::after {
   }
 }
 
-/* Sharp range slider for the detector. */
+/* Monitor rows: flagged rows light their score. */
+.mrow[data-flag="1"] [data-s] {
+  color: var(--amber);
+}
+
+/* Sharp amber range slider for the detector. */
 .range {
   appearance: none;
   width: 100%;
@@ -82,38 +83,38 @@ body::after {
 }
 
 .range::-webkit-slider-runnable-track {
-  height: 4px;
-  background: var(--paper);
+  height: 2px;
+  background: var(--amber-dim);
 }
 
 .range::-webkit-slider-thumb {
   appearance: none;
-  width: 18px;
-  height: 28px;
-  margin-top: -12px;
-  background: var(--accent);
-  border: 2px solid var(--paper);
+  width: 12px;
+  height: 24px;
+  margin-top: -11px;
+  background: var(--amber);
+  border: 0;
   border-radius: 0;
 }
 
 .range::-moz-range-track {
-  height: 4px;
-  background: var(--paper);
+  height: 2px;
+  background: var(--amber-dim);
 }
 
 .range::-moz-range-thumb {
-  width: 14px;
+  width: 12px;
   height: 24px;
-  background: var(--accent);
-  border: 2px solid var(--paper);
+  background: var(--amber);
+  border: 0;
   border-radius: 0;
 }
 
 .range:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 1px solid var(--amber);
   outline-offset: 4px;
 }
 
 .seg[data-on="1"] {
-  background: var(--accent);
+  background: var(--amber);
 }
