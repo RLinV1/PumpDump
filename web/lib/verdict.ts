@@ -1,10 +1,10 @@
-// Verdicts use amber only. Green and red are reserved for price direction, so a risk label never reads as buy or sell.
+// Verdicts say how risky a ticker looks, not which way it will move: orange for a likely pump or a watch, never green or red.
 export function verdictOf(score: number) {
   if (score >= 65) {
     return {
       label: "Pump likely",
-      tone: "text-amber",
-      style: "bg-amber text-bg",
+      tone: "text-accent",
+      style: "bg-accent text-bg",
       note: "Chatter and price are far above normal, and nothing explains them.",
     };
   }
@@ -12,7 +12,7 @@ export function verdictOf(score: number) {
     return {
       label: "Watch",
       tone: "text-text",
-      style: "border border-amber text-amber",
+      style: "border border-accent text-accent",
       note: "Elevated, or explained only in part. Worth a look.",
     };
   }

@@ -60,14 +60,14 @@ export default function Home() {
             </p>
             <div className="vr mt-8 grid grid-cols-4 gap-[3px]" aria-hidden>
               {STATUS.map((s) => (
-                <span key={s.name} className={`h-1.5 ${s.done ? "bg-amber" : "bg-line-strong"}`} />
+                <span key={s.name} className={`h-1.5 ${s.done ? "bg-accent" : "bg-line-strong"}`} />
               ))}
             </div>
             <dl className="vr mt-4 grid gap-6 md:grid-cols-4">
               {STATUS.map((s) => (
                 <div key={s.name}>
                   <dt className="font-medium">{s.name}</dt>
-                  <dd className={`text-sm ${s.done ? "text-amber" : "text-mute"}`}>{s.state}</dd>
+                  <dd className={`text-sm ${s.done ? "text-accent" : "text-mute"}`}>{s.state}</dd>
                 </div>
               ))}
             </dl>

@@ -42,9 +42,9 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
         {[25, 50, 75].map((y) => (
           <line key={y} x1="0" x2="1000" y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 7" vectorEffect="non-scaling-stroke" />
         ))}
-        <path d={area(s.chatter)} fill="var(--amber)" fillOpacity="0.1" />
+        <path d={area(s.chatter)} fill="var(--text)" fillOpacity="0.1" />
         <path d={path(s.price)} fill="none" stroke="var(--text)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        <path d={path(s.chatter)} fill="none" stroke="var(--amber)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        <path d={path(s.chatter)} fill="none" stroke="var(--text)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
 
       <div className="relative h-10 border-t border-line">
@@ -53,9 +53,9 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
         ))}
         {catalyst ? (
           <>
-            <span className="absolute inset-y-0 w-px bg-amber" style={{ left: `${tFiling * 100}%` }} />
+            <span className="absolute inset-y-0 w-px bg-accent" style={{ left: `${tFiling * 100}%` }} />
             <span
-              className="absolute top-1/2 -translate-y-1/2 text-xs text-amber"
+              className="absolute top-1/2 -translate-y-1/2 text-xs text-accent"
               style={{ left: `calc(${tFiling * 100}% + 8px)` }}
             >
               8-K filed
@@ -63,7 +63,7 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
           </>
         ) : (
           <span
-            className="absolute inset-y-1.5 flex items-center justify-center border border-dashed border-amber/60 text-xs text-amber"
+            className="absolute inset-y-1.5 flex items-center justify-center border border-dashed border-accent/60 text-xs text-accent"
             style={{ left: `${tChatter * 100}%`, right: "6%" }}
           >
             No news. No filing.
@@ -78,8 +78,8 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
         className="vclip block h-16 w-full border-t border-line"
       >
         <line x1="0" x2="1000" y1={SCORE_Y} y2={SCORE_Y} stroke="var(--line-strong)" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" />
-        <path d={area(s.score)} fill="var(--amber)" fillOpacity="0.08" />
-        <path d={path(s.score)} fill="none" stroke="var(--amber)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+        <path d={area(s.score)} fill="var(--text)" fillOpacity="0.08" />
+        <path d={path(s.score)} fill="none" stroke="var(--text)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
       </svg>
     </div>
   );

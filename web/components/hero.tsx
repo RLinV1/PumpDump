@@ -10,7 +10,7 @@ export function Hero() {
       <HeroBackground />
       <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-10 md:px-8 md:pt-14 [@media(max-height:560px)]:pb-10 [@media(max-height:560px)]:pt-6">
         <h1 className="rise max-w-[16ch] text-balance text-[clamp(2rem,min(5vw,10vh),4.6rem)] font-semibold leading-[1.02] tracking-[-0.04em] md:max-w-none">
-          See the <span className="text-amber">pump</span> before it dumps.
+          See the <span className="text-up">pump</span> before it <span className="text-down">dumps</span>.
         </h1>
         <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between [@media(max-height:560px)]:mt-3 [@media(max-height:560px)]:gap-3">
           <p className="rise max-w-[50ch] text-pretty text-lg leading-relaxed text-mute [@media(max-height:560px)]:text-base" style={{ "--d": "80ms" } as React.CSSProperties}>

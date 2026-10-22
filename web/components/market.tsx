@@ -58,7 +58,7 @@ export function Market() {
       bg: css.getPropertyValue("--bg").trim(),
       text: css.getPropertyValue("--text").trim(),
       mute: css.getPropertyValue("--mute").trim(),
-      amber: css.getPropertyValue("--amber").trim(),
+      accent: css.getPropertyValue("--accent").trim(),
       up: css.getPropertyValue("--up").trim(),
       down: css.getPropertyValue("--down").trim(),
     };
@@ -180,19 +180,19 @@ export function Market() {
       ctx.setLineDash([]);
       ctx.beginPath();
       for (let i = 0; i < n; i++) (i ? ctx.lineTo : ctx.moveTo).call(ctx, cx(i), cy(cands[i].chatter));
-      ctx.strokeStyle = C.amber;
+      ctx.strokeStyle = C.text;
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.lineTo(cx(n - 1), chTop + chH);
       ctx.lineTo(cx(0), chTop + chH);
       ctx.closePath();
-      ctx.fillStyle = "rgb(255 160 40 / 0.1)";
+      ctx.fillStyle = "rgb(241 237 226 / 0.08)";
       ctx.fill();
       ctx.lineWidth = 1;
       ctx.fillStyle = C.mute;
       ctx.textAlign = "left";
       ctx.fillText("Chatter, times normal", left + 2, chTop + 5);
-      ctx.fillStyle = C.amber;
+      ctx.fillStyle = C.text;
       ctx.fillText(`x${cands[n - 1].chatter.toFixed(1)}`, right + 6, cy(cands[n - 1].chatter));
 
       // Time axis.
@@ -216,7 +216,7 @@ export function Market() {
         ctx.setLineDash([]);
         const w = 36;
         const bx = Math.min(x + 5, right - w);
-        ctx.fillStyle = C.amber;
+        ctx.fillStyle = C.accent;
         ctx.fillRect(bx, top + 2, w, 16);
         ctx.fillStyle = C.bg;
         ctx.textAlign = "center";
@@ -427,7 +427,7 @@ export function Market() {
               ))}
               <div className="flex justify-between gap-3 border-t border-line pt-2">
                 <dt className="text-mute">Catalyst</dt>
-                <dd className="font-mono text-amber">none found</dd>
+                <dd className="font-mono text-accent">none found</dd>
               </div>
             </dl>
           </div>

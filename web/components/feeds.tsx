@@ -43,7 +43,7 @@ export function Feeds() {
               key={f.name}
               className="vr group relative grid items-center gap-4 py-8 md:grid-cols-[190px_1fr_260px] md:gap-10"
             >
-              <span className="vline absolute inset-x-0 top-0 h-px bg-line-strong transition-colors duration-200 group-hover:bg-amber" />
+              <span className="vline absolute inset-x-0 top-0 h-px bg-line-strong transition-colors duration-200 group-hover:bg-accent" />
               <h3 className="text-xl font-semibold tracking-tight">{f.name}</h3>
               <p className="max-w-[52ch] text-pretty leading-relaxed text-mute">{f.body}</p>
               <svg
@@ -60,7 +60,7 @@ export function Feeds() {
                     strokeOpacity={0.18 + i * 0.12}
                     strokeWidth="1"
                     vectorEffect="non-scaling-stroke"
-                    className="transition-[stroke,stroke-opacity] duration-200 group-hover:stroke-amber group-hover:[stroke-opacity:0.9]"
+                    className="transition-[stroke,stroke-opacity] duration-200 group-hover:stroke-accent group-hover:[stroke-opacity:0.9]"
                     transform={`translate(0 ${(i - 1) * 4})`}
                   />
                 ))}

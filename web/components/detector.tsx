@@ -107,7 +107,7 @@ export function Detector() {
                     </div>
                     <div className="mt-1 h-px bg-line-strong">
                       <div
-                        className="h-px bg-amber transition-[width] duration-200 ease-out"
+                        className="h-px bg-accent transition-[width] duration-200 ease-out"
                         style={{ width: `${(part / max) * 100}%` }}
                       />
                     </div>
@@ -126,7 +126,7 @@ export function Detector() {
               <label key={c.key} className="block">
                 <span className="flex items-baseline justify-between gap-4">
                   <span className="text-sm font-medium">{c.label}</span>
-                  <span className="font-mono text-sm tabular-nums text-amber">{values[c.key]}</span>
+                  <span className="font-mono text-sm tabular-nums text-accent">{values[c.key]}</span>
                 </span>
                 <span className="block text-xs text-mute">{c.hint}</span>
                 <input
@@ -140,7 +140,7 @@ export function Detector() {
               </label>
             ))}
 
-            <label className="flex cursor-pointer items-start gap-3 border border-line-strong p-3 transition-colors duration-150 has-[:checked]:border-amber">
+            <label className="flex cursor-pointer items-start gap-3 border border-line-strong p-3 transition-colors duration-150 has-[:checked]:border-accent">
               <input
                 type="checkbox"
                 checked={explained}

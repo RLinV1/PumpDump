@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Near-black screen, warm off-white text. Amber is the single signal colour; green and red only mean price direction. */
+/* Near-black screen, warm off-white text. Orange is the accent (actions, focus, flags and verdicts). Green and red mean price direction only: pump up, dump down. Chart lines are plain white. */
 :root {
   --bg: #0b0b0a;
   --surface: #121210;
@@ -8,7 +8,7 @@
   --line-strong: rgb(241 237 226 / 0.24);
   --text: #f1ede2;
   --mute: #9a9486;
-  --amber: #ffa028;
+  --accent: #ffa028;
   --up: #3ddc84;
   --down: #ff5d5d;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -22,7 +22,7 @@
   --color-line-strong: var(--line-strong);
   --color-text: var(--text);
   --color-mute: var(--mute);
-  --color-amber: var(--amber);
+  --color-accent: var(--accent);
   --color-up: var(--up);
   --color-down: var(--down);
   --font-sans: var(--font-ui), system-ui, sans-serif;
@@ -38,15 +38,15 @@ html {
 /* Browser surfaces carry the palette too: caret, native controls, focus ring and link underlines. */
 input,
 textarea {
-  caret-color: var(--amber);
+  caret-color: var(--accent);
 }
 
 input[type="checkbox"] {
-  accent-color: var(--amber);
+  accent-color: var(--accent);
 }
 
 :focus-visible {
-  outline: 1px solid var(--amber);
+  outline: 1px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -99,7 +99,7 @@ dd {
 }
 
 ::selection {
-  background: var(--amber);
+  background: var(--accent);
   color: var(--bg);
 }
 
@@ -122,7 +122,7 @@ dd {
   width: 10px;
   height: 20px;
   margin-top: -9px;
-  background: var(--amber);
+  background: var(--accent);
   border: 0;
   border-radius: 1px;
 }
@@ -135,18 +135,18 @@ dd {
 .range::-moz-range-thumb {
   width: 10px;
   height: 20px;
-  background: var(--amber);
+  background: var(--accent);
   border: 0;
   border-radius: 1px;
 }
 
 .range:focus-visible {
-  outline: 1px solid var(--amber);
+  outline: 1px solid var(--accent);
   outline-offset: 4px;
 }
 
 .seg[data-on="1"] {
-  background: var(--amber);
+  background: var(--accent);
 }
 
 /* Floating chrome is a translucent material, so content scrolls under it. It goes solid when the user asks. */

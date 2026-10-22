@@ -12,7 +12,8 @@ All figures on the page are simulated and labelled as such. No third-party brand
 - **Dusk Grey** (#9A9486) — secondary text, axis labels, metadata
 - **Hairline** (rgba(241,237,226,0.12)) — 1px structure; **Strong Hairline** (rgba(241,237,226,0.24)) for ghost buttons and scrollbar
 - **Signal Amber** (#FFA028) — the single accent: flags, verdicts, chatter line, primary CTA, focus ring
-- **Uptick Green** (#3DDC84) and **Downtick Red** (#FF5D5D) — price direction only, never verdicts or decoration
+- **Uptick Green** (#3DDC84) and **Downtick Red** (#FF5D5D) — price direction only: the word "pump" is green and "dumps" is red, as are candles and the price change. Never verdicts or decoration
+- **Chart lines** (Warm Paper) — series such as chatter and score are plain white, so the amber flag stands out against them
 
 ## 3. Typography Rules
 - **UI and display:** Instrument Sans (`--font-ui`), tight tracking (-0.04em on the hero), hierarchy by size and colour.
@@ -41,7 +42,7 @@ All figures on the page are simulated and labelled as such. No third-party brand
 
 ## 7. Anti-Patterns (Banned)
 - No emojis, no Inter, no serif, no pure black, no neon glows, no purple or blue gradients.
-- Verdicts are never green or red. Colour direction means price only.
+- Verdicts are never green or red. Green and red mean price direction only, so a "Pump likely" verdict is amber, not red.
 - No watchlist, filings feed or extra panes in the hero. One chart, one evidence panel.
 - No real brand names, no fake precision. Every number is labelled simulated.
 - No overlapping text, no bouncing scroll arrows, no "Scroll to explore".

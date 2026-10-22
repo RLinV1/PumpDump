@@ -48,7 +48,7 @@ export function RidgeField({ variant = "hero" }: { variant?: "hero" | "calm" }) 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const css = getComputedStyle(document.documentElement);
     const bg = css.getPropertyValue("--bg").trim();
-    const amber = css.getPropertyValue("--amber").trim();
+    const accent = css.getPropertyValue("--accent").trim();
 
     let W = 0;
     let H = 0;
@@ -135,12 +135,12 @@ export function RidgeField({ variant = "hero" }: { variant?: "hero" | "calm" }) 
         if (i === hot) {
           // The glow is a wide, faint stroke under the line. Canvas shadowBlur does the same job at many times the cost.
           ctx.globalAlpha = calm ? 0.12 : 0.1 + A * 0.16;
-          ctx.strokeStyle = amber;
+          ctx.strokeStyle = accent;
           ctx.lineWidth = calm ? 5 : 5 + A * 5;
           ctx.stroke(edge);
           ctx.globalAlpha = 1;
           ctx.lineWidth = calm ? 1.4 : 1.5 + A * 1.2;
-          ctx.strokeStyle = amber;
+          ctx.strokeStyle = accent;
         } else if (i === hoverRow) {
           ctx.strokeStyle = "rgb(241 237 226)";
           ctx.lineWidth = 1.6;
@@ -150,9 +150,9 @@ export function RidgeField({ variant = "hero" }: { variant?: "hero" | "calm" }) 
         }
         ctx.stroke(edge);
 
-        // The flagged row always carries its own label, in amber, so the chip and the line never disagree.
+        // The flagged row always carries its own label, in green, so the chip and the line never disagree.
         if (!calm && W >= 768 && (i % 3 === 0 || i === hot)) {
-          ctx.fillStyle = i === hot ? amber : "rgb(154 148 134 / 0.55)";
+          ctx.fillStyle = i === hot ? accent : "rgb(154 148 134 / 0.55)";
           ctx.font = `${i === hot ? 600 : 400} 10px var(--font-data), monospace`;
           ctx.fillText(SYMBOLS[i % SYMBOLS.length], 16, base - 4);
         }
@@ -224,8 +224,8 @@ export function RidgeField({ variant = "hero" }: { variant?: "hero" | "calm" }) 
         ref={label}
         className="pointer-events-none absolute left-0 top-0 flex items-center gap-2 whitespace-nowrap bg-bg/80 pr-2 font-mono text-xs opacity-0"
       >
-        <span className="bg-amber px-1.5 py-0.5 font-medium uppercase text-bg">Flag</span>
-        <span ref={labelSym} className="text-amber" />
+        <span className="bg-accent px-1.5 py-0.5 font-medium uppercase text-bg">Flag</span>
+        <span ref={labelSym} className="text-accent" />
         <span className="hidden text-mute md:inline">chatter far above normal</span>
       </div>
       <div

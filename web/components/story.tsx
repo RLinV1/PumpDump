@@ -189,19 +189,19 @@ export function Story() {
             <div className={label}>
               <p className="text-sm font-medium">Social posts</p>
               <p className="text-xs text-mute">Finance boards, all day</p>
-              <p data-read="chatter" className="mt-1 hidden font-mono text-sm tabular-nums text-amber md:block" />
+              <p data-read="chatter" className="mt-1 hidden font-mono text-sm tabular-nums text-text md:block" />
             </div>
             <div className="relative h-24 overflow-hidden md:h-28">
               <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
                 <Grid />
-                <path d={area(chatter)} fill="var(--amber)" fillOpacity="0.12" />
-                <path d={path(chatter)} fill="none" stroke="var(--amber)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                <path d={area(chatter)} fill="var(--text)" fillOpacity="0.12" />
+                <path d={path(chatter)} fill="none" stroke="var(--text)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
               </svg>
               <Cover />
-              <Dot k="chatter" tone="bg-amber" />
+              <Dot k="chatter" tone="bg-text" />
               <p
                 data-a="chatter"
-                className="absolute top-1 z-[2] whitespace-nowrap text-xs text-amber"
+                className="absolute top-1 z-[2] whitespace-nowrap text-xs text-accent"
                 style={{ right: `calc(${(1 - tChatterPeak) * 100}% + 40px)` }}
               >
                 Same pitch, new accounts
@@ -250,7 +250,7 @@ export function Story() {
               <Cover />
               <div
                 data-a="news"
-                className="absolute inset-y-2 z-[2] flex items-center justify-start border border-dashed border-amber/60 pl-3 text-xs text-amber"
+                className="absolute inset-y-2 z-[2] flex items-center justify-start border border-dashed border-accent/60 pl-3 text-xs text-accent"
                 style={{ left: `${tChatter * 100}%`, right: "6%" }}
               >
                 No news. No filing.
@@ -263,22 +263,22 @@ export function Story() {
             <div className={label}>
               <p className="text-sm font-medium">Risk score</p>
               <p className="text-xs text-mute">Chatter and price, minus any catalyst</p>
-              <p data-read="score" className="mt-1 hidden font-mono text-sm tabular-nums text-amber md:block" />
+              <p data-read="score" className="mt-1 hidden font-mono text-sm tabular-nums text-text md:block" />
             </div>
             <div className="relative h-24 overflow-hidden md:h-28">
               <svg viewBox="0 0 1000 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
                 <line x1="0" x2="1000" y1={THRESHOLD_Y} y2={THRESHOLD_Y} stroke="var(--line-strong)" strokeDasharray="4 6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                <path d={area(score)} fill="var(--amber)" fillOpacity="0.08" />
-                <path d={path(score)} fill="none" stroke="var(--amber)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+                <path d={area(score)} fill="var(--text)" fillOpacity="0.08" />
+                <path d={path(score)} fill="none" stroke="var(--text)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
               </svg>
               <Cover />
-              <Dot k="score" tone="bg-amber" />
+              <Dot k="score" tone="bg-text" />
               <p className="absolute left-0 z-[2] text-xs text-mute" style={{ top: `calc(${THRESHOLD_Y}% - 18px)` }}>
                 Flag level
               </p>
               <div data-a="flag" className="absolute inset-y-0 z-[2]" style={{ left: `${tFlag * 100}%` }}>
-                <span className="absolute inset-y-0 w-px bg-amber" />
-                <span className="absolute right-2 top-1 whitespace-nowrap bg-amber px-1.5 py-0.5 font-mono text-xs font-medium uppercase text-bg">
+                <span className="absolute inset-y-0 w-px bg-accent" />
+                <span className="absolute right-2 top-1 whitespace-nowrap bg-accent px-1.5 py-0.5 font-mono text-xs font-medium uppercase text-bg">
                   Flag raised
                 </span>
               </div>
