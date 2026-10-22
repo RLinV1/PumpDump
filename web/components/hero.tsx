@@ -1,3 +1,4 @@
+import { HeroField } from "./hero-field";
 import { Market } from "./market";
 import { REPO_URL, btnGhost, btnPrimary } from "@/lib/ui";
 
@@ -6,6 +7,7 @@ import { REPO_URL, btnGhost, btnPrimary } from "@/lib/ui";
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden pt-14">
+      <HeroField />
       <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-10 md:px-8 md:pt-14 [@media(max-height:560px)]:pb-10 [@media(max-height:560px)]:pt-6">
         <h1 className="rise max-w-[16ch] text-balance text-[clamp(2rem,min(5vw,10vh),4.6rem)] font-semibold leading-[1.02] tracking-[-0.04em] md:max-w-none">
           See the <span className="text-amber">pump</span> before it dumps.
