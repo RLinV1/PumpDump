@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+/* Near-black screen, warm off-white text. Orange is the accent (actions, focus, flags and verdicts). Green and red mean price direction only: pump up, dump down. Chart lines are plain white. */
+:root {
+  --bg: #0b0b0a;
+  --surface: #121210;
+  --line: rgb(241 237 226 / 0.12);
+  --line-strong: rgb(241 237 226 / 0.24);
+  --text: #f1ede2;
+  --mute: #9a9486;
+  --accent: #ffa028;
+  --up: #3ddc84;
+  --down: #ff5d5d;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-mute: var(--mute);
+  --color-accent: var(--accent);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --font-sans: var(--font-ui), system-ui, sans-serif;
+  --font-mono: var(--font-data), ui-monospace, monospace;
+}
+
+html {
+  background: var(--bg);
+  scrollbar-color: var(--line-strong) var(--bg);
+  scrollbar-width: thin;
+}
+
+/* Browser surfaces carry the palette too: caret, native controls, focus ring and link underlines. */
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mute);
+}
+
+body {
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-optical-sizing: auto;
+  /* Light text on a dark screen reads tighter than it is, so body gets a touch of tracking. Headings set their own. */
+  letter-spacing: 0.005em;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+dd {
+  text-wrap: pretty;
+}
+
+/* Every number lines up in columns, and a zero never reads as the letter O in a ticker. */
+.font-mono {
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Thin range slider for the detector. */
+.range {
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--line-strong);
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 10px;
+  height: 20px;
+  margin-top: -9px;
+  background: var(--accent);
+  border: 0;
+  border-radius: 1px;
+}
+
+.range::-moz-range-track {
+  height: 2px;
+  background: var(--line-strong);
+}
+
+.range::-moz-range-thumb {
+  width: 10px;
+  height: 20px;
+  background: var(--accent);
+  border: 0;
+  border-radius: 1px;
+}
+
+.range:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.seg[data-on="1"] {
+  background: var(--accent);
+}
+
+/* Floating chrome is a translucent material, so content scrolls under it. It goes solid when the user asks. */
+.material {
+  background: rgb(11 11 10 / 0.72);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .material {
+    background: var(--bg);
+    backdrop-filter: none;
+  }
+}
+
+/* Hero entrance is CSS only, so the headline paints on first frame and never waits on JavaScript. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.rise {
+  animation: rise 0.7s var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* Scroll-driven reveals for the feeds list: no JavaScript, and a plain static list where unsupported. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .vr {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+
+    .vline {
+      transform-origin: left;
+      animation: grow linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+
+    .vclip {
+      animation: wipe linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 85%;
+    }
+  }
+}
+
+/* Captions stack in one cell and crossfade while the story is pinned. Otherwise they read as a plain list. */
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .cap-stack > * {
+    grid-area: 1 / 1;
+  }
+}
