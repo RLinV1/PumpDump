@@ -9,7 +9,7 @@ Pumpwatch detects coordinated pump-and-dump activity by joining social chatter w
 - Add a Spring Boot (Java 21) multi-module Maven project named Pumpwatch.
 - Add a Kafka-backed ingestion layer with three topics: raw social posts, market ticks, and a dead-letter topic for records that fail validation.
 - Add a Reddit connector that polls selected finance subreddits through the official API and publishes normalized posts.
-- Add a market-data connector that publishes normalized trade and quote ticks for a configurable watchlist from Alpaca (live stream plus historical bars and trades for backfill).
+- Add a market-data connector that publishes normalized trade ticks for a configurable watchlist from Alpaca (live stream plus historical bars and trades for backfill).
 - Add a replay mode that re-publishes recorded raw records into the same topics at original or accelerated speed, so backtests and demos use the same code path as live data.
 - Add a local docker-compose environment (Kafka, Postgres) and basic health and throughput metrics for every connector.
 - Out of scope: ticker extraction, scoring, alerts, the web app, and any scraper for sites without an official API or feed (deferred to a later change).
