@@ -1,0 +1,9 @@
+pumpwatch:
+  sources:
+    finnhub:
+      enabled: ${FINNHUB_ENABLED:false} # off until terms are verified (docs/free-use-audit.md)
+      token: ${FINNHUB_TOKEN:}
+      # free plan allows 60 calls/min; stay below it
+      requests-per-minute: 50
+      poll-interval: 1m
+      lookback-days: 2

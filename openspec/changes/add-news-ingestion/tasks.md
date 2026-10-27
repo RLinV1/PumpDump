@@ -29,10 +29,10 @@
 
 ## 5. Finnhub
 
-- [ ] 5.1 Implement company-news polling per watchlist ticker with date window, and general market news
-- [ ] 5.2 Spread calls across the minute with the token bucket; rotate tickers across cycles
-- [ ] 5.3 Normalize to `ArticleRecord`
-- [ ] 5.4 Tests: rate limit never exceeded for a watchlist larger than one cycle allows
+- [x] 5.1 Implement company-news polling per watchlist ticker with date window, and general market news
+- [x] 5.2 Spread calls across the minute with the token bucket; rotate tickers across cycles
+- [x] 5.3 Normalize to `ArticleRecord`
+- [x] 5.4 Tests: rate limit never exceeded for a watchlist larger than one cycle allows
 
 ## 6. Press-release RSS
 
