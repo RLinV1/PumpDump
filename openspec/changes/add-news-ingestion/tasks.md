@@ -7,17 +7,17 @@
 
 ## 2. Connector framework
 
-- [ ] 2.1 Define a `NewsSource` interface and per-source scheduling with independent health reporting
-- [ ] 2.2 Add shared token-bucket rate limiter configurable per source
+- [x] 2.1 Define a `NewsSource` interface and per-source scheduling with independent health reporting
+- [x] 2.2 Add shared token-bucket rate limiter configurable per source
 - [ ] 2.3 Extend the `seen` table dedup to cover news item ids and accession numbers
-- [ ] 2.4 Test: one failing source does not stop the others
+- [x] 2.4 Test: one failing source does not stop the others
 
 ## 3. Alpaca News
 
-- [ ] 3.1 Implement REST fetch for backfill and gap fill using existing Alpaca credentials
-- [ ] 3.2 Implement WebSocket news stream with reconnect, reusing market connector logic
-- [ ] 3.3 Normalize to `ArticleRecord` with symbols as linked tickers
-- [ ] 3.4 Tests: article with symbols, duplicate item, reconnect gap fill
+- [x] 3.1 Implement REST fetch for backfill and gap fill using existing Alpaca credentials
+- [x] 3.2 Implement WebSocket news stream with reconnect, reusing market connector logic
+- [x] 3.3 Normalize to `ArticleRecord` with symbols as linked tickers
+- [x] 3.4 Tests: article with symbols, duplicate item, reconnect gap fill
 
 ## 4. SEC EDGAR 8-K
 
@@ -36,9 +36,9 @@
 
 ## 6. Press-release RSS
 
-- [ ] 6.1 Implement feed polling with ETag / Last-Modified for PR Newswire, GlobeNewswire and Business Wire from configuration
-- [ ] 6.2 Normalize items to `ArticleRecord`, linking tickers only when present in the item
-- [ ] 6.3 Tests: unchanged feed, new item, item without tickers
+- [x] 6.1 Implement feed polling with ETag / Last-Modified for PR Newswire, GlobeNewswire and Business Wire from configuration
+- [x] 6.2 Normalize items to `ArticleRecord`, linking tickers only when present in the item
+- [x] 6.3 Tests: unchanged feed, new item, item without tickers
 
 ## 7. Recording, cross-source behavior and wrap-up
 
