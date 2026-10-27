@@ -19,6 +19,12 @@ public class SeenItems {
         this.jdbc = jdbc;
     }
 
+    /** Read-only check, for connectors that mark an item seen only after it was published. */
+    public boolean contains(String source, String itemId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM seen_items WHERE source = ? AND item_id = ?)", Boolean.class, source, itemId));
+    }
+
     /** Records the item and returns true the first time it is seen, false on every later call. */
     public boolean markNew(String source, String itemId) {
         return jdbc.update(
