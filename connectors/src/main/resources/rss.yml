@@ -1,0 +1,9 @@
+pumpwatch:
+  sources:
+    rss:
+      enabled: ${RSS_ENABLED:false} # off until feed terms are verified (docs/data-sources.md)
+      # shared by all feeds; each poll cycle makes one request per feed
+      requests-per-minute: 30
+      # comma-separated feed URLs (PR Newswire, GlobeNewswire, Business Wire); required when enabled
+      feeds: ${RSS_FEEDS:}
+      poll-interval: ${RSS_POLL_INTERVAL:60s}
