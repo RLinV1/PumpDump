@@ -81,9 +81,7 @@ public final class ConnectorPublisher implements AutoCloseable {
         if (problems.isEmpty()) return buffer.offer(new Entry(topic, key, json));
         Instant now = clock.instant();
         var dl = new DeadLetter(topic, String.join("; ", problems), json, now, now, SchemaVersions.DEAD_LETTER);
-        if (!buffer.offer(new Entry(Topics.INGEST_DLQ, key, Json.toJson(dl)))) return false;
-        deadLettered.increment();
-        return true;
+        return buffer.offer(new Entry(Topics.INGEST_DLQ, key, Json.toJson(dl)));
     }
 
     /** False while the buffer is full: the connector must pause fetching. */
@@ -123,7 +121,11 @@ public final class ConnectorPublisher implements AutoCloseable {
         var pending = new ArrayList<CompletableFuture<?>>();
         boolean ok = true;
         try {
-            for (var e : batch) pending.add(sender.send(e.topic(), e.key(), e.value()));
+            for (var e : batch) {
+                pending.add(sender.send(e.topic(), e.key(), e.value()));
+                // without broker metadata each send blocks max-block and returns already failed: stop, don't try 500
+                if (pending.getLast().isCompletedExceptionally()) break;
+            }
         } catch (RuntimeException ex) {
             ok = false;
             log.warn("[{}] send failed: {}", name, ex.toString());
@@ -134,7 +136,8 @@ public final class ConnectorPublisher implements AutoCloseable {
             try {
                 f.get(ackWaitMs, TimeUnit.MILLISECONDS);
                 var done = buffer.poll();
-                if (done != null && !done.topic().equals(Topics.INGEST_DLQ)) published.increment(); // DLQ has its own counter
+                // counted on acknowledgement, like published, so a queued-but-unsent dead letter is not counted
+                if (done != null) (done.topic().equals(Topics.INGEST_DLQ) ? deadLettered : published).increment();
                 acked++;
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
