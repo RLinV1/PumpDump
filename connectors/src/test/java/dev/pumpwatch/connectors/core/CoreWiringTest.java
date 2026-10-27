@@ -12,7 +12,9 @@ import org.springframework.context.ApplicationContext;
 
 @AutoConfigureObservability
 @SpringBootTest(properties = {"pumpwatch.sources.sec.user-agent=pumpwatch test@example.com", "pumpwatch.sources.sec.enabled=true",
-        "spring.kafka.bootstrap-servers=localhost:1"})
+        "spring.kafka.bootstrap-servers=localhost:1",
+        // no database in this test: the wiring under test does not use it
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"})
 class CoreWiringTest {
     @Autowired ConnectorPublishers publishers;
     @Autowired HealthEndpoint health;

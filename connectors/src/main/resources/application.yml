@@ -1,6 +1,17 @@
 spring:
   application:
     name: pumpwatch-connectors
+  # Each source keeps its own settings file so connectors can be added independently.
+  config:
+    import: "optional:classpath:alpaca.yml,optional:classpath:bluesky.yml,optional:classpath:reddit.yml"
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/pumpwatch}
+    username: ${POSTGRES_USER:pumpwatch}
+    password: ${POSTGRES_PASSWORD:pumpwatch}
+  flyway:
+    # connectors and replay share one database, so each keeps its own migration history
+    table: flyway_history_connectors
+    baseline-on-migrate: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
 
