@@ -8,11 +8,12 @@ public final class Topics {
     public static final String RAW_NEWS = "raw-news";
     public static final String RAW_FILINGS = "raw-filings";
     public static final String INGEST_DLQ = "ingest-dlq";
+    public static final String MENTIONS = "mentions";
     public static final String FEATURES = "features";
     public static final String SCORES = "scores";
     public static final String FLAGS = "flags";
     public static final List<String> ALL =
-            List.of(RAW_POSTS, TICKS, RAW_NEWS, RAW_FILINGS, INGEST_DLQ, FEATURES, SCORES, FLAGS);
+            List.of(RAW_POSTS, TICKS, RAW_NEWS, RAW_FILINGS, INGEST_DLQ, MENTIONS, FEATURES, SCORES, FLAGS);
 
     private Topics() {}
 

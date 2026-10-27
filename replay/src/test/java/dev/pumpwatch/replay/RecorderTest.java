@@ -49,4 +49,19 @@ class RecorderTest {
         assertThat(out).hasSize(1);
         assertThat(out.get(0).key()).isEmpty();
     }
+
+    @Test
+    void listensToDerivedTopicsToo() throws NoSuchMethodException {
+        var topics = Recorder.class.getMethod("onBatch", List.class)
+                .getAnnotation(org.springframework.kafka.annotation.KafkaListener.class).topics();
+        assertThat(topics).contains("features", "scores", "flags");
+    }
+
+    @Test
+    void storesFeaturesScoresAndFlagsByTheirEventTime() {
+        String json = "{\"eventTime\":\"2026-01-01T00:05:00Z\",\"ticker\":\"GME\"}";
+        var out = Recorder.toEvents(List.of(rec("features", "GME", json), rec("scores", "GME", json), rec("flags", "GME", json)));
+        assertThat(out).extracting(RecordedEvent::topic).containsExactly("features", "scores", "flags");
+        assertThat(out).extracting(RecordedEvent::eventTime).containsOnly(Instant.parse("2026-01-01T00:05:00Z"));
+    }
 }

@@ -25,7 +25,8 @@ public class Recorder {
     }
 
     /** Offsets are committed by the container only after this returns, i.e. after the insert. */
-    @KafkaListener(topics = {Topics.RAW_POSTS, Topics.TICKS, Topics.RAW_NEWS, Topics.RAW_FILINGS},
+    @KafkaListener(topics = {Topics.RAW_POSTS, Topics.TICKS, Topics.RAW_NEWS, Topics.RAW_FILINGS,
+            Topics.FEATURES, Topics.SCORES, Topics.FLAGS},
             groupId = "pumpwatch-recorder")
     public void onBatch(List<ConsumerRecord<String, String>> records) {
         List<RecordedEvent> events = toEvents(records);
