@@ -12,6 +12,6 @@ Source register (compliance task 1.1). Facts come from `free-use-audit.md` and `
 | Reddit | Free tier reported for non-commercial use | about 100 queries per minute with OAuth (reported) | unverified | unverified | unverified (derived data only) | no (reported: needs rightsholder permission) | no |
 | X (Twitter) | Paid (pay-per-use) | not applicable | unverified | 2026-10-27 | unverified | unverified | no |
 | StockTwits | Unclear (registration status unconfirmed) | unverified | unverified | unverified | unverified | unverified | no |
-| Bluesky Jetstream | Free public firehose, no login | no rate or terms text found | unverified | unverified | unverified | unverified | no |
+| Bluesky Jetstream | Free public firehose, no login | no rate limit stated on the pages read | [Developer Guidelines](https://docs.bsky.app/docs/support/developer-guidelines), [Terms of Service](https://bsky.social/about/support/tos) | 2026-10-27 | unverified (Terms license covers Bluesky, not third-party developers) | unverified (Bluesky says it does not train generative AI on user content; no rule for developers found) | no |
 
 Sources are enabled only after their terms are verified and recorded here.

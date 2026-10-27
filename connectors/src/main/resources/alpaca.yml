@@ -1,0 +1,11 @@
+pumpwatch:
+  sources:
+    alpaca:
+      enabled: ${ALPACA_ENABLED:false}
+      # Alpaca free plan allows 200 requests/min; stay below it
+      requests-per-minute: 150
+      plan: free
+      feed: ${ALPACA_FEED:iex}
+      symbol-limit: ${ALPACA_SYMBOL_LIMIT:30}
+      key-id: ${ALPACA_KEY_ID:}
+      secret-key: ${ALPACA_SECRET_KEY:}

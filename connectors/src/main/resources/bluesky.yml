@@ -1,0 +1,12 @@
+pumpwatch:
+  sources:
+    bluesky:
+      enabled: ${BLUESKY_ENABLED:false} # off until terms are verified (docs/data-sources.md)
+      url: ${BLUESKY_JETSTREAM_URL:wss://jetstream2.us-east.bsky.network/subscribe}
+      # a watchlist ticker without a cashtag must appear with one of these (case-insensitive)
+      finance-terms:
+        - stock
+        - shares
+        - short squeeze
+        - to the moon
+        - penny stock

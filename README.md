@@ -50,9 +50,18 @@ Prerequisites: Docker with Compose v2, JDK 21 or newer, Maven 3.9+, Node 20+.
 
 ```bash
 cp .env.example .env      # credentials stay empty until you add your own
-set -a; source .env; set +a   # Spring Boot does not read .env; export it before running the Java apps
-scripts/dev-up.sh         # Kafka (KRaft), Postgres, topics
+scripts/dev-up.sh         # infra only: Kafka (KRaft), Postgres, topics
+scripts/dev-up.sh --apps  # infra plus connectors and replay in containers
 mvn -B verify             # build and test the Java modules
 (cd web && npm ci && npm run dev)
-scripts/dev-down.sh       # add --wipe to also delete volumes
+scripts/dev-down.sh       # stops everything; add --wipe to also delete volumes
 ```
+
+With `--apps`, health is at http://localhost:8080/actuator/health (connectors)
+and http://localhost:8081/actuator/health (replay). The containers read `.env`
+and point at Kafka and Postgres inside the Compose network.
+
+To run the apps from the IDE instead, use `scripts/dev-up.sh` (infra only) and
+export `.env` first, because Spring Boot does not read it:
+`set -a; source .env; set +a`. Then start the `connectors` and `replay` main
+classes; they reach Kafka on 127.0.0.1:9092 and Postgres on 127.0.0.1:5432.

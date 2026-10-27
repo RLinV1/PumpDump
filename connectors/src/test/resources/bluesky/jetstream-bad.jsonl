@@ -1,0 +1,2 @@
+not json at all {
+{"did":"did:plc:ggg","time_us":1790000000000700,"kind":"commit","commit":{"rev":"r7","operation":"create","collection":"app.bsky.feed.post","rkey":"3kbad","record":{"$type":"app.bsky.feed.post","createdAt":"yesterday-ish","text":"$SNDL with a broken timestamp"}}}

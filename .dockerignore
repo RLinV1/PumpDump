@@ -1,0 +1,8 @@
+**/target/
+web/
+node_modules/
+.git/
+screenshots/
+.playwright-mcp/
+.impeccable/
+.env
