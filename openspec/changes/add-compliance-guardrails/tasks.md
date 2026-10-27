@@ -12,8 +12,8 @@
 
 ## 3. Rate limits and identification
 
-- [ ] 3.1 Add a shared rate limiter per source set below its published limit
-- [ ] 3.2 Send a descriptive client name where a source requires it, configured from the environment
+- [x] 3.1 Add a shared rate limiter per source set below its published limit
+- [x] 3.2 Send a descriptive client name where a source requires it, configured from the environment
 
 ## 4. Storage and public output
 
