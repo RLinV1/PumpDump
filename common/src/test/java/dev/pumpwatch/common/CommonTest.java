@@ -43,7 +43,7 @@ class CommonTest {
     void jsonRoundTripsEveryRecordType() {
         Object[] all = {
             post(), tick(), article(), filing(),
-            new DeadLetter("raw-posts", "bad", "{}", T, 1),
+            new DeadLetter("raw-posts", "bad", "{}", T, T, 1),
             new Features(1, T, T, "GME", T.minusSeconds(60), T, 1, Map.of("posts", 3.0), Set.of("social")),
             new Score(1, T, T, "GME", T, 0.5, "rule-1", Set.of("social")),
             flag()
@@ -67,7 +67,7 @@ class CommonTest {
         assertThat(Validator.validate(article())).isEmpty(); // empty tickers allowed
         assertThat(Validator.validate(filing())).isEmpty();
         assertThat(Validator.validate(flag())).isEmpty();
-        assertThat(Validator.validate(new DeadLetter("t", "r", null, T, 1))).isEmpty();
+        assertThat(Validator.validate(new DeadLetter("t", "r", null, T, T, 1))).isEmpty();
     }
 
     @Test
@@ -83,6 +83,38 @@ class CommonTest {
                 .contains("eventTime is required", "ingestTime is required", "ticker is required");
         assertThat(Validator.validate(new PostRecord(1, T, T, " ", "p", "a", null, "")))
                 .contains("source is required", "text is required");
+    }
+
+    @Test
+    void deadLetterRequiresIngestTime() {
+        assertThat(Validator.validate(new DeadLetter("t", "r", null, T, null, 1))).contains("ingestTime is required");
+    }
+
+    @Test
+    void eventTimeMustMatchWindowEndOrRaisedAt() {
+        var other = T.plusSeconds(1);
+        var f = new Features(1, other, T, "GME", T.minusSeconds(60), T, 1, Map.of(), Set.of());
+        assertThat(Validator.validate(f)).containsExactly("eventTime must equal windowEnd");
+        assertThat(Validator.validate(new Score(1, other, T, "GME", T, 0.5, "m", Set.of())))
+                .containsExactly("eventTime must equal windowEnd");
+        var ev = flag().evidence();
+        assertThat(Validator.validate(new Flag(1, other, T, "GME", T, ev)))
+                .containsExactly("eventTime must equal raisedAt");
+    }
+
+    @Test
+    void rejectsNonFiniteNumbers() {
+        for (double bad : new double[] {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+            assertThat(Validator.validate(new Score(1, T, T, "GME", T, bad, "m", Set.of())))
+                    .containsExactly("score must be a finite number");
+            assertThat(Validator.validate(new Features(1, T, T, "GME", T.minusSeconds(60), T, 1,
+                    Map.of("posts", bad), Set.of()))).containsExactly("values.posts must be a finite number");
+            var ev = new Evidence(bad, "m", List.of(new Contributor("social", bad)), 1, 1,
+                    new CatalystCheck(false, T, T, List.of()));
+            assertThat(Validator.validate(new Flag(1, T, T, "GME", T, ev)))
+                    .containsExactly("evidence.score must be a finite number",
+                            "contributor social delta must be a finite number");
+        }
     }
 
     @Test
@@ -111,6 +143,7 @@ class CommonTest {
         assertThat(Fingerprints.fingerprint("BREAKING: ACME Corp announces   merger!")).isEqualTo(base);
         assertThat(Fingerprints.fingerprint("Press Release: Acme Corp announces merger")).isEqualTo(base);
         assertThat(Fingerprints.fingerprint("Acme Corp announces layoffs")).isNotEqualTo(base);
+        assertThat(Fingerprints.fingerprint("Acme-Corp announces merger")).isEqualTo(base);
         assertThat(base).hasSize(64);
     }
 }

@@ -50,8 +50,9 @@ Prerequisites: Docker with Compose v2, JDK 21 or newer, Maven 3.9+, Node 20+.
 
 ```bash
 cp .env.example .env      # credentials stay empty until you add your own
+set -a; source .env; set +a   # Spring Boot does not read .env; export it before running the Java apps
 scripts/dev-up.sh         # Kafka (KRaft), Postgres, topics
 mvn -B verify             # build and test the Java modules
-cd web && npm ci && npm run dev
+(cd web && npm ci && npm run dev)
 scripts/dev-down.sh       # add --wipe to also delete volumes
 ```

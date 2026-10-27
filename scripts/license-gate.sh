@@ -2,7 +2,7 @@
 # License gate: fail on non-commercial, share-alike, copyleft-network or unknown licenses.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-BAD='NC|Non-?Commercial|CC-BY-NC|CC-BY-SA|GPL|AGPL|SSPL|BUSL|BSL|UNKNOWN|UNLICENSED|Custom'
+BAD='NC|Non[- ]?Commercial|Share[- ]?Alike|CC-BY-NC|CC-BY-SA|GPL|AGPL|SSPL|BUSL|BSL|UNKNOWN|UNLICENSED|Custom'
 ALLOW=$(grep -v '^\s*#' scripts/license-allow.txt | sed 's/\s*#.*//; s/\s*$//' | grep -v '^$' || true)
 fail=0
 

@@ -16,9 +16,9 @@ public final class Fingerprints {
 
     public static String normalize(String headline) {
         String s = headline.toLowerCase(Locale.ROOT).strip();
-        // strip the prefix before punctuation removal, while its colon is still there
+        // strip the prefix before punctuation replacement, while its colon is still there
         s = BOILERPLATE.matcher(s).replaceFirst("");
-        return PUNCT.matcher(s).replaceAll("").replaceAll("\\s+", " ").strip();
+        return PUNCT.matcher(s).replaceAll(" ").replaceAll("\\s+", " ").strip();
     }
 
     public static String fingerprint(String headline) {

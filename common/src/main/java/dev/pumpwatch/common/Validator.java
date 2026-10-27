@@ -65,6 +65,9 @@ public final class Validator {
         ticker(p, r.ticker());
         if (r.windowStart() == null || r.windowEnd() == null) p.add("windowStart and windowEnd are required");
         else if (!r.windowStart().isBefore(r.windowEnd())) p.add("windowStart must be before windowEnd");
+        if (r.eventTime() != null && r.windowEnd() != null && !r.eventTime().equals(r.windowEnd()))
+            p.add("eventTime must equal windowEnd");
+        r.values().forEach((k, v) -> finite(p, "values." + k, v));
         if (r.windowMinutes() <= 0) p.add("windowMinutes must be > 0");
         return p;
     }
@@ -75,7 +78,8 @@ public final class Validator {
         times(p, r.eventTime(), r.ingestTime());
         ticker(p, r.ticker());
         if (r.windowEnd() == null) p.add("windowEnd is required");
-        if (Double.isNaN(r.score())) p.add("score must be a number");
+        else if (r.eventTime() != null && !r.eventTime().equals(r.windowEnd())) p.add("eventTime must equal windowEnd");
+        finite(p, "score", r.score());
         text(p, "modelVersion", r.modelVersion());
         return p;
     }
@@ -86,10 +90,13 @@ public final class Validator {
         times(p, r.eventTime(), r.ingestTime());
         ticker(p, r.ticker());
         if (r.raisedAt() == null) p.add("raisedAt is required");
+        else if (r.eventTime() != null && !r.eventTime().equals(r.raisedAt())) p.add("eventTime must equal raisedAt");
         var e = r.evidence();
         if (e == null) p.add("evidence is required");
         else {
             text(p, "evidence.modelVersion", e.modelVersion());
+            finite(p, "evidence.score", e.score());
+            e.topContributors().forEach(c -> finite(p, "contributor " + c.featureGroup() + " delta", c.delta()));
             if (e.catalyst() == null) p.add("evidence.catalyst is required");
             else if (e.catalyst().lookbackStart() == null || e.catalyst().lookbackEnd() == null)
                 p.add("evidence.catalyst lookback window is required");
@@ -103,6 +110,7 @@ public final class Validator {
         text(p, "sourceTopic", r.sourceTopic());
         text(p, "reason", r.reason());
         if (r.failedAt() == null) p.add("failedAt is required");
+        if (r.ingestTime() == null) p.add("ingestTime is required");
         return p;
     }
 
@@ -115,6 +123,10 @@ public final class Validator {
         if (ingest == null) p.add("ingestTime is required");
         if (event != null && ingest != null && event.isAfter(ingest.plus(CLOCK_SKEW)))
             p.add("eventTime is more than 5 minutes after ingestTime");
+    }
+
+    private static void finite(List<String> p, String field, Double v) {
+        if (v == null || !Double.isFinite(v)) p.add(field + " must be a finite number");
     }
 
     private static void text(List<String> p, String field, String v) {
