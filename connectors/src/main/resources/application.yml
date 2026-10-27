@@ -3,7 +3,7 @@ spring:
     name: pumpwatch-connectors
   # Each source keeps its own settings file so connectors can be added independently.
   config:
-    import: "optional:classpath:alpaca.yml,optional:classpath:bluesky.yml,optional:classpath:reddit.yml"
+    import: "optional:classpath:alpaca.yml,optional:classpath:bluesky.yml,optional:classpath:reddit.yml,optional:classpath:alpaca-news.yml,optional:classpath:sec.yml,optional:classpath:finnhub.yml,optional:classpath:rss.yml"
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/pumpwatch}
     username: ${POSTGRES_USER:pumpwatch}
