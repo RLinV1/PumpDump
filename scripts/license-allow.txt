@@ -1,0 +1,4 @@
+# Explicit license-gate exceptions: one package per line, then " # reason".
+# npm: name@version or name. Maven: groupId:artifactId.
+gsap  # GSAP standard no-charge license, verified free in docs/free-use-audit.md
+jakarta.annotation:jakarta.annotation-api  # dual EPL-2.0 / GPL2 with Classpath Exception; EPL-2.0 option is permissive-enough, CPE allows linking

@@ -1,9 +1,9 @@
 ## 1. Common records and topics
 
-- [ ] 1.1 Add `ArticleRecord` and `FilingRecord` types to `common` with schema version, event time and ingest time
-- [ ] 1.2 Add `raw-news` and `raw-filings` topics to topic creation and constants
-- [ ] 1.3 Add record validation with unit tests (required fields, empty ticker list allowed)
-- [ ] 1.4 Add headline normalization and SHA-256 fingerprint with unit tests (case, punctuation, boilerplate)
+- [x] 1.1 Add `ArticleRecord` and `FilingRecord` types to `common` with schema version, event time and ingest time
+- [x] 1.2 Add `raw-news` and `raw-filings` topics to topic creation and constants
+- [x] 1.3 Add record validation with unit tests (required fields, empty ticker list allowed)
+- [x] 1.4 Add headline normalization and SHA-256 fingerprint with unit tests (case, punctuation, boilerplate)
 
 ## 2. Connector framework
 

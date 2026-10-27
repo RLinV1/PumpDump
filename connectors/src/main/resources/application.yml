@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: pumpwatch-connectors
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}

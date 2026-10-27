@@ -1,15 +1,15 @@
 ## 1. Project setup
 
-- [ ] 1.1 Create Maven parent with modules `common`, `connectors`, `replay` (Java 21, Spring Boot)
-- [ ] 1.2 Add docker-compose with Kafka and Postgres, plus a one-command start script and README section
-- [ ] 1.3 Add topic creation (`raw-posts`, `ticks`, `ingest-dlq`) with configurable partition count
-- [ ] 1.4 Add CI workflow that builds and runs unit tests
+- [x] 1.1 Create Maven parent with modules `common`, `connectors`, `replay` (Java 21, Spring Boot)
+- [x] 1.2 Add docker-compose with Kafka and Postgres, plus a one-command start script and README section
+- [x] 1.3 Add topic creation (`raw-posts`, `ticks`, `ingest-dlq`) with configurable partition count
+- [x] 1.4 Add CI workflow that builds and runs unit tests
 
 ## 2. Common records
 
-- [ ] 2.1 Define `PostRecord`, `TickRecord`, and dead-letter record types with `schemaVersion` and event/ingest times
-- [ ] 2.2 Add JSON serialization and validation (required fields) with unit tests
-- [ ] 2.3 Add shared topic-name and header constants (replay marker, replay run id)
+- [x] 2.1 Define `PostRecord`, `TickRecord`, and dead-letter record types with `schemaVersion` and event/ingest times
+- [x] 2.2 Add JSON serialization and validation (required fields) with unit tests
+- [x] 2.3 Add shared topic-name and header constants (replay marker, replay run id)
 
 ## 3. Ingestion reliability
 

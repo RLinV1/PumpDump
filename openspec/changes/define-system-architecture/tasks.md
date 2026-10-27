@@ -1,8 +1,8 @@
 ## 1. Shared contracts
 
-- [ ] 1.1 Add a `common` module with topic names, key rules (ticker), and the `Features`, `Score` and `Flag` record types with a schema version
-- [ ] 1.2 Define the flag evidence structure (score, model version, top contributors, post and trade counts, catalyst lookback result)
-- [ ] 1.3 Add a run-id header and topic-prefix convention for replay isolation
+- [x] 1.1 Add a `common` module with topic names, key rules (ticker), and the `Features`, `Score` and `Flag` record types with a schema version
+- [x] 1.2 Define the flag evidence structure (score, model version, top contributors, post and trade counts, catalyst lookback result)
+- [x] 1.3 Add a run-id header and topic-prefix convention for replay isolation
 
 - [ ] 1.4 Keep `docs/resources-needed.md` current with every account, key, tool, machine, model and dataset a milestone needs
 

@@ -5,6 +5,7 @@ target/
 # secrets and local config
 .env
 .env.*
+!.env.example
 *.pem
 *.tfstate
 *.tfstate.*
