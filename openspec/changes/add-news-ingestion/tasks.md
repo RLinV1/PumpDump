@@ -21,11 +21,11 @@
 
 ## 4. SEC EDGAR 8-K
 
-- [ ] 4.1 Poll the current-filings Atom feed filtered to 8-K and 8-K/A
-- [ ] 4.2 Load and daily-refresh the SEC company-ticker mapping
-- [ ] 4.3 Extract item codes from the filing index and normalize to `FilingRecord` using acceptance time as event time
-- [ ] 4.4 Send configured User-Agent and enforce request spacing below the SEC limit
-- [ ] 4.5 Tests: form filtering, known and unmapped filer, duplicate accession number, burst of filings
+- [x] 4.1 Poll the current-filings Atom feed filtered to 8-K and 8-K/A
+- [x] 4.2 Load and daily-refresh the SEC company-ticker mapping
+- [x] 4.3 Extract item codes from the filing index and normalize to `FilingRecord` using acceptance time as event time
+- [x] 4.4 Send configured User-Agent and enforce request spacing below the SEC limit
+- [x] 4.5 Tests: form filtering, known and unmapped filer, duplicate accession number, burst of filings
 
 ## 5. Finnhub
 
