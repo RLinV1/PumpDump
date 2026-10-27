@@ -27,10 +27,4 @@ public class SeenItems {
                 "INSERT INTO seen_items (source, item_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
                 source, itemId) == 1;
     }
-
-    /** True if the item was already recorded. Pair with {@link #markNew} after a successful publish. */
-    public boolean isSeen(String source, String itemId) {
-        return !jdbc.queryForList("SELECT 1 FROM seen_items WHERE source = ? AND item_id = ?", Integer.class, source,
-                itemId).isEmpty();
-    }
 }

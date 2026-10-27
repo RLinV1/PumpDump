@@ -39,7 +39,7 @@ class RssSourceTest {
     record Sent(String topic, String key, String value) {}
 
     final List<Sent> sent = new CopyOnWriteArrayList<>();
-    final ConnectorPublisher publisher = new ConnectorPublisher("rss",
+    final ConnectorPublisher publisher = new ConnectorPublisher("rss", new dev.pumpwatch.connectors.core.InMemoryOutbox(),
             (t, k, v) -> {
                 sent.add(new Sent(t, k, v));
                 return CompletableFuture.completedFuture(null);

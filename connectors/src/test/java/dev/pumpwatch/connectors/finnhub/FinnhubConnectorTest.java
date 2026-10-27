@@ -72,7 +72,7 @@ class FinnhubConnectorTest {
         @Override public boolean isSeen(String source, String itemId) { return seenIds.contains(source + ":" + itemId); }
         @Override public boolean markNew(String source, String itemId) { return seenIds.add(source + ":" + itemId); }
     };
-    final ConnectorPublisher publisher = new ConnectorPublisher("finnhub", (t, k, v) -> {
+    final ConnectorPublisher publisher = new ConnectorPublisher("finnhub", new dev.pumpwatch.connectors.core.InMemoryOutbox(), (t, k, v) -> {
         sent.add(new Sent(t, k, v));
         return CompletableFuture.completedFuture(null);
     }, PumpwatchKafkaProperties.defaults(), new SimpleMeterRegistry(), Clock.systemUTC());

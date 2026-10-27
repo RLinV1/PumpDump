@@ -36,7 +36,7 @@ class NewsSchedulerTest {
     }
 
     ConnectorPublisher publisher(String name) {
-        var p = new ConnectorPublisher(name, (t, k, v) -> {
+        var p = new ConnectorPublisher(name, new dev.pumpwatch.connectors.core.InMemoryOutbox(), (t, k, v) -> {
             keys.add(name + ":" + t + ":" + k);
             return CompletableFuture.completedFuture(null);
         }, PumpwatchKafkaProperties.defaults(), new SimpleMeterRegistry(), Clock.systemUTC());
