@@ -11,7 +11,7 @@ public final class NewsSink {
     private final BiPredicate<String, String> markNew;
     private final BooleanSupplier stopped;
 
-    NewsSink(ConnectorPublisher publisher, BiPredicate<String, String> markNew, BooleanSupplier stopped) {
+    public NewsSink(ConnectorPublisher publisher, BiPredicate<String, String> markNew, BooleanSupplier stopped) {
         this.publisher = publisher;
         this.markNew = markNew;
         this.stopped = stopped;
