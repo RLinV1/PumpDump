@@ -16,6 +16,7 @@
     <module>common</module>
     <module>connectors</module>
     <module>replay</module>
+    <module>pipeline</module>
   </modules>
   <properties>
     <java.version>21</java.version>
