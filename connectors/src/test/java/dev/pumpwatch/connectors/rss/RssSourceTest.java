@@ -45,7 +45,7 @@ class RssSourceTest {
                 return CompletableFuture.completedFuture(null);
             }, PumpwatchKafkaProperties.defaults(), new SimpleMeterRegistry(), Clock.systemUTC());
     final HashSet<String> seen = new HashSet<>();
-    final NewsSink sink = new NewsSink(publisher, (s, i) -> seen.add(s + "|" + i), () -> false);
+    final NewsSink sink = new NewsSink(publisher, (s, i) -> seen.contains(s + "|" + i), (s, i) -> seen.add(s + "|" + i), () -> false);
 
     /** State kept in a map here; the real store is Postgres. */
     static class MapStore implements FeedStateStore {

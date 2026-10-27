@@ -24,6 +24,11 @@ class NewsSchedulerTest {
     final Set<String> seenSet = new HashSet<>();
     final SeenItems seen = new SeenItems(null) {
         @Override
+        public synchronized boolean isSeen(String source, String itemId) {
+            return seenSet.contains(source + "|" + itemId);
+        }
+
+        @Override
         public synchronized boolean markNew(String source, String itemId) {
             return seenSet.add(source + "|" + itemId);
         }

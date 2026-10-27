@@ -26,7 +26,7 @@ public final class NewsScheduler {
     public synchronized void start() {
         if (!threads.isEmpty()) return;
         for (var s : sources) {
-            var sink = new NewsSink(publishers.apply(s.name()), seen::markNew, () -> stopped);
+            var sink = new NewsSink(publishers.apply(s.name()), seen::isSeen, seen::markNew, () -> stopped);
             threads.add(Thread.ofPlatform().daemon().name("news-" + s.name()).start(() -> loop(s, sink)));
         }
     }

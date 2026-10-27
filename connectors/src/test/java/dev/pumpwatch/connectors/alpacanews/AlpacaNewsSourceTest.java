@@ -44,7 +44,7 @@ class AlpacaNewsSourceTest {
                 return CompletableFuture.completedFuture(null);
             }, PumpwatchKafkaProperties.defaults(), new SimpleMeterRegistry(), Clock.systemUTC());
     final HashSet<String> seen = new HashSet<>();
-    final NewsSink sink = new NewsSink(publisher, (s, i) -> seen.add(s + "|" + i), () -> false);
+    final NewsSink sink = new NewsSink(publisher, (s, i) -> seen.contains(s + "|" + i), (s, i) -> seen.add(s + "|" + i), () -> false);
 
     /** Scripted server: connected/auth/subscribe handshake, then the frames for this connection, then close. */
     static class FakeStream implements TradeStream {
