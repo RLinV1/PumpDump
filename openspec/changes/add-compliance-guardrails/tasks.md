@@ -1,7 +1,7 @@
 ## 1. Register and audit
 
 - [ ] 1.1 Create `docs/data-sources.md` with one row per source: plan, limit, terms link, last verified date, status (verified or unverified)
-- [ ] 1.2 Create `docs/free-use-audit.md` recording the audit findings and the evidence for each
+- [x] 1.2 Create `docs/free-use-audit.md` recording the audit findings and the evidence for each
 - [ ] 1.3 Add a test that fails when a configured source has no register entry or a stale verification date
 
 ## 2. Free-tier defaults

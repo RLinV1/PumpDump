@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: pumpwatch-replay
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/pumpwatch}
+    username: ${POSTGRES_USER:pumpwatch}
+    password: ${POSTGRES_PASSWORD:pumpwatch}
