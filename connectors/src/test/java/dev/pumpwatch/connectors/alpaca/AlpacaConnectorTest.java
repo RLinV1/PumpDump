@@ -11,14 +11,17 @@ import dev.pumpwatch.common.Json;
 import dev.pumpwatch.common.TickRecord;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.connectors.core.ConnectorPublisher;
+import dev.pumpwatch.connectors.core.FakePositions;
+import dev.pumpwatch.connectors.core.FakeSeenItems;
+import dev.pumpwatch.connectors.core.InMemoryOutbox;
 import dev.pumpwatch.connectors.core.PumpwatchKafkaProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -28,12 +31,15 @@ import org.slf4j.LoggerFactory;
 class AlpacaConnectorTest {
     static final String KEY = "PKTESTKEYID123";
     static final String SECRET = "s3cr3t-value-xyz";
+    static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-02T16:00:00Z"), ZoneOffset.UTC);
     static final TradeHistory NO_HISTORY = (sy, a, b, tok) -> new TradeHistory.Page(List.of(), null);
 
     record Sent(String topic, String key, String value) {}
 
+    final FakeSeenItems seen = new FakeSeenItems();
+    final FakePositions positions = new FakePositions();
     final List<Sent> sent = new CopyOnWriteArrayList<>();
-    final ConnectorPublisher publisher = new ConnectorPublisher("alpaca",
+    final ConnectorPublisher publisher = new ConnectorPublisher("alpaca", new InMemoryOutbox(),
             (t, k, v) -> {
                 sent.add(new Sent(t, k, v));
                 return CompletableFuture.completedFuture(null);
@@ -83,9 +89,8 @@ class AlpacaConnectorTest {
     }
 
     AlpacaConnector connector(FakeStream s, TradeHistory h, List<String> watchlist) {
-        var seen = new HashSet<String>();
         publisher.start();
-        return new AlpacaConnector(props(30, KEY, SECRET), watchlist, publisher, s, h, seen::add, Clock.systemUTC());
+        return new AlpacaConnector(props(30, KEY, SECRET), watchlist, publisher, s, h, seen, positions, CLOCK);
     }
 
     List<TickRecord> ticks() throws InterruptedException {
@@ -159,6 +164,43 @@ class AlpacaConnectorTest {
         assertThat(ticks()).extracting(x -> x.eventTime().toString())
                 .containsExactlyInAnyOrder("2026-01-02T15:00:01Z", "2026-01-02T15:00:02Z", "2026-01-02T15:00:03Z",
                         "2026-01-02T15:00:04Z");
+    }
+
+    @Test
+    void savedPositionStartsAGapFillAndItIsBoundedTo24Hours() throws Exception {
+        var s = new FakeStream();
+        s.connections.add(List.of());
+        s.connections.add(List.of());
+        var asked = new ArrayList<Instant>();
+        TradeHistory history = (sy, start, end, tok) -> {
+            asked.add(start);
+            return new TradeHistory.Page(List.of(), null);
+        };
+        positions.saved.put("alpaca", "2026-01-02T15:30:00Z");
+        var c = connector(s, history, List.of("GME"));
+        c.start();
+        Thread.sleep(300);
+        c.stop();
+        assertThat(asked).containsExactly(Instant.parse("2026-01-02T15:30:00Z"));
+
+        asked.clear();
+        positions.saved.put("alpaca", "2025-12-25T00:00:00Z");
+        var c2 = connector(s, history, List.of("GME"));
+        c2.start();
+        Thread.sleep(300);
+        c2.stop();
+        assertThat(asked).containsExactly(Instant.parse("2026-01-01T16:00:00Z"));
+    }
+
+    @Test
+    void lastSeenTradeTimeIsSavedAndNotMarkedSeenUntilOffered() throws Exception {
+        var s = new FakeStream();
+        s.connections.add(List.of("[" + trade("GME", "1", 1, "2026-01-02T15:00:01Z", 1) + "]"));
+        var c = connector(s, NO_HISTORY, List.of("GME"));
+        c.session();
+        c.stop();
+        assertThat(positions.saved.get("alpaca")).isEqualTo("2026-01-02T15:00:01Z");
+        assertThat(seen.marked).containsExactly("alpaca:GME:1");
     }
 
     @Test

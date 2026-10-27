@@ -29,7 +29,7 @@ class ReplayerTest {
             sent::add, sleeps::add, Runnable::run);
 
     void add(long id, String topic, int seconds) {
-        data.add(new RecordedEvent(id, topic, "k" + id, T0.plusSeconds(seconds), "{\"n\":" + id + "}"));
+        data.add(new RecordedEvent(id, topic, "k" + id, T0.plusSeconds(seconds), "{\"n\":" + id + "}", 0, id));
     }
 
     static String header(ProducerRecord<?, ?> r, String name) {
@@ -49,7 +49,7 @@ class ReplayerTest {
     void originalSpeedKeepsGapsAndTinyGapsAreAccumulatedNotSlept() throws Exception {
         add(1, "ticks", 0);
         add(2, "ticks", 3);
-        data.add(new RecordedEvent(3, "ticks", "k3", T0.plusSeconds(3).plusMillis(1), "{}"));
+        data.add(new RecordedEvent(3, "ticks", "k3", T0.plusSeconds(3).plusMillis(1), "{}", 0, 3));
         replayer.run("run-1", T0, T0.plusSeconds(60), 1, false);
         assertThat(sleeps).containsExactly(Duration.ofSeconds(3));
     }
@@ -78,7 +78,7 @@ class ReplayerTest {
     @Test
     void respectsRangeAndPagesPastPageSize() throws Exception {
         for (int i = 0; i < Replayer.PAGE + 10; i++) {
-            data.add(new RecordedEvent(i + 1, "ticks", "k", T0.plusSeconds(1), "{}"));
+            data.add(new RecordedEvent(i + 1, "ticks", "k", T0.plusSeconds(1), "{}", 0, i));
         }
         add(9999, "ticks", 500);
         long n = replayer.run("run-1", T0, T0.plusSeconds(100), 1, false);

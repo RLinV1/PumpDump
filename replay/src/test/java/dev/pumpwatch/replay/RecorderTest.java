@@ -25,6 +25,14 @@ class RecorderTest {
     }
 
     @Test
+    void sameKeyAndEventTimeAtDifferentOffsetsAreBothKept() {
+        String json = "{\"eventTime\":\"2026-01-01T00:00:05Z\"}";
+        var out = Recorder.toEvents(List.of(new ConsumerRecord<>("ticks", 0, 7L, "ABC", json),
+                new ConsumerRecord<>("ticks", 0, 8L, "ABC", json)));
+        assertThat(out).extracting(RecordedEvent::offset).containsExactly(7L, 8L);
+    }
+
+    @Test
     void skipsReplayedRecords() {
         ConsumerRecord<String, String> replayed =
                 rec("ticks", "ABC", "{\"eventTime\":\"2026-01-01T00:00:05Z\"}");

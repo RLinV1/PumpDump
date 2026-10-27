@@ -8,7 +8,9 @@ import dev.pumpwatch.common.SchemaVersions;
 import dev.pumpwatch.common.TickRecord;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.connectors.core.Connector;
+import dev.pumpwatch.connectors.core.ConnectorPositions;
 import dev.pumpwatch.connectors.core.ConnectorPublisher;
+import dev.pumpwatch.connectors.core.SeenItems;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -19,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +36,15 @@ public final class AlpacaConnector implements Connector {
     private static final Logger log = LoggerFactory.getLogger(AlpacaConnector.class);
     private static final ObjectMapper MAPPER = Json.newMapper();
     private static final long SUBSCRIBE_TIMEOUT_SECONDS = 30;
+    private static final Duration MAX_GAP_FILL = Duration.ofHours(24);
 
     private final AlpacaProperties props;
     private final List<String> symbols;
     private final ConnectorPublisher publisher;
     private final TradeStream stream;
     private final TradeHistory history;
-    private final Predicate<String> markNew;
+    private final SeenItems seen;
+    private final ConnectorPositions positions;
     private final Clock clock;
     private final String streamUrl;
 
@@ -49,17 +52,18 @@ public final class AlpacaConnector implements Connector {
     private volatile Thread thread;
     private volatile TradeStream.Connection current;
     private Instant lastSeen; // guarded by this
+    private long lastSavedMs; // guarded by this
     private Instant gapFrom;  // set when a session ends, cleared once a backfill from it succeeded; session thread only
 
-    /** @param markNew true the first time a dedupe key is seen (SeenItems when a database exists, else in memory) */
     AlpacaConnector(AlpacaProperties props, List<String> watchlist, ConnectorPublisher publisher,
-                    TradeStream stream, TradeHistory history, Predicate<String> markNew, Clock clock) {
+                    TradeStream stream, TradeHistory history, SeenItems seen, ConnectorPositions positions, Clock clock) {
         this.symbols = validate(props, watchlist);
         this.props = props;
         this.publisher = publisher;
         this.stream = stream;
         this.history = history;
-        this.markNew = markNew;
+        this.seen = seen;
+        this.positions = positions;
         this.clock = clock;
         this.streamUrl = "wss://stream.data.alpaca.markets/v2/" + props.feed();
     }
@@ -89,6 +93,12 @@ public final class AlpacaConnector implements Connector {
     @Override
     public void start() {
         if (thread != null) return;
+        var saved = positions.load(NAME);
+        if (saved != null) {
+            synchronized (this) {
+                lastSeen = gapFrom = Instant.parse(saved);
+            }
+        }
         log.info("Alpaca connector starting: plan={} feed={} symbols={} (limit {})", props.plan(), props.feed(),
                 symbols.size(), props.symbolLimit());
         thread = Thread.ofPlatform().daemon().name("alpaca-stream").start(this::runForever);
@@ -97,6 +107,9 @@ public final class AlpacaConnector implements Connector {
     @Override
     public void stop() {
         stopped = true;
+        synchronized (this) {
+            if (lastSeen != null) positions.save(NAME, lastSeen.toString());
+        }
         var c = current;
         if (c != null) c.close();
         var t = thread;
@@ -210,8 +223,9 @@ public final class AlpacaConnector implements Connector {
         }
     }
 
-    private void gapFill(Instant from) throws Exception {
+    private void gapFill(Instant requested) throws Exception {
         Instant end = clock.instant();
+        Instant from = requested.isBefore(end.minus(MAX_GAP_FILL)) ? end.minus(MAX_GAP_FILL) : requested;
         log.info("Alpaca gap fill from {} to {}", from, end);
         String token = null;
         do {
@@ -230,10 +244,16 @@ public final class AlpacaConnector implements Connector {
             Thread.currentThread().interrupt();
             return;
         }
-        if (stopped || !markNew.test(t.dedupeKey())) return;
+        if (stopped || seen.isSeen(NAME, t.dedupeKey())) return;
         var tick = new TickRecord(SchemaVersions.TICK, t.time(), clock.instant(), t.symbol(), t.price(), t.size(),
                 t.exchange());
-        publisher.offer(Topics.TICKS, Keys.tickerKey(t.symbol()), tick);
+        if (!publisher.offer(Topics.TICKS, Keys.tickerKey(t.symbol()), tick)) return;
+        seen.markNew(NAME, t.dedupeKey());
         if (lastSeen == null || t.time().isAfter(lastSeen)) lastSeen = t.time();
+        long now = clock.millis();
+        if (now - lastSavedMs >= 1000) { // at most about once a second; stop() saves the rest
+            positions.save(NAME, lastSeen.toString());
+            lastSavedMs = now;
+        }
     }
 }

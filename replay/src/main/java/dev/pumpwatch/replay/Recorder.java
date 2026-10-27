@@ -1,6 +1,7 @@
 package dev.pumpwatch.replay;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pumpwatch.common.Headers;
 import dev.pumpwatch.common.Json;
 import dev.pumpwatch.common.Topics;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class Recorder {
     private static final Logger log = LoggerFactory.getLogger(Recorder.class);
+    private static final ObjectMapper MAPPER = Json.newMapper();
     private final EventStore store;
 
     public Recorder(EventStore store) {
@@ -40,9 +42,9 @@ public class Recorder {
                 continue;
             }
             try {
-                JsonNode t = Json.newMapper().readTree(r.value()).get("eventTime");
+                JsonNode t = MAPPER.readTree(r.value()).get("eventTime");
                 out.add(new RecordedEvent(0, r.topic(), r.key() == null ? "" : r.key(),
-                        Instant.parse(t.asText()), r.value()));
+                        Instant.parse(t.asText()), r.value(), r.partition(), r.offset()));
             } catch (Exception e) {
                 log.warn("not recording {}-{}@{}: no usable eventTime", r.topic(), r.partition(), r.offset());
             }

@@ -7,6 +7,9 @@ import dev.pumpwatch.common.Json;
 import dev.pumpwatch.common.PostRecord;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.connectors.core.ConnectorPublisher;
+import dev.pumpwatch.connectors.core.FakePositions;
+import dev.pumpwatch.connectors.core.FakeSeenItems;
+import dev.pumpwatch.connectors.core.InMemoryOutbox;
 import dev.pumpwatch.connectors.core.PumpwatchKafkaProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
@@ -31,6 +34,8 @@ class BlueskyConnectorTest {
             List.of("stock", "shares", "short squeeze"));
 
     private final List<String[]> sent = new CopyOnWriteArrayList<>(); // topic, key, value
+    private final FakeSeenItems seen = new FakeSeenItems();
+    private final FakePositions positions = new FakePositions();
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     private ConnectorPublisher publisher;
     private BlueskyConnector connector;
@@ -56,14 +61,14 @@ class BlueskyConnectorTest {
     }
 
     private Fake run(List<List<String>> batches) throws Exception {
-        publisher = new ConnectorPublisher("bluesky", (t, k, v) -> {
+        publisher = new ConnectorPublisher("bluesky", new InMemoryOutbox(), (t, k, v) -> {
             sent.add(new String[] {t, k, v});
             return CompletableFuture.completedFuture(null);
         }, PumpwatchKafkaProperties.defaults(), meters, CLOCK);
         publisher.start();
         var fake = new Fake(batches);
         connector = new BlueskyConnector(PROPS, List.of("GME", "AMC", "SNDL"), publisher,
-                BlueskyConnector.dedupe(null), fake, meters, CLOCK, Duration.ofMillis(1), Duration.ofMillis(4));
+                seen, positions, fake, meters, CLOCK, Duration.ofMillis(1), Duration.ofMillis(4));
         connector.start();
         return fake;
     }
@@ -107,6 +112,25 @@ class BlueskyConnectorTest {
                 "wss://example.test/subscribe?wantedCollections=app.bsky.feed.post");
         // last time_us in the sample is ...600; resume 5 seconds earlier
         assertThat(fake.uris.get(1).toString()).endsWith("&cursor=" + (1790000000000600L - 5_000_000L));
+    }
+
+    @Test
+    void savedCursorIsUsedOnStartAndTheLatestOneSavedOnStop() throws Exception {
+        positions.saved.put("bluesky", "1790000000000000");
+        var fake = run(List.of(lines("jetstream-sample.jsonl")));
+        await(() -> fake.uris.size() >= 2);
+        assertThat(fake.uris.get(0).toString()).endsWith("&cursor=" + (1790000000000000L - 5_000_000L));
+        connector.stop();
+        assertThat(positions.saved.get("bluesky")).isEqualTo("1790000000000600");
+    }
+
+    @Test
+    void postIsNotMarkedSeenWhenConnectorStoppedBeforeItWasAccepted() throws Exception {
+        run(List.of()); // started, then stopped below: the offer loop never runs
+        connector.stop();
+        connector.onMessage(lines("jetstream-sample.jsonl").get(0));
+        assertThat(seen.marked).isEmpty();
+        assertThat(sent).isEmpty();
     }
 
     @Test

@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 /** Business-rule checks. Returns human-readable problems; empty means valid. */
@@ -135,6 +134,6 @@ public final class Validator {
 
     private static void ticker(List<String> p, String t) {
         if (t == null || t.isBlank()) p.add("ticker is required");
-        else if (!TICKER.matcher(t.toUpperCase(Locale.ROOT)).matches()) p.add("ticker is invalid: " + t);
+        else if (!TICKER.matcher(t).matches()) p.add("ticker is invalid: " + t);
     }
 }
