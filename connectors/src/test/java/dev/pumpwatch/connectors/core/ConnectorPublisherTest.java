@@ -23,9 +23,11 @@ class ConnectorPublisherTest {
     static class FakeSender implements ConnectorPublisher.Sender {
         final List<Sent> sent = new CopyOnWriteArrayList<>();
         final AtomicInteger failures = new AtomicInteger();
+        final AtomicInteger calls = new AtomicInteger();
 
         @Override
         public CompletableFuture<?> send(String topic, String key, String value) {
+            calls.incrementAndGet();
             if (failures.get() > 0) {
                 failures.decrementAndGet();
                 return CompletableFuture.failedFuture(new RuntimeException("broker down"));
@@ -87,10 +89,11 @@ class ConnectorPublisherTest {
         var p = publisher(10);
         p.offer(Topics.TICKS, "AAA", tick("AAA", 1, 1));
         p.offer(Topics.TICKS, "AAA", tick("AAA", 1, 2));
-        sender.failures.set(2); // real Kafka fails every later in-flight record of a failed send too
+        sender.failures.set(1);
         assertThat(p.drainOnce()).isFalse();
         assertThat(p.bufferSize()).isEqualTo(2);
         assertThat(sender.sent).isEmpty();
+        assertThat(sender.calls).hasValue(1); // stops at the first already-failed send instead of trying the rest
         assertThat(p.drainOnce()).isTrue();
         assertThat(p.bufferSize()).isZero();
         assertThat(sender.sent).hasSize(2);
