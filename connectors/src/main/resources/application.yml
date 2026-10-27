@@ -16,6 +16,8 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
 
 pumpwatch:
+  # tickers every connector cares about; Alpaca streams them, social connectors filter posts by them
+  watchlist: ${WATCHLIST:GME,AMC,SNDL}
   kafka:
     # Producer is always idempotent with acks=all. max-in-flight must be <= 5.
     retries: 10
