@@ -15,7 +15,7 @@
 ## 3. Rule scorer and plumbing
 
 - [ ] 3.0 Implement the anomaly baseline (per-feature z-scores against history, combined by fixed rules) for use before labels exist
-- [ ] 3.1 Define the rule score in a documented table of thresholds and weights
+- [x] 3.1 Define the rule score in a documented table of thresholds and weights
 - [ ] 3.2 Implement `RuleScorer` and the scorer health output
 - [ ] 3.3 Implement the occlusion explainer for the three feature groups
 
