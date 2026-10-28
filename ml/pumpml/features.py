@@ -1,8 +1,8 @@
 """Feature names, as produced by the Java pipeline (Features.values). Version 1 has no social features."""
 
-MARKET = ["return", "volume", "volumeRatio", "realizedVol"]
+MARKET = ["return", "volume", "volumeRatio", "volatility"]
 # More catalyst evidence must never raise the score, so these get monotone-decreasing constraints.
-CATALYST = ["filingCount", "newsCount", "catalystBeforeMove"]
+CATALYST = ["filings24h", "newsOutlets6h", "catalystPrecededMove"]
 FEATURES = MARKET + CATALYST
 
 # docs/rule-scorer.md (rules-v1): feature, "at least" threshold, points. Highest matching row per feature wins.

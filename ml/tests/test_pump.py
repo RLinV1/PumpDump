@@ -52,7 +52,7 @@ def test_catalyst_cannot_raise_score(df, trained):
 def test_monotone_check_catches_violation(df):
     class Rising:  # a model that rewards catalysts
         def predict(self, X):
-            return X["filingCount"].to_numpy() / 10
+            return X["filings24h"].to_numpy() / 10
 
     class Id:
         def predict(self, x):

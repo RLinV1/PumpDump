@@ -32,8 +32,8 @@ def make_pump_dataset(seed: int = 0) -> pd.DataFrame:
                 "window_end": start + pd.Timedelta(minutes=5 * (w + 1)), "peak_time": peak,
                 "return": r, "volume": float(rng.lognormal(np.log(2e5 * vr * ramp + 1e3), 0.6)),
                 "volumeRatio": abs(rng.normal(vr * ramp, vr * 0.3 + 0.2)),
-                "realizedVol": abs(rng.normal(r * 0.4, 0.01)),
-                "filingCount": n_cat, "newsCount": rng.poisson(filings / 2), "catalystBeforeMove": int(n_cat > 0),
+                "volatility": abs(rng.normal(r * 0.4, 0.01)),
+                "filings24h": n_cat, "newsOutlets6h": rng.poisson(filings / 2), "catalystPrecededMove": int(n_cat > 0),
             })
     return pd.DataFrame(rows)
 
