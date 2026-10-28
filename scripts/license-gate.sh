@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 BAD='NC|Non[- ]?Commercial|Share[- ]?Alike|CC-BY-NC|CC-BY-SA|GPL|AGPL|SSPL|BUSL|BSL|UNKNOWN|UNLICENSED|Custom'
 ALLOW=$(grep -v '^\s*#' scripts/license-allow.txt | sed 's/\s*#.*//; s/\s*$//' | grep -v '^$' || true)
 fail=0
+only="${1:-all}"  # all | python
 
 # prints "name<TAB>license" lines on stdin; flags bad ones not on the allow-list
 flag() {
@@ -18,7 +19,8 @@ flag() {
 }
 
 echo "== npm (web) =="
-if [ -d web/node_modules ]; then
+if [ "$only" != all ]; then echo "skipped"
+elif [ -d web/node_modules ]; then
   (cd web && npx --yes license-checker@25.0.1 --production --json) > "${TMPDIR:-/tmp}/npm-lic.json" || { echo "license-checker failed"; exit 2; }
   flag < <(node -e '
     const d=JSON.parse(require("fs").readFileSync(0,"utf8"));
@@ -31,7 +33,8 @@ else
 fi
 
 echo "== maven =="
-if [ -f pom.xml ]; then
+if [ "$only" != all ]; then echo "skipped"
+elif [ -f pom.xml ]; then
   mvn -B -q org.codehaus.mojo:license-maven-plugin:2.4.0:aggregate-add-third-party \
     -Dlicense.outputDirectory=target/license -Dlicense.excludedScopes=test,provided -Dlicense.failOnMissing=false || { echo "maven license plugin failed"; exit 2; }
   f=$(find target/license -name THIRD-PARTY.txt 2>/dev/null | head -1)
@@ -44,6 +47,30 @@ if [ -f pom.xml ]; then
   fi
 else
   echo "pom.xml missing: skipping maven license scan"
+fi
+
+echo "== python (ml) =="
+if [ -f ml/requirements.txt ]; then
+  # reads license metadata of the installed packages named in ml/requirements.txt (pip install -r it first)
+  PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
+  flag < <("$PY" - <<'PY'
+import re, sys
+from importlib.metadata import metadata, PackageNotFoundError
+for line in open("ml/requirements.txt"):
+    name = re.split(r"[=<>~ #]", line.strip(), maxsplit=1)[0]
+    if not name:
+        continue
+    try:
+        m = metadata(name)
+    except PackageNotFoundError:
+        print(name + chr(9) + "UNKNOWN (not installed)"); continue
+    lic = m.get("License-Expression") or " OR ".join(c.split(" :: ")[-1] for c in m.get_all("Classifier", []) if c.startswith("License ::"))
+    lic = lic or (m.get("License") or "")[:60].split(chr(10))[0] or "UNKNOWN"
+    print(name + chr(9) + lic)
+PY
+  )
+else
+  echo "ml/requirements.txt missing: skipping python license scan"
 fi
 
 [ $fail -eq 0 ] && echo "license gate: OK" || echo "license gate: FAILED"

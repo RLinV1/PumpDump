@@ -26,3 +26,12 @@ Thumbs.db
 screenshots/
 .impeccable/
 .claude/launch.json
+
+# ml
+ml/models/
+ml/data/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
