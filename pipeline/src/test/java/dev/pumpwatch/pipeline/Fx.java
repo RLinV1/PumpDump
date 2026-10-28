@@ -36,6 +36,17 @@ public final class Fx {
                 "p-" + when.toEpochMilli() + author, author, when.minusSeconds(86400), text));
     }
 
+    public static String filing(Instant when, String ticker, String form, String... items) {
+        return Json.toJson(new dev.pumpwatch.common.FilingRecord(SchemaVersions.FILING, when, when.plusSeconds(1),
+                "acc-" + when.toEpochMilli() + form, "0001", ticker, form, java.util.List.of(items)));
+    }
+
+    public static String news(Instant when, String source, String... tickers) {
+        return Json.toJson(new dev.pumpwatch.common.ArticleRecord(SchemaVersions.ARTICLE, when, when.plusSeconds(1),
+                source, "n-" + when.toEpochMilli() + source, "headline", "https://x/" + when.toEpochMilli(),
+                java.util.List.of(tickers), "fp-" + when.toEpochMilli() + source));
+    }
+
     public static String tick(Instant when, String ticker, String price, long size) {
         return Json.toJson(new TickRecord(SchemaVersions.TICK, when, when.plusSeconds(1), ticker,
                 new BigDecimal(price), size, "IEX"));

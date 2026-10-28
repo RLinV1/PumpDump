@@ -9,6 +9,7 @@ import dev.pumpwatch.pipeline.scorer.Scorer;
 import dev.pumpwatch.pipeline.scorer.ScorerStage;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,8 +54,9 @@ public class PipelineApplication {
     }
 
     public static void build(StreamsBuilder b, PipelineProperties p, Scorer scorer, List<Integer> windowMinutes) {
-        MentionExtractor.build(b, p.watchlist().stream().map(Keys::tickerKey).collect(Collectors.toSet()));
-        FeatureStage.build(b, p.baselineMentionsPerMinute(), windowMinutes);
+        Set<String> watchlist = p.watchlist().stream().map(Keys::tickerKey).collect(Collectors.toSet());
+        MentionExtractor.build(b, watchlist);
+        FeatureStage.build(b, p.baselineMentionsPerMinute(), windowMinutes, watchlist);
         ScorerStage.build(b, scorer, p.scoringWindowMinutes());
         FlagStage.build(b, scorer, p.flagConfig());
     }
