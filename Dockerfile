@@ -1,4 +1,4 @@
-# Build one app image: docker build --build-arg MODULE=connectors|replay|pipeline .
+# Build one app image: docker build --build-arg MODULE=connectors|replay|pipeline|api .
 FROM maven:3.9-eclipse-temurin-21 AS build
 ARG MODULE
 WORKDIR /src
@@ -8,11 +8,13 @@ COPY common/pom.xml common/
 COPY connectors/pom.xml connectors/
 COPY replay/pom.xml replay/
 COPY pipeline/pom.xml pipeline/
+COPY api/pom.xml api/
 RUN mvn -B -q dependency:go-offline || true
 COPY common common
 COPY connectors connectors
 COPY replay replay
 COPY pipeline pipeline
+COPY api api
 RUN mvn -B -q -pl ${MODULE} -am package -DskipTests
 
 FROM eclipse-temurin:21-jre

@@ -1,11 +1,11 @@
 ## 1. API
 
-- [ ] 1.1 Add the `api` Spring Boot module with a Postgres read layer for scores, timelines and flags
-- [ ] 1.2 Implement the watchlist, timeline and recent-flags endpoints with event-time aligned series
-- [ ] 1.3 Implement the SSE flag stream with heartbeats and last-event-id resume
-- [ ] 1.4 Add rate limiting, origin allow-list and the fixed not-advice notice on every response
-- [ ] 1.5 Ensure no response includes raw post text or author identifiers, with a test
-- [ ] 1.6 Add replay isolation by run id with a test that live responses never include replayed flags
+- [x] 1.1 Add the `api` Spring Boot module with a Postgres read layer for scores, timelines and flags
+- [x] 1.2 Implement the watchlist, timeline and recent-flags endpoints with event-time aligned series
+- [x] 1.3 Implement the SSE flag stream with heartbeats and last-event-id resume
+- [x] 1.4 Add rate limiting, origin allow-list and the fixed not-advice notice on every response
+- [x] 1.5 Ensure no response includes raw post text or author identifiers, with a test
+- [x] 1.6 Add replay isolation by run id with a test that live responses never include replayed flags
 
 ## 2. Alerts
 

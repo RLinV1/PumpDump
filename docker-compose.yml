@@ -150,6 +150,37 @@ services:
       retries: 10
       start_period: 40s
 
+  api:
+    profiles: ["apps"]
+    build:
+      context: .
+      args:
+        MODULE: api
+        PORT: "8083"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/pumpwatch
+      API_PORT: "8083"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8083:8083"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
 volumes:
   pgdata:
   kafkadata:
