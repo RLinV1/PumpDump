@@ -333,8 +333,7 @@ export function Market() {
     writeEvidence();
     writeHeader();
 
-    const timer = window.setInterval(() => {
-      if (document.hidden) return;
+    const tick = () => {
       step += 1;
       wig = Math.random() - 0.5;
       if (step >= STEPS) {
@@ -344,10 +343,31 @@ export function Market() {
       }
       writeHeader();
       schedule();
-    }, TICK_MS);
+    };
+
+    // Run only while the chart is on screen and the tab is visible; otherwise no timer and no frames.
+    let timer = 0;
+    let onScreen = true;
+    const sync = () => {
+      const run = onScreen && !document.hidden;
+      if (run && !timer) timer = window.setInterval(tick, TICK_MS);
+      else if (!run && timer) {
+        window.clearInterval(timer);
+        timer = 0;
+      }
+    };
+    const io = new IntersectionObserver(([e]) => {
+      onScreen = e.isIntersecting;
+      sync();
+    });
+    io.observe(el);
+    document.addEventListener("visibilitychange", sync);
+    sync();
 
     return () => {
       window.clearInterval(timer);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", sync);
       ro.disconnect();
       cv.removeEventListener("pointermove", onMove);
       cv.removeEventListener("pointerleave", onLeave);
