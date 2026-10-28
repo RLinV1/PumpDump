@@ -30,6 +30,9 @@ export default function Home() {
             <a href="#detector" className="text-mute transition-colors duration-150 hover:text-text">
               Detector
             </a>
+            <a href="/live" className="text-mute transition-colors duration-150 hover:text-text">
+              Live
+            </a>
             <a
               href={REPO_URL}
               className="inline-flex h-9 items-center border border-line-strong px-3 font-medium transition-colors duration-150 hover:border-text"
@@ -84,7 +87,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-[1400px] gap-2 px-4 text-sm md:px-8 text-mute md:grid-cols-2">
           <p>All symbols, prices and scores on this page are invented.</p>
           <p className="md:text-right">
-            Pumpwatch flags risk signals. It is not investment advice, and it connects to no broker.
+            Pumpwatch flags risk signals. It is not investment advice, it connects to no broker, and it is a non-commercial project.
           </p>
         </div>
       </footer>
