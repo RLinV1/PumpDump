@@ -1,6 +1,6 @@
 import type { Timeline } from "@/lib/api";
 
-// Score series in plain white, flags as dashed amber markers. Text sits in HTML so the SVG can stretch freely.
+// Score series in plain white, flags as dashed red markers. Text sits in HTML so the SVG can stretch freely.
 export function LiveChart({ t }: { t: Timeline }) {
   const from = Date.parse(t.from);
   const span = Date.parse(t.to) - from;
@@ -17,7 +17,7 @@ export function LiveChart({ t }: { t: Timeline }) {
             <line key={v} x1="0" x2="100" y1={y(v)} y2={y(v)} stroke="var(--line-strong)" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
           ))}
           {t.flags.map((f) => (
-            <line key={f.id} x1={x(f.at)} x2={x(f.at)} y1="0" y2="100" stroke="var(--accent)" strokeWidth="1.5" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+            <line key={f.id} x1={x(f.at)} x2={x(f.at)} y1="0" y2="100" stroke="var(--down)" strokeWidth="1.5" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
           ))}
           {t.scores.length > 1 && (
             <polyline points={line} fill="none" stroke="var(--text)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
@@ -31,7 +31,7 @@ export function LiveChart({ t }: { t: Timeline }) {
       </div>
       <div className="mt-2 flex justify-between font-mono text-[11px] text-mute">
         <span>{hm(t.from)}</span>
-        <span className="text-accent">{t.flags.length > 0 ? `${t.flags.length} FLAG${t.flags.length > 1 ? "S" : ""}` : ""}</span>
+        <span className="text-down">{t.flags.length > 0 ? `${t.flags.length} FLAG${t.flags.length > 1 ? "S" : ""}` : ""}</span>
         <span>{hm(t.to)}</span>
       </div>
     </div>
