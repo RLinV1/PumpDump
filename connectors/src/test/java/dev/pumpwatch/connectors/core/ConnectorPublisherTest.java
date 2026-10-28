@@ -68,6 +68,25 @@ class ConnectorPublisherTest {
     }
 
     @Test
+    void sourceHealthTracksWhenTheUnhealthySpellBegan() {
+        var p = publisher(1);
+        assertThat(p.sourceHealth().healthy()).isTrue();
+        assertThat(p.sourceHealth().unhealthySince()).isNull();
+        p.offer(Topics.TICKS, "AAA", tick("AAA", 1, 1)); // buffer full -> DOWN
+        var began = clock.instant();
+        assertThat(p.sourceHealth().healthy()).isFalse();
+        clock.advance(Duration.ofMinutes(6));
+        var later = p.sourceHealth();
+        assertThat(later.healthy()).isFalse();
+        assertThat(later.unhealthySince()).isEqualTo(began);
+        assertThat(later.source()).isEqualTo("alpaca");
+        p.drainOnce();
+        p.markFetched(); // six silent minutes also fail the fetch-age check
+        assertThat(p.sourceHealth().healthy()).isTrue();
+        assertThat(p.sourceHealth().unhealthySince()).isNull();
+    }
+
+    @Test
     void invalidRecordGoesToDeadLetterWithReasonAndPayloadAndProcessingContinues() {
         var p = publisher(10);
         var bad = tick("AAA", -1, 1);

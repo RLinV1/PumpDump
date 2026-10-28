@@ -12,8 +12,10 @@ public final class Topics {
     public static final String FEATURES = "features";
     public static final String SCORES = "scores";
     public static final String FLAGS = "flags";
+    public static final String SOURCE_HEALTH = "source-health";
     public static final List<String> ALL =
-            List.of(RAW_POSTS, TICKS, RAW_NEWS, RAW_FILINGS, INGEST_DLQ, MENTIONS, FEATURES, SCORES, FLAGS);
+            List.of(RAW_POSTS, TICKS, RAW_NEWS, RAW_FILINGS, INGEST_DLQ, MENTIONS, FEATURES, SCORES, FLAGS,
+            SOURCE_HEALTH);
 
     private Topics() {}
 

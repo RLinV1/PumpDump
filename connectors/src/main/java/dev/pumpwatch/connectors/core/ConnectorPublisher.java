@@ -6,6 +6,7 @@ import dev.pumpwatch.common.FilingRecord;
 import dev.pumpwatch.common.Json;
 import dev.pumpwatch.common.PostRecord;
 import dev.pumpwatch.common.SchemaVersions;
+import dev.pumpwatch.common.SourceHealth;
 import dev.pumpwatch.common.TickRecord;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.common.Validator;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.Status;
 
 /**
  * Bounded, ack-gated Postgres outbox in front of Kafka for one connector. A row is deleted only after the broker
@@ -51,6 +53,7 @@ public final class ConnectorPublisher implements AutoCloseable {
     private final Counter deadLettered;
     private volatile Instant lastFetch;
     private volatile Instant failingSince;
+    private volatile Instant unhealthySince;
     private volatile Thread loop;
 
     public ConnectorPublisher(String name, OutboxStore outbox, Sender sender, PumpwatchKafkaProperties props, MeterRegistry meters,
@@ -114,6 +117,22 @@ public final class ConnectorPublisher implements AutoCloseable {
         var b = reasons.isEmpty() ? Health.up() : Health.down().withDetail("reasons", reasons);
         return b.withDetail("bufferSize", size.get()).withDetail("bufferCapacity", props.bufferCapacity())
                 .withDetail("lastFetchAgeSeconds", lastFetchAge().toSeconds()).build();
+    }
+
+    public String name() {
+        return name;
+    }
+
+    /**
+     * Health as a record for the {@link Topics#SOURCE_HEALTH} topic. Meant for one caller (the reporter), because it
+     * tracks when the current unhealthy spell began.
+     */
+    public SourceHealth sourceHealth() {
+        Instant now = clock.instant();
+        boolean up = Status.UP.equals(health().getStatus());
+        if (up) unhealthySince = null;
+        else if (unhealthySince == null) unhealthySince = now;
+        return new SourceHealth(SchemaVersions.SOURCE_HEALTH, now, now, name, up, unhealthySince);
     }
 
     /** One pass of the sender loop: sends a batch, deletes the acknowledged prefix. True if the whole batch succeeded. */

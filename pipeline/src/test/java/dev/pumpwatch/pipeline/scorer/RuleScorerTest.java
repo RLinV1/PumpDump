@@ -69,19 +69,81 @@ class RuleScorerTest {
         assertThat(c).extracting(Flag.Contributor::delta).containsExactly(40.0, 20.0);
     }
 
-    /** The doc table is the contract: every row must equal a RuleScorer term, in order. */
+    static Features with(Map<String, Double> values) {
+        return new Features(1, at(10, 0), at(10, 1), "GME", at(9, 55), at(10, 0), 5, values, null);
+    }
+
     @Test
-    void documentedTableMatchesTheCode() throws IOException {
-        List<String> doc = new ArrayList<>();
+    void newAccountsCopiedPostsAndVolumeSurgeScoreByTier() {
+        assertThat(scorer.score(with(Map.of("newAccountShare", 0.3))).score()).isEqualTo(5);
+        assertThat(scorer.score(with(Map.of("newAccountShare", 0.6))).score()).isEqualTo(10);
+        assertThat(scorer.score(with(Map.of("duplicateShare", 0.29))).score()).isZero();
+        assertThat(scorer.score(with(Map.of("duplicateShare", 0.6))).score()).isEqualTo(10);
+        assertThat(scorer.score(with(Map.of("volumeRatio", 1.0))).score()).isZero(); // neutral without history
+        assertThat(scorer.score(with(Map.of("volumeRatio", 5.0))).score()).isEqualTo(10);
+        assertThat(scorer.score(with(Map.of("volumeRatio", 20.0))).score()).isEqualTo(20);
+    }
+
+    @Test
+    void aCatalystLowersTheScoreByTierAndNeverBelowZero() {
+        Map<String, Double> pump = Map.of("mentionRatio", 10.0, "return", 0.2); // 70
+        assertThat(scorer.score(with(pump)).score()).isEqualTo(70);
+        assertThat(scorer.score(with(merge(pump, "newsOutlets6h", 1.0))).score()).isEqualTo(60);
+        assertThat(scorer.score(with(merge(pump, "newsOutlets6h", 3.0))).score()).isEqualTo(50);
+        assertThat(scorer.score(with(merge(pump, "filings24h", 1.0))).score()).isEqualTo(50);
+        assertThat(scorer.score(with(merge(pump, "catalystPrecededMove", 1.0))).score()).isEqualTo(55);
+        Map<String, Double> all = Map.of("mentionRatio", 10.0, "return", 0.2, "newsOutlets6h", 3.0, "filings24h", 2.0,
+                "catalystPrecededMove", 1.0);
+        assertThat(scorer.score(with(all)).score()).isEqualTo(15);
+        assertThat(scorer.score(with(Map.of("filings24h", 1.0, "newsOutlets6h", 5.0))).score()).isZero();
+    }
+
+    private static Map<String, Double> merge(Map<String, Double> base, String k, double v) {
+        var m = new java.util.HashMap<>(base);
+        m.put(k, v);
+        return m;
+    }
+
+    @Test
+    void staleSourcesAreCarriedOntoTheScoreWithoutChangingIt() {
+        Features f = new Features(1, at(10, 0), at(10, 1), "GME", at(9, 55), at(10, 0), 5,
+                Map.of("mentionRatio", 10.0), java.util.Set.of("bluesky"));
+        assertThat(scorer.score(f).staleSources()).containsExactly("bluesky");
+        assertThat(scorer.score(f).score()).isEqualTo(35);
+    }
+
+    @Test
+    void anomalyScorerReadsZScoresAndShareTheCatalystRows() {
+        RuleScorer a = RuleScorer.anomaly();
+        assertThat(a.modelVersion()).isEqualTo("anomaly-v1");
+        assertThat(a.score(with(Map.of("z.mentionRatio", 2.9))).score()).isZero();
+        assertThat(a.score(with(Map.of("z.mentionRatio", 3.0))).score()).isEqualTo(20);
+        assertThat(a.score(with(Map.of("z.mentionRatio", 7.0, "z.return", 5.0))).score()).isEqualTo(70);
+        assertThat(a.score(with(Map.of("z.mentionRatio", 7.0, "z.return", 5.0, "filings24h", 1.0))).score())
+                .isEqualTo(50);
+        // raw features are ignored by the anomaly rules
+        assertThat(a.score(with(Map.of("mentionRatio", 99.0, "return", 0.5))).score()).isZero();
+    }
+
+    /** The doc tables are the contract: every row must equal a term, in order. */
+    @Test
+    void documentedTablesMatchTheCode() throws IOException {
+        List<String> rules = new ArrayList<>(), anomaly = new ArrayList<>();
+        List<String> into = rules;
         for (String line : Files.readAllLines(Path.of("..", "docs", "rule-scorer.md"))) {
+            if (line.startsWith("## Anomaly table")) into = anomaly;
             String[] c = line.split("\\|");
             if (c.length == 6 && c[3].trim().startsWith("`")) {
-                doc.add(String.join("|", c[1].trim(), c[2].trim(), c[3].trim().replace("`", ""), num(c[4]), num(c[5])));
+                into.add(String.join("|", c[1].trim(), c[2].trim(), c[3].trim().replace("`", ""), num(c[4]), num(c[5])));
             }
         }
-        List<String> code = RuleScorer.TERMS.stream()
+        assertThat(rules).isNotEmpty().isEqualTo(rows(RuleScorer.TERMS));
+        assertThat(anomaly).isNotEmpty().isEqualTo(rows(RuleScorer.ANOMALY_TERMS));
+    }
+
+    private static List<String> rows(List<RuleScorer.Term> terms) {
+        return terms.stream()
                 .map(t -> String.join("|", t.name(), t.group(), t.feature(), num(t.atLeast()), num(t.points()))).toList();
-        assertThat(doc).isNotEmpty().isEqualTo(code);
     }
 
     private static String num(String s) {
