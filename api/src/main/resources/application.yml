@@ -28,6 +28,12 @@ api:
   heartbeat: PT15S
   poll-interval: PT1S
   max-streams: 100
+alerts:
+  enabled: ${ALERTS_ENABLED:false}
+  webhook-urls: ${ALERTS_WEBHOOK_URLS:}
+  link-base: ${ALERTS_LINK_BASE:http://localhost:3000}
+  cooldown: ${ALERTS_COOLDOWN:PT30M}
+  max-per-minute: ${ALERTS_MAX_PER_MINUTE:5}
 server:
   port: ${API_PORT:8083}
 management:

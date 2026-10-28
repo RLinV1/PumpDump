@@ -9,11 +9,11 @@
 
 ## 2. Alerts
 
-- [ ] 2.1 Implement the webhook notifier reading URLs from the environment
-- [ ] 2.2 Add retry with backoff and per-flag, per-webhook de-duplication
-- [ ] 2.3 Add the cooldown and the digest for bursts
-- [ ] 2.4 Add the notice and model version to every message
-- [ ] 2.5 Test that webhook URLs never appear in logs or stored records
+- [x] 2.1 Implement the webhook notifier reading URLs from the environment
+- [x] 2.2 Add retry with backoff and per-flag, per-webhook de-duplication
+- [x] 2.3 Add the cooldown and the digest for bursts
+- [x] 2.4 Add the notice and model version to every message
+- [x] 2.5 Test that webhook URLs never appear in logs or stored records
 
 ## 3. Web
 
