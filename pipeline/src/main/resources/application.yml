@@ -24,6 +24,10 @@ pipeline:
   cooldown: PT30M
   reflag-margin: 10
   catalyst-lookback: PT1H
+  # rules = documented thresholds; anomaly = z-scores against each ticker's own history (no labels needed)
+  scorer: rules
+  # a source is marked stale on scores once it has been unhealthy this long
+  stale-after: PT5M
 server:
   port: ${PIPELINE_PORT:8082}
 management:

@@ -1,0 +1,40 @@
+# Known ticker symbols the extractor may link (one per line, upper case). Only symbols on the watchlist are emitted.
+# Add a symbol here before putting it on the watchlist. Lines starting with # are comments.
+GME
+AMC
+SNDL
+BB
+NOK
+PLTR
+TSLA
+AAPL
+NVDA
+AMD
+SPY
+QQQ
+BBBY
+KOSS
+CLOV
+WISH
+MARA
+RIOT
+COIN
+HOOD
+SOFI
+# symbols that are also common English words or abbreviations (see common-words.txt)
+ON
+IT
+ALL
+A
+ARE
+SO
+FOR
+CAN
+NOW
+HAS
+BIG
+EAT
+GOOD
+LOVE
+REAL
+WELL

@@ -16,9 +16,9 @@
 
 ## 3. Cross-cutting behavior
 
-- [ ] 3.1 Add stale-source markers to scores when a connector reports unhealthy
-- [ ] 3.2 Add late-data metrics and a metric for flag latency
-- [ ] 3.3 Add the feature-group occlusion explainer that produces the evidence contributors
+- [x] 3.1 Add stale-source markers to scores when a connector reports unhealthy
+- [x] 3.2 Add late-data metrics and a metric for flag latency
+- [x] 3.3 Add the feature-group occlusion explainer that produces the evidence contributors
 
 ## 4. Proof
 
