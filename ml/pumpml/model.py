@@ -89,8 +89,8 @@ def rule_score(df: pd.DataFrame) -> np.ndarray:
     pts = {}
     for feat, at_least, p in RULES:
         if feat in df:
-            pts[feat] = np.maximum(pts.get(feat, 0), np.where(df[feat] >= at_least, p, 0))
-    return np.minimum(sum(pts.values()), 100)
+            pts[feat] = np.where(df[feat] >= at_least, p, pts.get(feat, 0))
+    return np.clip(sum(pts.values()), 0, 100)
 
 
 class VolumeBaseline:
