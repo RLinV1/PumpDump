@@ -13,11 +13,11 @@
 
 ## 3. Ingestion reliability
 
-- [ ] 3.1 Configure idempotent, `acks=all` producer with bounded retries
-- [ ] 3.2 Implement bounded buffer that pauses fetching when full and flips health to unhealthy
-- [ ] 3.3 Implement dead-letter publishing with reason and original payload
-- [ ] 3.4 Expose Actuator health and Micrometer metrics per connector (published/s, dead-letter count, last fetch age)
-- [ ] 3.5 Test: broker down for 30s loses no records; buffer-full path reports unhealthy
+- [x] 3.1 Configure idempotent, `acks=all` producer with bounded retries
+- [x] 3.2 Implement bounded buffer that pauses fetching when full and flips health to unhealthy
+- [x] 3.3 Implement dead-letter publishing with reason and original payload
+- [x] 3.4 Expose Actuator health and Micrometer metrics per connector (published/s, dead-letter count, last fetch age)
+- [x] 3.5 Test: broker down for 30s loses no records; buffer-full path reports unhealthy
 
 ## 4. Social post ingestion (Reddit)
 

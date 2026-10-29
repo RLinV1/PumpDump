@@ -3,3 +3,33 @@ spring:
     name: pumpwatch-connectors
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+
+pumpwatch:
+  kafka:
+    # Producer is always idempotent with acks=all. max-in-flight must be <= 5.
+    retries: 10
+    delivery-timeout: 2m
+    max-block: 10s
+    max-in-flight: 5
+    buffer-capacity: 10000      # per connector; full buffer = stop fetching + health DOWN
+    batch-size: 500
+    initial-backoff: 100ms
+    max-backoff: 10s
+    broker-down-after: 60s      # health DOWN once sends fail continuously this long
+    max-fetch-age: 2m           # health DOWN when the last successful fetch is older
+  sources:
+    # requests-per-minute: set BELOW the source's published limit, never at it.
+    sec:
+      requests-per-minute: 300  # SEC publishes 10 req/s (600/min)
+      enabled: ${SEC_ENABLED:false} # off until terms verified (docs/data-sources.md)
+      requires-user-agent: true # when enabled, startup fails if SEC_USER_AGENT is empty
+      user-agent: ${SEC_USER_AGENT:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-components: always
