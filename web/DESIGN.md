@@ -11,9 +11,9 @@ All figures on the page are simulated and labelled as such. No third-party brand
 - **Warm Paper** (#F1EDE2) — primary text
 - **Dusk Grey** (#9A9486) — secondary text, axis labels, metadata
 - **Hairline** (rgba(241,237,226,0.12)) — 1px structure; **Strong Hairline** (rgba(241,237,226,0.24)) for ghost buttons and scrollbar
-- **Signal Amber** (#FFA028) — the single accent: flags, verdicts, chatter line, primary CTA, focus ring
-- **Uptick Green** (#3DDC84) and **Downtick Red** (#FF5D5D) — price direction only: the word "pump" is green and "dumps" is red, as are candles and the price change. Never verdicts or decoration
-- **Chart lines** (Warm Paper) — series such as chatter and score are plain white, so the amber flag stands out against them
+- **Signal Orange** (#FFA028, `--accent`) — the single accent: the "Pump likely" verdict, primary CTA, focus ring, active score segments
+- **Uptick Green** (#3DDC84) and **Downtick Red** (#FF5D5D) — green is "pump" and up candles, red is "dumps", down candles and the dashed FLAG marker. Never verdicts or decoration
+- **Chart lines** (Warm Paper) — series such as chatter and score are plain white, so the red flag marker stands out against them
 
 ## 3. Typography Rules
 - **UI and display:** Instrument Sans (`--font-ui`), tight tracking (-0.04em on the hero), hierarchy by size and colour.
@@ -22,11 +22,11 @@ All figures on the page are simulated and labelled as such. No third-party brand
 - **Banned:** Inter, serif faces, gradient text.
 
 ## 4. Component Stylings
-- **Buttons:** flat rectangles, 44px tall. Primary is amber fill with dark text; ghost is a strong-hairline outline. Press scales to 0.97 over 150ms ease-out. Hover changes colour only, and only on devices that hover.
+- **Buttons:** flat rectangles, 44px tall. Primary is orange fill with dark text; ghost is a strong-hairline outline. Press scales to 0.97 over 150ms ease-out. Hover changes colour only, and only on devices that hover.
 - **Panes:** a 1px hairline grid on a panel fill, no shadows, no rounded corners. Each pane has a 36px header with a title and a small grey tag.
-- **Chart:** canvas candlesticks in green and red, a volume strip, an amber chatter line against a dashed "normal" baseline, a dashed amber FLAG marker, a last-price tag on the right scale, and a crosshair readout on hover.
-- **Score bar:** 20 segments that fill amber, with a 150ms colour ease.
-- **Inputs:** thin range sliders with an amber thumb, labels above, a checkbox for the catalyst factor.
+- **Chart:** canvas candlesticks in green and red, a volume strip, a white chatter line against a dashed "normal" baseline, a dashed red FLAG marker, a last-price tag on the right scale, and a crosshair readout on hover.
+- **Score bar:** 20 segments that fill orange, with a 150ms colour ease.
+- **Inputs:** thin range sliders with an orange thumb, labels above, a checkbox for the catalyst factor.
 
 ## 5. Layout Principles
 - A 1400px container with 16px gutters on mobile and 32px from the md breakpoint.
@@ -36,13 +36,13 @@ All figures on the page are simulated and labelled as such. No third-party brand
 
 ## 6. Motion & Interaction
 - The headline and actions enter with a CSS-only rise, so text paints before any script runs.
-- The market screen is client-only canvas: ticks every 100ms, a new candle every 400ms, redraw on change only, paused when the tab is hidden, a held static frame under reduced motion.
+- The market screen is client-only canvas: ticks every 100ms, a new candle every 400ms, redraw on change only, paused when the tab is hidden or the chart is scrolled off-screen, a held static frame under reduced motion.
 - Scroll reveals use `animation-timeline: view()` with a plain static fallback. The pinned story and the smooth scroll use GSAP and Lenis.
 - Animate transform and opacity only. No blur over canvas, no shadow blur.
 
 ## 7. Anti-Patterns (Banned)
 - No emojis, no Inter, no serif, no pure black, no neon glows, no purple or blue gradients.
-- Verdicts are never green or red. Green and red mean price direction only, so a "Pump likely" verdict is amber, not red.
+- Verdicts are never green or red. Green and red mean price direction only, so a "Pump likely" verdict is orange, not red.
 - No watchlist, filings feed or extra panes in the hero. One chart, one evidence panel.
 - No real brand names, no fake precision. Every number is labelled simulated.
 - No overlapping text, no bouncing scroll arrows, no "Scroll to explore".
