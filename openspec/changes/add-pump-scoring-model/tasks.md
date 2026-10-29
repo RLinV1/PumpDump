@@ -28,14 +28,14 @@
 
 ## 5. Training and evaluation (`ml/`)
 
-- [ ] 5.1 Create the Python project with pinned versions and a one-command training entry point
+- [x] 5.1 Create the Python project with pinned versions and a one-command training entry point
 - [ ] 5.2 Train the promotional-language classifier on embeddings from an Apache-2.0 model; record model names and licenses
-- [ ] 5.2b Train version 1 on market and catalyst features only, because historical social data is not available for free
-- [ ] 5.3 Train LightGBM with monotone-decreasing constraints on catalyst features and time-based cross-validation
-- [ ] 5.4 Calibrate with isotonic regression and choose the flag level on held-out data
-- [ ] 5.5 Build the evaluation harness: time split, metrics with bootstrap intervals, rule and volume baselines
-- [ ] 5.6 Add the catalyst monotonicity test and the promotion gate
-- [ ] 5.7 Write the model card generator
+- [x] 5.2b Train version 1 on market and catalyst features only, because historical social data is not available for free
+- [x] 5.3 Train LightGBM with monotone-decreasing constraints on catalyst features and time-based cross-validation
+- [x] 5.4 Calibrate with isotonic regression and choose the flag level on held-out data
+- [x] 5.5 Build the evaluation harness: time split, metrics with bootstrap intervals, rule and volume baselines
+- [x] 5.6 Add the catalyst monotonicity test and the promotion gate
+- [x] 5.7 Write the model card generator
 
 ## 6. Serving
 
