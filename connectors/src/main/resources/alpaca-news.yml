@@ -1,0 +1,13 @@
+pumpwatch:
+  sources:
+    alpaca-news:
+      enabled: ${ALPACA_NEWS_ENABLED:false} # off until terms are verified (docs/data-sources.md)
+      # Alpaca market-data REST allows 200 requests/min on the free plan; stay below it
+      requests-per-minute: 150
+      # same credentials as market data
+      key-id: ${ALPACA_KEY_ID:}
+      secret-key: ${ALPACA_SECRET_KEY:}
+      # false: subscribe to the watchlist; true: subscribe to "*"
+      subscribe-all: false
+      # on start and after a restart, REST backfill from this long ago
+      backfill-minutes: 60

@@ -6,10 +6,10 @@ import java.net.http.WebSocket;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-final class JdkTradeStream implements TradeStream {
+public final class JdkTradeStream implements TradeStream {
     private final HttpClient client;
 
-    JdkTradeStream(HttpClient client) {
+    public JdkTradeStream(HttpClient client) {
         this.client = client;
     }
 
