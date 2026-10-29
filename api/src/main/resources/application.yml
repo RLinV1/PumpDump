@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: pumpwatch-api
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: pumpwatch-api
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        # pick up new replay.<run>.* topics quickly
+        metadata.max.age.ms: 30000
+    listener:
+      type: batch
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/pumpwatch}
+    username: ${POSTGRES_USER:pumpwatch}
+    password: ${POSTGRES_PASSWORD:pumpwatch}
+  flyway:
+    table: flyway_history_api
+    baseline-on-migrate: true
+api:
+  allowed-origins: ${API_ALLOWED_ORIGINS:http://localhost:3000}
+  rate-limit-per-minute: ${API_RATE_LIMIT_PER_MINUTE:120}
+  burst: 30
+  heartbeat: PT15S
+  poll-interval: PT1S
+  max-streams: 100
+server:
+  port: ${API_PORT:8083}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
