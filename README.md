@@ -14,6 +14,7 @@ The output is a risk signal with its evidence. It is not buy or sell advice.
    - `raw-news`: Alpaca News, Finnhub and press-release RSS
    - `raw-filings`: SEC EDGAR 8-K filings
    - `ingest-dlq`: records that failed validation
+   - `source-health`: each connector's health every 15 s, used to mark stale sources on scores
 2. **Record and replay.** Every record is stored with its event time and can be
    replayed into the same topics at original or accelerated speed, so backtests
    and demos run the same code as live data.

@@ -1,0 +1,11 @@
+# Runtime pins, direct and transitive. The license gate scans exactly these names.
+numpy==2.5.3
+pandas==3.0.6
+scikit-learn==1.9.1
+lightgbm==4.7.0
+scipy==1.18.1
+joblib==1.6.0
+threadpoolctl==3.7.0
+python-dateutil==2.9.0.post0
+six==1.17.0
+tzdata==2026.4

@@ -11,6 +11,8 @@ public interface Scorer {
 
     Score score(Features features);
 
-    /** Largest-first contributions behind {@link #score}, used as flag evidence. */
-    List<Flag.Contributor> contributors(Features features);
+    /** Largest-first contributions behind {@link #score}, used as flag evidence. Occlusion works for any scorer. */
+    default List<Flag.Contributor> contributors(Features features) {
+        return Occlusion.explain(this, features);
+    }
 }

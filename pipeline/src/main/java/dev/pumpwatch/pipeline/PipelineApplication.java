@@ -6,9 +6,12 @@ import dev.pumpwatch.pipeline.features.FeatureStage;
 import dev.pumpwatch.pipeline.flagger.FlagStage;
 import dev.pumpwatch.pipeline.scorer.RuleScorer;
 import dev.pumpwatch.pipeline.scorer.Scorer;
+import dev.pumpwatch.pipeline.scorer.ScorerHealth;
 import dev.pumpwatch.pipeline.scorer.ScorerStage;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,13 +36,19 @@ public class PipelineApplication {
     }
 
     @Bean
-    Scorer scorer() {
-        return new RuleScorer();
+    Scorer scorer(PipelineProperties p) {
+        return "anomaly".equals(p.scorer()) ? RuleScorer.anomaly() : new RuleScorer();
+    }
+
+    @Bean
+    ScorerHealth scorerHealth(Scorer scorer, MeterRegistry registry) {
+        return new ScorerHealth(scorer.modelVersion(), registry);
     }
 
     @Autowired
-    void topology(StreamsBuilder builder, PipelineProperties p, Scorer scorer) {
-        build(builder, p, scorer);
+    void topology(StreamsBuilder builder, PipelineProperties p, Scorer scorer, ScorerHealth health,
+                  MeterRegistry registry) {
+        build(builder, p, scorer, FeatureStage.WINDOW_MINUTES, registry, health);
     }
 
     /** Exposes Kafka Streams metrics, including dropped-records (late data beyond grace), to Micrometer. */
@@ -53,9 +62,16 @@ public class PipelineApplication {
     }
 
     public static void build(StreamsBuilder b, PipelineProperties p, Scorer scorer, List<Integer> windowMinutes) {
-        MentionExtractor.build(b, p.watchlist().stream().map(Keys::tickerKey).collect(Collectors.toSet()));
-        FeatureStage.build(b, p.baselineMentionsPerMinute(), windowMinutes);
-        ScorerStage.build(b, scorer, p.scoringWindowMinutes());
-        FlagStage.build(b, scorer, p.flagConfig());
+        build(b, p, scorer, windowMinutes, new SimpleMeterRegistry(),
+                new ScorerHealth(scorer.modelVersion(), new SimpleMeterRegistry()));
+    }
+
+    public static void build(StreamsBuilder b, PipelineProperties p, Scorer scorer, List<Integer> windowMinutes,
+                             MeterRegistry registry, ScorerHealth health) {
+        Set<String> watchlist = p.watchlist().stream().map(Keys::tickerKey).collect(Collectors.toSet());
+        MentionExtractor.build(b, watchlist);
+        FeatureStage.build(b, p.baselineMentionsPerMinute(), windowMinutes, watchlist, registry);
+        ScorerStage.build(b, scorer, p.scoringWindowMinutes(), p.staleAfter(), health);
+        FlagStage.build(b, scorer, p.flagConfig(), registry);
     }
 }

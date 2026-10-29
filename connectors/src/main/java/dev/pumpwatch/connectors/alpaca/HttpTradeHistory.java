@@ -17,11 +17,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Pages through {@code GET /v2/stocks/trades}; every request waits on the rate limiter. */
-final class HttpTradeHistory implements TradeHistory {
-    record Response(int status, String body, String retryAfterSeconds) {}
+public final class HttpTradeHistory implements TradeHistory {
+    public record Response(int status, String body, String retryAfterSeconds) {}
 
     /** Seam over the HTTP call so tests can fake it. Headers carry the credentials: implementations must not log them. */
-    interface Http {
+    public interface Http {
         Response get(URI uri, String keyId, String secretKey) throws IOException, InterruptedException;
     }
 
@@ -47,7 +47,7 @@ final class HttpTradeHistory implements TradeHistory {
         this.clock = clock;
     }
 
-    static Http jdk(HttpClient client) {
+    public static Http jdk(HttpClient client) {
         return (uri, key, secret) -> {
             var req = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(30))
                     .header("APCA-API-KEY-ID", key).header("APCA-API-SECRET-KEY", secret).GET().build();

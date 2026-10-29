@@ -42,6 +42,7 @@ class FlagStageTest {
             return List.of(new Flag.Contributor("social", 40), new Flag.Contributor("market", 20));
         }
     };
+    final io.micrometer.core.instrument.simple.SimpleMeterRegistry meters = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
     Topology topology;
     TopologyTestDriver d;
     TestInputTopic<String, String> features;
@@ -51,7 +52,7 @@ class FlagStageTest {
     @BeforeEach
     void setUp() {
         StreamsBuilder b = new StreamsBuilder();
-        FlagStage.build(b, STUB, CFG);
+        FlagStage.build(b, STUB, CFG, meters);
         topology = b.build();
         d = Fx.driver(topology);
         features = d.createInputTopic(Topics.FEATURES, Serdes.String().serializer(), Serdes.String().serializer());
@@ -104,6 +105,39 @@ class FlagStageTest {
         assertThat(f.evidence().catalyst().found()).isFalse();
         assertThat(f.evidence().catalyst().lookbackStart()).isEqualTo(at(10, 0).minus(Duration.ofHours(1)));
         assertThat(f.evidence().catalyst().lookbackEnd()).isEqualTo(at(10, 0));
+    }
+
+    void windowWithCatalyst(Instant end, double minutesSince, Map<String, Double> extra) {
+        var values = new java.util.HashMap<>(extra);
+        values.putAll(Map.of("mentions", 40.0, "trades", 12.0, "s", 70.0, "minutesSinceCatalyst", minutesSince));
+        features.pipeInput("GME", Json.toJson(new Features(1, end, end, "GME", end.minusSeconds(300), end, 5, values, null)));
+        scores.pipeInput("GME", Json.toJson(new Score(SchemaVersions.SCORE, end, end, "GME", end, 70, "rules-v1", null)));
+    }
+
+    @Test
+    void catalystInsideTheLookbackIsFoundWithItsItemCodes() {
+        windowWithCatalyst(at(10, 0), 20, Map.of("item.1.01", 1.0, "item.8.01", 2.0, "filings24h", 1.0));
+        Flag.CatalystCheck c = flags().get(0).evidence().catalyst();
+        assertThat(c.found()).isTrue();
+        assertThat(c.items()).containsExactly("1.01", "8.01");
+    }
+
+    @Test
+    void catalystOlderThanTheLookbackOrAbsentIsNotFound() {
+        windowWithCatalyst(at(10, 0), 61, Map.of("item.1.01", 1.0));
+        Flag.CatalystCheck old = flags().get(0).evidence().catalyst();
+        assertThat(old.found()).isFalse();
+        assertThat(old.items()).isEmpty();
+        windowWithCatalyst(at(50, 0), 60, Map.of()); // exactly the lookback is still inside
+        assertThat(flags().get(0).evidence().catalyst().found()).isTrue();
+    }
+
+    @Test
+    void flagLatencyIsRecordedPerFlag() {
+        window(at(10, 0), 70);
+        window(at(10, 15), 70); // inside the cooldown: no flag, no sample
+        assertThat(meters.get("pumpwatch.flag.latency").timer().count()).isEqualTo(1);
+        assertThat(meters.get("pumpwatch.flag.latency").timer().max(java.util.concurrent.TimeUnit.SECONDS)).isPositive();
     }
 
     @Test

@@ -1,0 +1,6 @@
+pumpwatch:
+  sources:
+    sec:
+      # how often the current-filings feed is polled; each new filing then costs one more request
+      poll-interval: 60s
+      ticker-refresh: 24h

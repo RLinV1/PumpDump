@@ -1,0 +1,18 @@
+# Known symbols that are also ordinary words. They link only with a $ cashtag or confirming context
+# (exchange prefix, "ticker"/"symbol" before, or stock/shares/calls/puts after). One per line, upper case.
+ON
+IT
+ALL
+A
+ARE
+SO
+FOR
+CAN
+NOW
+HAS
+BIG
+EAT
+GOOD
+LOVE
+REAL
+WELL

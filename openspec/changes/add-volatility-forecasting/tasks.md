@@ -1,7 +1,7 @@
 ## 1. Data and baseline
 
-- [ ] 1.1 Build one-minute range targets from historical bars for the watchlist, with a time-based train, validation and test split
-- [ ] 1.2 Implement the HAR-RV baseline and a naive last-hour baseline, and record their scores
+- [x] 1.1 Build one-minute range targets from historical bars for the watchlist, with a time-based train, validation and test split
+- [x] 1.2 Implement the HAR-RV baseline and a naive last-hour baseline, and record their scores
 - [ ] 1.3 Add `swing` (median, upper band, regime) to the shared `Score` record with a schema version bump
 
 ## 2. Model

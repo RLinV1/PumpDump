@@ -40,8 +40,17 @@ class MentionExtractorTest {
     }
 
     @Test
+    void mentionCarriesHashAndNewAccountFlagButNotThePostText() {
+        var out = run(Fx.post(at(1, 0), "alice", "$GME secret-phrase-xyz"));
+        assertThat(out.get(0).value).doesNotContain("secret-phrase-xyz");
+        Mention m = Json.fromJson(out.get(0).value, Mention.class);
+        assertThat(m.newAccount()).isTrue(); // Fx.post accounts are a day old
+        assertThat(m.simhash()).isEqualTo(SimHash.of("$GME secret-phrase-xyz"));
+    }
+
+    @Test
     void dropsPostsWithoutWatchlistCashtagAndInvalidPosts() {
-        assertThat(run(Fx.post(at(1, 0), "a", "GME without a cashtag"), "not json",
+        assertThat(run(Fx.post(at(1, 0), "a", "gme lowercase without a cashtag"), "not json",
                 Fx.post(at(1, 0), "", "$GME blank author"))).isEmpty();
     }
 }
