@@ -39,12 +39,13 @@ class ConnectorPublisherTest {
 
     private final FakeClock clock = new FakeClock();
     private final FakeSender sender = new FakeSender();
+    private final InMemoryOutbox outbox = new InMemoryOutbox();
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
 
     private ConnectorPublisher publisher(int capacity) {
         var props = new PumpwatchKafkaProperties(10, Duration.ofMinutes(2), Duration.ofSeconds(10), 5, capacity, 100,
                 Duration.ofMillis(1), Duration.ofMillis(5), Duration.ofSeconds(60), Duration.ofSeconds(120));
-        return new ConnectorPublisher("alpaca", sender, props, meters, clock);
+        return new ConnectorPublisher("alpaca", outbox, sender, props, meters, clock);
     }
 
     private TickRecord tick(String ticker, double price, long size) {
@@ -143,5 +144,31 @@ class ConnectorPublisherTest {
         } finally {
             p.close();
         }
+    }
+
+    @Test
+    void pendingRowsSurviveARestartAndAreSentInOrder() {
+        var first = publisher(10);
+        first.offer(Topics.TICKS, "AAA", tick("AAA", 1, 1));
+        first.offer(Topics.TICKS, "AAA", tick("AAA", 1, 2));
+        // a new publisher on the same store is a process restart: nothing was sent, nothing was lost
+        var second = publisher(10);
+        assertThat(second.bufferSize()).isEqualTo(2);
+        assertThat(second.drainOnce()).isTrue();
+        assertThat(sender.sent).extracting(x -> Json.fromJson(x.value(), TickRecord.class).size())
+                .containsExactly(1L, 2L);
+        assertThat(outbox.count("alpaca")).isZero();
+    }
+
+    @Test
+    void failedSendLeavesItsRowAndFullOutboxCountsRowsFromStartup() {
+        var first = publisher(2);
+        first.offer(Topics.TICKS, "AAA", tick("AAA", 1, 1));
+        first.offer(Topics.TICKS, "AAA", tick("AAA", 1, 2));
+        var second = publisher(2);
+        assertThat(second.isAcceptingRecords()).isFalse();
+        sender.failures.set(1);
+        assertThat(second.drainOnce()).isFalse();
+        assertThat(outbox.count("alpaca")).isEqualTo(2);
     }
 }

@@ -6,9 +6,9 @@
 
 ## 2. Free-tier defaults
 
-- [ ] 2.1 Add per-source plan and limit settings to configuration, defaulting to the free plan
-- [ ] 2.2 Refuse to start a stream whose watchlist exceeds the plan's symbol limit
-- [ ] 2.3 Log each source's active plan at startup
+- [x] 2.1 Add per-source plan and limit settings to configuration, defaulting to the free plan
+- [x] 2.2 Refuse to start a stream whose watchlist exceeds the plan's symbol limit
+- [x] 2.3 Log each source's active plan at startup
 
 ## 3. Rate limits and identification
 

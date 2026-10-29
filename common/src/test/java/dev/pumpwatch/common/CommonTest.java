@@ -118,8 +118,10 @@ class CommonTest {
     }
 
     @Test
-    void tickerIsUpperCasedBeforeChecking() {
-        assertThat(Validator.validate(new TickRecord(1, T, T, "brk.b", BigDecimal.ONE, 1, null))).isEmpty();
+    void tickerIsMatchedExactlyAsGiven() {
+        assertThat(Validator.validate(new TickRecord(1, T, T, "gme", BigDecimal.ONE, 1, null))).isNotEmpty();
+        assertThat(Validator.validate(new TickRecord(1, T, T, "GME", BigDecimal.ONE, 1, null))).isEmpty();
+        assertThat(Validator.validate(new TickRecord(1, T, T, "BRK.B", BigDecimal.ONE, 1, null))).isEmpty();
     }
 
     @Test

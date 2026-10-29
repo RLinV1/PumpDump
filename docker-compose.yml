@@ -61,6 +61,67 @@ services:
       timeout: 5s
       retries: 10
 
+  connectors:
+    profiles: ["apps"]
+    build:
+      context: .
+      args:
+        MODULE: connectors
+        PORT: "8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/pumpwatch
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  replay:
+    profiles: ["apps"]
+    build:
+      context: .
+      args:
+        MODULE: replay
+        PORT: "8081"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/pumpwatch
+      REPLAY_PORT: "8081"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8081:8081"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
 volumes:
   pgdata:
   kafkadata:

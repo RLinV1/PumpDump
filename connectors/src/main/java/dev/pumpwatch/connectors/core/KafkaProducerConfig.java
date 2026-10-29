@@ -45,9 +45,10 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    ConnectorPublishers connectorPublishers(KafkaTemplate<String, String> template, PumpwatchKafkaProperties props,
+    ConnectorPublishers connectorPublishers(KafkaTemplate<String, String> template, OutboxStore outbox,
+                                            PumpwatchKafkaProperties props,
                                             MeterRegistry meters, HealthContributorRegistry health, Clock clock) {
-        return new ConnectorPublishers(template, props, meters, health, clock);
+        return new ConnectorPublishers(template, outbox, props, meters, health, clock);
     }
 
     @Bean

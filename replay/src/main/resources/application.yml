@@ -3,7 +3,31 @@ spring:
     name: pumpwatch-replay
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: pumpwatch-recorder
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+    listener:
+      type: batch
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/pumpwatch}
     username: ${POSTGRES_USER:pumpwatch}
     password: ${POSTGRES_PASSWORD:pumpwatch}
+  flyway:
+    table: flyway_history_replay
+    baseline-on-migrate: true
+server:
+  port: ${REPLAY_PORT:8081}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

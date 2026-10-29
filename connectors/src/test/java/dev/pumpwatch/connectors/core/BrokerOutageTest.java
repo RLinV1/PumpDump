@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -32,6 +33,8 @@ import org.testcontainers.utility.DockerImageName;
 class BrokerOutageTest {
     @Container
     static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
+    @Container
+    static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Test
     void pausedBrokerLosesNothingAndKeepsPerKeyOrder() throws Exception {
@@ -39,7 +42,7 @@ class BrokerOutageTest {
                 Duration.ofMillis(100), Duration.ofSeconds(2), Duration.ofSeconds(60), Duration.ofSeconds(120));
         var cfg = new HashMap<String, Object>(KafkaProducerConfig.producerConfig(props, KAFKA.getBootstrapServers()));
         var template = new KafkaTemplate<>(new DefaultKafkaProducerFactory<String, String>(cfg));
-        var publisher = new ConnectorPublisher("it", template::send, props, new SimpleMeterRegistry(),
+        var publisher = new ConnectorPublisher("it", new JdbcOutboxStore(TestDb.migrated(PG)), template::send, props, new SimpleMeterRegistry(),
                 Clock.systemUTC());
         publisher.start();
 

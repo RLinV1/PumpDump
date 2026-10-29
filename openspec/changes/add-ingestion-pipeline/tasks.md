@@ -29,20 +29,20 @@
 
 ## 5. Market tick ingestion (Alpaca)
 
-- [ ] 5.1 Load Alpaca credentials from environment; ensure they never appear in logs or records
-- [ ] 5.2 Implement WebSocket trade stream subscription for the configured watchlist
-- [ ] 5.3 Fail startup when watchlist exceeds the configured plan's symbol limit
-- [ ] 5.4 Normalize trades to `TickRecord` and publish keyed by ticker
-- [ ] 5.5 Implement reconnect with backoff and historical-trades gap fill without duplicates
-- [ ] 5.6 Tests: ordering per ticker, over-limit watchlist, drop-and-reconnect gap fill
+- [x] 5.1 Load Alpaca credentials from environment; ensure they never appear in logs or records
+- [x] 5.2 Implement WebSocket trade stream subscription for the configured watchlist
+- [x] 5.3 Fail startup when watchlist exceeds the configured plan's symbol limit
+- [x] 5.4 Normalize trades to `TickRecord` and publish keyed by ticker
+- [x] 5.5 Implement reconnect with backoff and historical-trades gap fill without duplicates
+- [x] 5.6 Tests: ordering per ticker, over-limit watchlist, drop-and-reconnect gap fill
 
 ## 6. Recording and replay
 
-- [ ] 6.1 Implement recorder consumer writing `recorded_events` (batched inserts, indexed by event time)
-- [ ] 6.2 Implement replayer: read range ordered by event time, scale gaps by speed factor, publish with replay header
-- [ ] 6.3 Add replay trigger (CLI or HTTP endpoint) with range and speed parameters
-- [ ] 6.4 Verify replay does not delay live publishing
-- [ ] 6.5 Tests: restart survival, 10x speed gap check, replay marker present
+- [x] 6.1 Implement recorder consumer writing `recorded_events` (batched inserts, indexed by event time)
+- [x] 6.2 Implement replayer: read range ordered by event time, scale gaps by speed factor, publish with replay header
+- [x] 6.3 Add replay trigger (CLI or HTTP endpoint) with range and speed parameters
+- [x] 6.4 Verify replay does not delay live publishing
+- [x] 6.5 Tests: restart survival, 10x speed gap check, replay marker present
 
 ## 7. Week-1 checks and wrap-up
 
