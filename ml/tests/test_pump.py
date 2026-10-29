@@ -94,7 +94,8 @@ def test_gate_blocks_losers_and_violations():
 
 def test_rule_table_matches_docs():
     doc = Path(__file__).parents[2] / "docs" / "rule-scorer.md"
-    rows = re.findall(r"^\| [^|]+ \| \w+ \| `(\w+)` \| ([\d.]+) \| (\d+) \|$", doc.read_text(), re.M)
+    table = doc.read_text().split("## Rule table")[1].split("\n## ")[0]
+    rows = re.findall(r"^\| [^|]+ \| \w+ \| `(\w+)` \| ([\d.]+) \| (-?\d+) \|$", table, re.M)
     assert [(f, float(a), int(p)) for f, a, p in rows] == [(f, float(a), p) for f, a, p in RULES]
 
 
