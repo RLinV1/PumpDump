@@ -11,6 +11,10 @@ import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.common.Validator;
 import dev.pumpwatch.pipeline.EventTime;
 import dev.pumpwatch.pipeline.extractor.Mention;
+import dev.pumpwatch.pipeline.scorer.AnomalyBaseline;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -37,6 +41,7 @@ import org.apache.kafka.streams.processor.api.FixedKeyProcessor;
 import org.apache.kafka.streams.processor.api.FixedKeyProcessorContext;
 import org.apache.kafka.streams.processor.api.FixedKeyRecord;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.TimestampedKeyValueStore;
 import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.apache.kafka.streams.state.WindowStore;
@@ -56,6 +61,7 @@ public final class FeatureStage {
     public static final Duration ADVANCE = Duration.ofSeconds(15);
     public static final Duration GRACE = Duration.ofMinutes(2);
     static final String CTX_STORE = "ctx";
+    static final String ANOMALY_STORE = "anomaly-history";
     private static final Logger log = LoggerFactory.getLogger(FeatureStage.class);
     private static final Serde<Agg> AGG = jsonSerde(Agg.class);
     private static final Serde<Ctx> CTX = jsonSerde(Ctx.class);
@@ -69,13 +75,22 @@ public final class FeatureStage {
     /** Window lengths are a parameter so slow end-to-end tests can use just the scoring window. */
     public static void build(StreamsBuilder b, double baselineMentionsPerMinute, List<Integer> windowMinutes,
                              Set<String> watchlist) {
+        build(b, baselineMentionsPerMinute, windowMinutes, watchlist, new SimpleMeterRegistry());
+    }
+
+    /** {@code meters} receives {@code pumpwatch.late.records}, tagged by input topic. */
+    public static void build(StreamsBuilder b, double baselineMentionsPerMinute, List<Integer> windowMinutes,
+                             Set<String> watchlist, MeterRegistry meters) {
         Consumed<String, String> consumed =
                 Consumed.with(Serdes.String(), Serdes.String()).withTimestampExtractor(new EventTime());
-        KStream<String, Agg> m = b.stream(Topics.MENTIONS, consumed).flatMapValues(FeatureStage::mentionDelta);
-        KStream<String, Agg> t = b.stream(Topics.TICKS, consumed).flatMapValues(FeatureStage::tickDelta);
-        KStream<String, Agg> filings = b.stream(Topics.RAW_FILINGS, consumed)
+        b.addStateStore(Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(ANOMALY_STORE), Serdes.String(),
+                Serdes.String()).withLoggingEnabled(Map.of()));
+        KStream<String, Agg> m = input(b, Topics.MENTIONS, consumed, meters).flatMapValues(FeatureStage::mentionDelta);
+        KStream<String, Agg> t = input(b, Topics.TICKS, consumed, meters).flatMapValues(FeatureStage::tickDelta);
+        KStream<String, Agg> filings = input(b, Topics.RAW_FILINGS, consumed, meters)
                 .flatMap((k, v) -> filingDelta(v, watchlist));
-        KStream<String, Agg> news = b.stream(Topics.RAW_NEWS, consumed).flatMap((k, v) -> newsDelta(v, watchlist));
+        KStream<String, Agg> news = input(b, Topics.RAW_NEWS, consumed, meters)
+                .flatMap((k, v) -> newsDelta(v, watchlist));
         // filings and news are keyed by something else upstream, so they are re-keyed by ticker (all topics must
         // have the same partition count for the per-ticker state to line up)
         KStream<String, Agg> cats = filings.merge(news)
@@ -97,10 +112,16 @@ public final class FeatureStage {
                     .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded())
                             .withName("final-" + minutes + "m"))
                     .toStream()
-                    .processValues(() -> new WithContext(minutes, baselineMentionsPerMinute), CTX_STORE)
+                    .processValues(() -> new WithContext(minutes, baselineMentionsPerMinute), CTX_STORE, ANOMALY_STORE)
                     .map((w, f) -> KeyValue.pair(w.key(), Json.toJson(f)))
                     .to(Topics.FEATURES, Produced.with(Serdes.String(), Serdes.String()));
         }
+    }
+
+    private static KStream<String, String> input(StreamsBuilder b, String topic, Consumed<String, String> consumed,
+                                                 MeterRegistry meters) {
+        Counter late = Counter.builder("pumpwatch.late.records").tag("topic", topic).register(meters);
+        return b.stream(topic, consumed).processValues(() -> new LateCounter<String>(late));
     }
 
     /** Joins a closed window with the ticker's context from the state store. */
@@ -109,6 +130,7 @@ public final class FeatureStage {
         private final double baselinePerMinute;
         private FixedKeyProcessorContext<Windowed<String>, Features> context;
         private TimestampedKeyValueStore<String, Ctx> store;
+        private KeyValueStore<String, String> anomaly;
 
         WithContext(int minutes, double baselinePerMinute) {
             this.minutes = minutes;
@@ -119,13 +141,24 @@ public final class FeatureStage {
         public void init(FixedKeyProcessorContext<Windowed<String>, Features> context) {
             this.context = context;
             this.store = context.getStateStore(CTX_STORE);
+            this.anomaly = context.getStateStore(ANOMALY_STORE);
         }
 
         @Override
         public void process(FixedKeyRecord<Windowed<String>, Agg> r) {
             ValueAndTimestamp<Ctx> vt = store.get(r.key().key());
             Ctx c = vt == null ? null : vt.value();
-            context.forward(r.withValue(toFeatures(r.key(), minutes, r.value(), c == null ? Ctx.EMPTY : c, baselinePerMinute)));
+            Features f = toFeatures(r.key(), minutes, r.value(), c == null ? Ctx.EMPTY : c, baselinePerMinute);
+            // windows close in event-time order per ticker, so the history (and every z-score) is the same in replay
+            String key = r.key().key() + "|" + minutes;
+            String stored = anomaly.get(key);
+            AnomalyBaseline.History h = stored == null ? AnomalyBaseline.History.EMPTY
+                    : Json.fromJson(stored, AnomalyBaseline.History.class);
+            Map<String, Double> values = new HashMap<>(f.values());
+            values.putAll(h.zScores(f.values()));
+            anomaly.put(key, Json.toJson(h.observe(f.values())));
+            context.forward(r.withValue(new Features(f.schemaVersion(), f.eventTime(), f.ingestTime(), f.ticker(),
+                    f.windowStart(), f.windowEnd(), f.windowMinutes(), values, f.staleSources())));
         }
     }
 

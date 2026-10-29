@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class PipelineTopologyTest {
     // margin 50 can never be met (scores top out at 100), so only the first crossing may flag
     static final PipelineProperties PROPS =
-            new PipelineProperties(List.of("GME"), 5, 0.1, 60, Duration.ofMinutes(30), 50, Duration.ofHours(1));
+            new PipelineProperties(List.of("GME"), 5, 0.1, 60, Duration.ofMinutes(30), 50, Duration.ofHours(1), "rules", Duration.ofMinutes(5));
 
     record Ev(String topic, String value) {}
 

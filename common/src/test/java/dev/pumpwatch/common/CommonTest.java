@@ -130,7 +130,7 @@ class CommonTest {
         for (String bad : new String[] {null, "", " ", "a b", "a.b", "a/b"}) {
             assertThatThrownBy(() -> Topics.forRun(Topics.TICKS, bad)).isInstanceOf(IllegalArgumentException.class);
         }
-        assertThat(Topics.ALL).hasSize(9).contains("flags", "mentions");
+        assertThat(Topics.ALL).hasSize(10).contains("flags", "mentions");
     }
 
     @Test

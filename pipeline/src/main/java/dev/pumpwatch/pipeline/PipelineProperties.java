@@ -14,7 +14,9 @@ public record PipelineProperties(
         @DefaultValue("60") double flagLevel,
         @DefaultValue("PT30M") Duration cooldown,
         @DefaultValue("10") double reflagMargin,
-        @DefaultValue("PT1H") Duration catalystLookback) {
+        @DefaultValue("PT1H") Duration catalystLookback,
+        @DefaultValue("rules") String scorer,
+        @DefaultValue("PT5M") Duration staleAfter) {
 
     public FlagConfig flagConfig() {
         return new FlagConfig(scoringWindowMinutes, flagLevel, cooldown, reflagMargin, catalystLookback);

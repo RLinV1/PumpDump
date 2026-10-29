@@ -8,6 +8,9 @@ import dev.pumpwatch.common.Score;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.pipeline.EventTime;
 import dev.pumpwatch.pipeline.scorer.Scorer;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -42,6 +45,12 @@ public final class FlagStage {
     record Pair(Score score, Features features) {}
 
     public static void build(StreamsBuilder b, Scorer scorer, FlagConfig cfg) {
+        build(b, scorer, cfg, new SimpleMeterRegistry());
+    }
+
+    /** {@code meters} receives {@code pumpwatch.flag.latency}: wall time from the scored window end to the flag. */
+    public static void build(StreamsBuilder b, Scorer scorer, FlagConfig cfg, MeterRegistry meters) {
+        Timer latency = Timer.builder("pumpwatch.flag.latency").publishPercentileHistogram().register(meters);
         Consumed<String, String> consumed =
                 Consumed.with(Serdes.String(), Serdes.String()).withTimestampExtractor(new EventTime());
         var scores = b.stream(Topics.SCORES, consumed);
@@ -53,7 +62,7 @@ public final class FlagStage {
         scores.join(features, FlagStage::pair, JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(1), Duration.ofMinutes(2)),
                         StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String()))
                 .filter((k, p) -> p != null)
-                .process(() -> new Dedup(scorer, cfg), STORE)
+                .process(() -> new Dedup(scorer, cfg, latency), STORE)
                 .mapValues(Json::toJson)
                 .to(Topics.FLAGS, Produced.with(Serdes.String(), Serdes.String()));
     }
@@ -76,15 +85,30 @@ public final class FlagStage {
         }
     }
 
+    /**
+     * Found when the newest catalyst (filing or news item) is no older than the lookback. The items are the 8-K item
+     * codes the window's features carry (their lookback is 24 hours, so they can be older than the check window).
+     */
+    static Flag.CatalystCheck catalyst(Features f, Instant at, Duration lookback) {
+        double since = f.values().getOrDefault("minutesSinceCatalyst", Double.MAX_VALUE);
+        boolean found = since <= lookback.toMinutes();
+        List<String> items = !found ? List.of() : f.values().keySet().stream().filter(k -> k.startsWith("item."))
+                .map(k -> k.substring("item.".length())).sorted().toList();
+        return new Flag.CatalystCheck(found, at.minus(lookback), at, items);
+    }
+
     private static final class Dedup implements Processor<String, Pair, String, Flag> {
         private final Scorer scorer;
         private final FlagConfig cfg;
         private ProcessorContext<String, Flag> ctx;
         private KeyValueStore<String, String> store;
 
-        Dedup(Scorer scorer, FlagConfig cfg) {
+        private final Timer latency;
+
+        Dedup(Scorer scorer, FlagConfig cfg, Timer latency) {
             this.scorer = scorer;
             this.cfg = cfg;
+            this.latency = latency;
         }
 
         @Override
@@ -112,8 +136,9 @@ public final class FlagStage {
             Flag.Evidence evidence = new Flag.Evidence(s.score(), s.modelVersion(), scorer.contributors(f),
                     Math.round(f.values().getOrDefault("mentions", 0.0)),
                     Math.round(f.values().getOrDefault("trades", 0.0)),
-                    // placeholder: catalyst features do not exist yet, so nothing is ever found
-                    new Flag.CatalystCheck(false, at.minus(cfg.catalystLookback()), at, List.of()));
+                    catalyst(f, at, cfg.catalystLookback()));
+            Duration lag = Duration.between(at, Instant.now());
+            if (!lag.isNegative()) latency.record(lag); // negative only when replaying timestamps from the future
             ctx.forward(rec.withValue(new Flag(SchemaVersions.FLAG, at, Instant.now(), s.ticker(), at, evidence))
                     .withTimestamp(at.toEpochMilli()));
         }
