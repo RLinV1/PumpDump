@@ -69,6 +69,18 @@ class ReplayerTest {
     }
 
     @Test
+    void derivedTopicsAreRecordedButNeverReplayedBecauseThePipelineRegeneratesThem() throws Exception {
+        add(1, "ticks", 0);
+        add(2, "features", 1);
+        add(3, "scores", 2);
+        add(4, "flags", 3);
+        add(5, "raw-posts", 4);
+        long n = replayer.run("run-1", T0, T0.plusSeconds(60), 1000, false);
+        assertThat(n).isEqualTo(2);
+        assertThat(sent).extracting(ProducerRecord::topic).containsExactly("ticks", "raw-posts");
+    }
+
+    @Test
     void isolatedModeUsesRunTopic() throws Exception {
         add(1, "ticks", 0);
         replayer.run("run-1", T0, T0.plusSeconds(60), 1, true);

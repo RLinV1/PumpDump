@@ -8,11 +8,11 @@
 
 ## 2. Pipeline skeleton
 
-- [ ] 2.1 Add `extractor`, `feature-builder`, `scorer` and `flagger` Spring Boot modules wired through Kafka topics, each reading and writing the shared records
-- [ ] 2.2 Configure event-time windows (1, 5, 30 minutes, emitted every 15 seconds) with a two-minute grace period
-- [ ] 2.3 Implement the `Scorer` interface with a `RuleScorer` so the whole path runs before any model exists
-- [ ] 2.4 Implement flag de-duplication with a per-ticker cooldown and a re-flag margin
-- [ ] 2.5 Extend the recorder to store features, scores and flags with event time
+- [x] 2.1 Add a `pipeline` Spring Boot module (Kafka Streams) with `extractor`, `features`, `scorer` and `flagger` stages as separate packages wired only through Kafka topics, each reading and writing the shared records
+- [x] 2.2 Configure event-time windows (1, 5, 30 minutes, emitted every 15 seconds) with a two-minute grace period
+- [x] 2.3 Implement the `Scorer` interface with a `RuleScorer` so the whole path runs before any model exists
+- [x] 2.4 Implement flag de-duplication with a per-ticker cooldown and a re-flag margin
+- [x] 2.5 Extend the recorder to store features, scores and flags with event time
 
 ## 3. Cross-cutting behavior
 

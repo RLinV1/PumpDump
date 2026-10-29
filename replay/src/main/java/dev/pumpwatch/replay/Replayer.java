@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class Replayer {
     static final int PAGE = 500;
+    static final java.util.Set<String> DERIVED = java.util.Set.of(Topics.MENTIONS, Topics.FEATURES, Topics.SCORES, Topics.FLAGS);
     /** Gaps below this are accumulated instead of slept, so tiny sleeps do not distort the pace. */
     static final Duration MIN_SLEEP = Duration.ofMillis(5);
     private static final Logger log = LoggerFactory.getLogger(Replayer.class);
@@ -69,6 +70,11 @@ public class Replayer {
                 return sent;
             }
             for (RecordedEvent e : page) {
+                afterTime = e.eventTime();
+                afterId = e.id();
+                if (DERIVED.contains(e.topic())) {
+                    continue; // recorded for audit and parity checks; the pipeline regenerates them from the inputs
+                }
                 if (prev != null) {
                     owed = owed.plusNanos((long) (Duration.between(prev, e.eventTime()).toNanos() / speed));
                     if (owed.compareTo(MIN_SLEEP) >= 0) {
@@ -84,8 +90,6 @@ public class Replayer {
                 pr.headers().add(Headers.RUN_ID, runId.getBytes(StandardCharsets.UTF_8));
                 sink.send(pr);
                 sent++;
-                afterTime = e.eventTime();
-                afterId = e.id();
             }
         }
     }
