@@ -3,6 +3,36 @@
 `web/bluesky-sentiment.mjs` serves the live sentiment feature. The existing Python LightGBM pipeline in
 this directory remains the offline pump-model training path. These are separate models and outputs.
 
+## Recent top and latest posts
+
+The panel defaults to top-ranked posts from the last 24 hours. `web/bluesky-search.mjs` queries
+`https://api.bsky.app/xrpc/app.bsky.feed.searchPosts` with the ticker cashtag, `since`/`until`, English
+language and either `sort=top` or `sort=latest`. The public cached host returned HTTP 403 during local
+verification; the AppView host above returned actual results without configured credentials.
+
+At most 50 returned results are considered and 25 matching, unique posts are classified. Both search
+and streaming use the shared ticker matcher: cashtags match directly; plain uppercase symbols require
+financial context. Created timestamps must be inside the requested day. Search ranking is supplied by
+Bluesky; this application filters the results but does not invent an engagement score. These are sampled
+posts, not all ticker discussion or a representative survey of users.
+
+Search shares the same pretrained model and serial inference scheduler as streaming. It caches only
+aggregate label counts/metadata for 60 seconds, coalesces concurrent identical reads, and bounds cache
+entries, concurrent requests and provider request frequency. Errors have a five-second cooldown and are
+reported as unavailable, not fabricated zero counts. Search text and author data are not returned or
+persisted. Deleted posts disappear when the provider refreshes its results; this one-minute aggregate
+cache does not offer instantaneous deletion invalidation.
+
+The API accepts `?sample=top`, `?sample=latest` or `?sample=stream`. Omitting the parameter preserves
+the streaming contract for existing clients. Search responses use `windowMinutes: 1440` and
+`sample: { sort, examined }`; streaming keeps its one-hour response without search metadata.
+
+Local real-model verification on 2026-10-30 classified 2 relevant AMC posts from 49 top search results
+(both neutral), and 25 NVDA posts from 50 top results (4 positive, 14 neutral, 7 negative). These are
+time-specific samples demonstrating data flow, not a sentiment accuracy evaluation or fixed expected counts.
+
+## Live-stream collection
+
 The live service runs the quantized ONNX version of
 [DistilRoBERTa financial sentiment](https://huggingface.co/Xenova/distilroberta-finetuned-financial-news-sentiment-analysis)
 locally through `@huggingface/transformers`. The upstream
@@ -18,9 +48,11 @@ Only posts naming a tracked cashtag, or an uppercase tracked ticker alongside a 
 enter classification. The configured watchlist is always tracked. Selecting a mover also tracks that
 symbol from the first sentiment read onward, even without a risk score. At most 64 additional selected
 symbols are tracked; the least recently read selection is evicted at the limit, and selections expire
-after one hour without reads. This does not backfill historical posts.
+after one hour without reads. The live-stream view does not backfill historical posts; recent searches
+are a separate sample and are not inserted into the one-hour stream aggregate.
 The model receives at most 256 tokens from a post. A single inference runs at a
-time, with 64 queued posts, a ten-second inference deadline and at most 10,000 retained samples. Drops
+time across both sources, with bounded classification/stream queues, a ten-second inference deadline
+and at most 10,000 retained streaming samples. Drops
 are reported. Reconnection resumes from the latest event cursor. Deletes remove the matching sample,
 including an inference still in progress.
 

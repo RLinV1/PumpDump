@@ -17,3 +17,16 @@ test("context routes return public live envelopes and sanitize provider failures
   const res=response(); handle({url:"/api/v1/tickers/AAPL/news",method:"GET"},res);await flush();assert.equal(res.status,200);assert.equal(res.body.mode,"live");assert.equal(res.body.data.ticker,"AAPL");
   const failed=response();handle({url:"/api/v1/market-movers",method:"GET"},failed);await flush();assert.equal(failed.status,503);assert.ok(!JSON.stringify(failed.body).includes("PRIVATE_PROVIDER_TOKEN"));
 });
+
+test("sentiment routes select recent top/latest samples or the live stream and reject unknown filters", async () => {
+  const reads = [];
+  const handle = createContextApi({ loadRecentSentiment: async (ticker, sort) => { reads.push([ticker, sort]); return { ticker }; }, sentiment: { snapshot: (ticker) => { reads.push([ticker, "stream"]); return { ticker }; } } });
+  for (const sample of ["top", "latest", "stream"]) {
+    const res = response(); handle({ url: `/api/v1/tickers/AMC/sentiment?sample=${sample}`, method: "GET" }, res); await flush();
+    assert.equal(res.status, 200);
+  }
+  assert.deepEqual(reads, [["AMC", "top"], ["AMC", "latest"], ["AMC", "stream"]]);
+  const invalid = response(); handle({ url: "/api/v1/tickers/AMC/sentiment?sample=invalid", method: "GET" }, invalid); await flush();
+  assert.equal(invalid.status, 400);
+  assert.equal(reads.length, 3);
+});

@@ -26,6 +26,19 @@ test("mock watchlist provides current aggregate data labeled mock", async () => 
   assert.ok(!JSON.stringify(body).match(/author|rawText|postText/));
 });
 
+test("mock sentiment keeps top and latest samples disabled and rejects invalid filters", async () => {
+  for (const sample of ["top", "latest"]) {
+    const response = await fetch(`${base}/api/v1/tickers/AMC/sentiment?sample=${sample}`);
+    const body = await response.json();
+    assert.equal(body.mode, "mock");
+    assert.equal(body.data.enabled, false);
+    assert.equal(body.data.total, 0);
+    assert.equal(body.data.windowMinutes, 1440);
+    assert.deepEqual(body.data.sample, { sort: sample, examined: 0 });
+  }
+  assert.equal((await fetch(`${base}/api/v1/tickers/AMC/sentiment?sample=invalid`)).status, 400);
+});
+
 test("mock flags respect limits and share the ticker timeline time axis", async () => {
   const flags = await (await fetch(`${base}/api/v1/flags?limit=1`)).json();
   assert.equal(flags.data.length, 1);

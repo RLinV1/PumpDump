@@ -47,6 +47,7 @@ export type Sentiment = {
   ticker: string; enabled: boolean; model: string; modelStatus: "disabled" | "loading" | "ready" | "error";
   streamConnected: boolean; asOf: string; windowMinutes: number;
   positive: number; negative: number; neutral: number; total: number; lastPostAt: string | null; dropped: number;
+  sample?: { sort: "top" | "latest"; examined: number };
 };
 
 export type DataMode = "mock" | "live";
@@ -125,7 +126,9 @@ function validSentiment(data: Sentiment, ticker: string): boolean {
     && ["disabled", "loading", "ready", "error"].includes(data.modelStatus) && typeof data.streamConnected === "boolean"
     && validDate(data.asOf) && Number.isFinite(data.windowMinutes) && data.windowMinutes > 0
     && [data.positive, data.negative, data.neutral, data.total, data.dropped].every(validCount)
-    && data.total === data.positive + data.negative + data.neutral && (data.lastPostAt === null || validDate(data.lastPostAt));
+    && data.total === data.positive + data.negative + data.neutral && (data.lastPostAt === null || validDate(data.lastPostAt))
+    && (data.sample === undefined || (!!data.sample && ["top", "latest"].includes(data.sample.sort)
+      && validCount(data.sample.examined) && data.sample.examined <= 50 && data.total <= Math.min(25, data.sample.examined) && data.windowMinutes === 1440));
 }
 
 function validPublicData(path: string, data: unknown): boolean {
@@ -133,7 +136,12 @@ function validPublicData(path: string, data: unknown): boolean {
   if (endpoint === "/api/v1/market-movers") return validMovers(data as MarketMovers);
   if (endpoint === "/api/v1/news") return validNews(data as StockNews, null);
   const context = /^\/api\/v1\/tickers\/([A-Z]{1,5})\/(news|sentiment)$/.exec(endpoint);
-  if (context) return context[2] === "news" ? validNews(data as StockNews, context[1]) : validSentiment(data as Sentiment, context[1]);
+  if (context) {
+    if (context[2] === "news") return validNews(data as StockNews, context[1]);
+    const sentiment = data as Sentiment;
+    const sample = new URLSearchParams(path.split("?")[1]).get("sample") ?? "stream";
+    return validSentiment(sentiment, context[1]) && (sample === "stream" ? sentiment.sample === undefined : sentiment.sample?.sort === sample);
+  }
   if (endpoint === "/api/v1/watchlist") return Array.isArray(data) && (data as Score[]).every(validScoreView);
   if (endpoint === "/api/v1/flags") return Array.isArray(data) && (data as Flag[]).every(validFlag);
   const ticker = /^\/api\/v1\/tickers\/([A-Z]{1,5})\/timeline$/.exec(endpoint)?.[1];
