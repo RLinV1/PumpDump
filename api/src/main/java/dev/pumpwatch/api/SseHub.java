@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -42,6 +43,7 @@ public class SseHub {
     private final Clock clock;
     private final List<Client> clients = new CopyOnWriteArrayList<>();
 
+    @Autowired
     public SseHub(ReadRepository repo, ApiProperties props) {
         this(repo, props, Clock.systemUTC());
     }

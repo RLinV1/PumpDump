@@ -46,8 +46,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
         res.setHeader(Views.NOTICE_HEADER, Views.NOTICE);
-        // shortcut: keyed on the socket address; behind a proxy every client looks the same, so key on a trusted
-        // forwarded-for header when this is deployed behind one.
+        // Tomcat resolves forwarding headers only from the configured trusted web host before this filter runs.
         long retryAfterSeconds = take(req.getRemoteAddr());
         if (retryAfterSeconds == 0) {
             chain.doFilter(req, res);

@@ -12,6 +12,7 @@ spring:
     # connectors and replay share one database, so each keeps its own migration history
     table: flyway_history_connectors
     baseline-on-migrate: true
+    baseline-version: 0 # another app's tables must not cause this app's V1 to be skipped
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
 
