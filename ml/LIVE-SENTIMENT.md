@@ -27,6 +27,13 @@ author identifiers are never returned, logged, written to disk or used to retrai
 record identifiers and labels remain in memory for deduplication, deletion handling and hourly expiry.
 Restarting the service clears those aggregates.
 
+Local verification on 2026-10-30 loaded the pinned model and ran actual CPU inference on three synthetic
+financial sentences; the examples produced positive, negative and neutral labels respectively. The live
+app reported `modelStatus: ready` and `streamConnected: true`. Desktop and mobile browser checks showed
+the connected sentiment panel without page errors or horizontal overflow. A ten-second independent
+stream check received 505 events and no watchlist cashtag matches; zero aggregate samples remain valid.
+These checks establish model execution and stream connectivity, rather than sentiment accuracy on real posts.
+
 This classifier was trained on financial news, not evaluated as a Bluesky trading predictor. Slang,
 sarcasm, non-English posts and ticker ambiguity can produce errors. Its label counts describe the
 sampled text; they do not establish price direction, manipulation, model calibration or investment

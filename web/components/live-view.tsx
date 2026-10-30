@@ -91,7 +91,7 @@ function Watchlist({ w, ticker, onPick }: { w: ReturnType<typeof useApi<Score[]>
                   <span className="w-14 font-mono font-medium">{r.ticker}</span>
                   <span className="w-10 font-mono">{Math.round(r.score)}</span>
                   <Verdict score={r.score} />
-                  <span className="ml-auto font-mono text-[11px] text-mute">{age(r.computedAt)}</span>
+                  <span className="ml-auto font-mono text-[11px] text-mute" title={`Score window ended ${r.windowEnd}`}>data {age(r.windowEnd)}</span>
                   <span className="w-full empty:hidden">
                     <Stale sources={r.staleSources} />
                   </span>
