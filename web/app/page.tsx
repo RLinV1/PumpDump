@@ -9,10 +9,10 @@ import { Story } from "@/components/story";
 import { REPO_URL, btnPrimary, heading } from "@/lib/ui";
 
 const STATUS = [
-  { name: "Ingestion pipeline", state: "Spec written", done: true },
-  { name: "News and filings", state: "Spec written", done: true },
-  { name: "Scoring model", state: "Not started", done: false },
-  { name: "Alert app", state: "Not started", done: false },
+  { name: "Ingestion pipeline", state: "Implemented", done: true },
+  { name: "News and filings", state: "Implemented", done: true },
+  { name: "Risk scoring", state: "Rules scorer available", done: true },
+  { name: "API and alerts", state: "Implemented", done: true },
 ];
 
 export default function Home() {
@@ -56,10 +56,10 @@ export default function Home() {
         <section id="status" className="relative isolate overflow-hidden border-t border-line pb-72 pt-24 md:pb-80 md:pt-32">
           <RidgeField variant="calm" />
           <div data-hero-copy className="relative mx-auto max-w-[1400px] px-4 md:px-8">
-            <h2 className={`${heading} max-w-3xl`}>The scorer is next.</h2>
+            <h2 className={`${heading} max-w-3xl`}>From signals to evidence.</h2>
             <p className="vr mt-4 max-w-[52ch] text-pretty leading-relaxed text-mute">
-              Each piece is written as a spec before any code. Two are specified. Next is training the
-              scorer on labelled pump cases, then wiring alerts.
+              Ingestion, a versioned rules scorer, the read API and webhook alerts are implemented.
+              Learned scoring and volatility forecasts still need validation before they can replace the baselines.
             </p>
             <div className="vr mt-8 grid grid-cols-4 gap-[3px]" aria-hidden>
               {STATUS.map((s) => (
@@ -85,7 +85,7 @@ export default function Home() {
 
       <footer className="border-t border-line py-8">
         <div className="mx-auto grid max-w-[1400px] gap-2 px-4 text-sm md:px-8 text-mute md:grid-cols-2">
-          <p>All symbols, prices and scores on this page are invented.</p>
+          <p>The market panel is labeled live, mock or simulated. Interactive examples elsewhere on this page use invented data.</p>
           <p className="md:text-right">
             Pumpwatch flags risk signals. It is not investment advice, it connects to no broker, and it is a non-commercial project.
           </p>

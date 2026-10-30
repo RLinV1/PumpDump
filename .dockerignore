@@ -5,4 +5,4 @@ node_modules/
 screenshots/
 .playwright-mcp/
 .impeccable/
-.env
+**/.env*

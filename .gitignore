@@ -3,8 +3,7 @@ target/
 *.class
 
 # secrets and local config
-.env
-.env.*
+.env*
 !.env.example
 *.pem
 *.tfstate
