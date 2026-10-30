@@ -37,6 +37,40 @@ test("disabled service never loads a model or opens a stream", async () => {
   service.stop();
 });
 
+test("selecting a stock outside the watchlist starts collecting its sentiment", async () => {
+  const { service } = make();
+  await service.start();
+  assert.equal(service.ingest(event("before", "$NVDA profits beat expectations")), false);
+  assert.equal(service.snapshot("NVDA").total, 0);
+  assert.equal(service.ingest(event("after", "$NVDA profits beat expectations")), true);
+  await settle(() => service.snapshot("NVDA").total === 1);
+  assert.equal(service.snapshot("NVDA").positive, 1);
+  service.stop();
+});
+
+test("selected stocks expire after an hour without reads", async () => {
+  let now = START;
+  const { service } = make({ now: () => now });
+  await service.start();
+  service.snapshot("NVDA");
+  assert.equal(service.ingest(event("active", "$NVDA earnings", now)), true);
+  await settle(() => service.snapshot("NVDA").total === 1);
+  now += 3600001;
+  assert.equal(service.ingest(event("expired", "$NVDA earnings", now)), false);
+  assert.equal(service.ingest(event("configured", "$GME earnings", now)), true);
+  service.stop();
+});
+
+test("selection tracking is bounded while preserving the configured watchlist", async () => {
+  const { service } = make();
+  await service.start();
+  for (let i = 0; i < 65; i++) service.snapshot(`Z${String.fromCharCode(65 + Math.floor(i / 26))}${String.fromCharCode(65 + i % 26)}`);
+  assert.equal(service.ingest(event("evicted", "$ZAA earnings")), false);
+  assert.equal(service.ingest(event("latest", "$ZCM earnings")), true);
+  assert.equal(service.ingest(event("configured", "$GME earnings")), true);
+  service.stop();
+});
+
 test("local classification counts each matching ticker once and exposes no post or author data", async () => {
   let calls = 0;
   const { service, sockets } = make({ classify: async () => { calls++; return [{ label: "positive", score: 0.95 }]; } });
