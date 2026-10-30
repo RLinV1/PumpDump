@@ -37,6 +37,23 @@ test("disabled service never loads a model or opens a stream", async () => {
   service.stop();
 });
 
+test("search and live posts share one serial classifier", async () => {
+  const pending = [];
+  let active = 0, maxActive = 0;
+  const { service } = make({ classify: () => { active++; maxActive = Math.max(maxActive, active); return new Promise((resolve) => pending.push(() => { active--; resolve("positive"); })); } });
+  await service.start();
+  service.ingest(event());
+  const search = service.classify("Synthetic search sample");
+  await settle(() => pending.length === 1);
+  pending.shift()();
+  await settle(() => pending.length === 1);
+  pending.shift()();
+  assert.equal(await search, "positive");
+  assert.equal(maxActive, 1);
+  assert.equal(service.snapshot("GME").total, 1);
+  service.stop();
+});
+
 test("selecting a stock outside the watchlist starts collecting its sentiment", async () => {
   const { service } = make();
   await service.start();

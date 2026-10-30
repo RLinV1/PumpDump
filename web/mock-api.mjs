@@ -35,8 +35,11 @@ export function serveMockApi(request, response, now = Date.now()) {
   }
   const context = /^\/api\/v1\/tickers\/([A-Z]{1,5})\/(news|sentiment)$/.exec(url.pathname);
   if (context?.[2] === "sentiment") {
+    const sample = url.searchParams.get("sample") ?? "stream";
+    if (!["top", "latest", "stream"].includes(sample)) return json(400, null, "Invalid sentiment sample");
     return json(200, { ticker: context[1], enabled: false, model: "mock", modelStatus: "disabled", streamConnected: false,
-      asOf: iso(now), windowMinutes: 60, positive: 0, negative: 0, neutral: 0, total: 0, lastPostAt: null, dropped: 0 });
+      asOf: iso(now), windowMinutes: sample === "stream" ? 60 : 1440, positive: 0, negative: 0, neutral: 0, total: 0, lastPostAt: null, dropped: 0,
+      ...(sample === "stream" ? {} : { sample: { sort: sample, examined: 0 } }) });
   }
   if (url.pathname === "/api/v1/news" || context?.[2] === "news") {
     const ticker = context?.[1] ?? null;
