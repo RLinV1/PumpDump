@@ -69,8 +69,8 @@ export function Detector() {
           <p className="mt-4 max-w-[46ch] text-pretty leading-relaxed text-mute">
             Move the sliders and watch the verdict change. Chatter is how much people are talking
             about a ticker compared with a normal day. A catalyst is a filing or news story that gives
-            a move a real reason. These weights are a toy; the real scorer is a trained model and is
-            not built yet.
+            a move a real reason. These sliders use simplified weights for the simulation. The live
+            view uses the versioned scorer identified beside each score.
           </p>
         </div>
 

@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pumpwatch web
 
-## Getting Started
+From this directory run `npm ci`, then `npm run dev`. Open [localhost:3000](http://localhost:3000).
 
-First, run the development server:
+## Mock and live data
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The repository root `.env` controls the data source. It is copied from `.env.example` for local development and stays out of Git:
+
+```dotenv
+DATA_MODE=mock
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`mock` is the default and needs no keys, Docker or backend processes. It serves a three-ticker watchlist, aggregate flag evidence, six-hour score timelines and a resumable SSE flag stream. Both the landing panel and `/live` dashboard explicitly say **Mock data. No market feed connected.** Mock records never enter Kafka, Postgres, alerts or training data.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To connect the real backend later:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Add your `ALPACA_KEY_ID` and `ALPACA_SECRET_KEY` to the root `.env` without putting secrets in chat or Git. Complete the source verification recorded in `docs/data-sources.md`, then enable the intended connectors (`ALPACA_ENABLED=true` for trades).
+2. Start Kafka, Postgres, connectors, pipeline and API with `scripts/dev-up.sh --apps` from the repository root.
+3. Set `DATA_MODE=live` in the root `.env`, restart the web server and reload the page.
 
-## Learn More
+`live` exclusively proxies the real API. It never substitutes mock API records. The landing panel remains the explicitly labeled simulation while no valid live snapshot is available; `/live` shows the connection or empty-data state. Credentials alone do not produce scores: ingestion must run long enough to close the configured feature windows. Only enable a source after its terms are verified.
 
-To learn more about Next.js, take a look at the following resources:
+The default private API upstream is `http://127.0.0.1:8083`. Override the server-only `API_ORIGIN` in the root `.env` or `web/.env.local` before building and starting Next.js. Use `http://api:8083` inside the Compose network. Rebuild/restart after changing the upstream. `NEXT_PUBLIC_API_URL` is no longer used.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use the supplied `npm run dev` and `npm start` commands: their server replaces caller-supplied forwarding headers with the actual socket address. The API trusts only loopback proxies by default; set `API_TRUSTED_PROXIES` to the private web host's exact address when deploying separately. Keep the API private. If placing another reverse proxy in front of the web host, configure trusted client-address handling at that boundary before public deployment; the default server keys visitors by its direct socket peers.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Loading and performance
 
-## Deploy on Vercel
+The dashboard's **Refresh all** button reloads the watchlist, selected ticker history, flags and context panels. The environment template includes 20 tickers; keep `WATCHLIST` within your market-data plan's symbol limit.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Today's movers** ranks daily price changes and intraday ranges from the screened symbols and labels that coverage. Stock news follows the selected ticker; daily market news is shown separately. These reads use Alpaca credentials only on the server and report provider failures without invented results.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set `SENTIMENT_ENABLED=true` in live mode to run the local Bluesky sentiment classifier. It downloads its pinned model on first use and exposes rolling positive/neutral/negative counts. See [live sentiment](../ml/LIVE-SENTIMENT.md) for the model, cache, limits and deletion handling. This model's sentiment counts are separate from the rules risk score; its accuracy on Bluesky posts has not been established.
+
+The landing shell and labeled simulation render before any API call. API code is imported after the first painted frame, and the live/mock panel is loaded only for a complete snapshot. Snapshot requests share a 2.5-second deadline and poll every 30 seconds without overlap. No real and simulated values share a market panel. A quiet watchlist stays connected and explicitly says there are no recent flags.
+
+Only aggregate evidence is rendered: scores, counts, model versions, catalyst status and feature-group contributions. No post text or author names are displayed. The live panel shows no invented volatility forecast.
+
+Dashboard requests have a six-second deadline, retain the last good data on failure, and retry failures after five seconds. Flag history refreshes when the stream connects or reconnects; concurrent refresh requests are coalesced. Successful reads return to their normal polling interval. The landing panel shows score and flag age beside their timestamps.
+
+The dev/build commands use Next's webpack mode to avoid a Windows Turbopack CSS-worker startup failure; the existing Tailwind loader runs in both engines. The decorative hero scroll effect reuses GSAP instead of loading a second animation runtime.
+
+## Validation
+
+Use Node 22.13+ (CI uses Node 22):
+
+```sh
+npm test
+npm run lint
+npm run build
+npm start
+```
+
+Tests use Node's built-in runner with TypeScript stripping and local HTTP/SSE listeners; no test dependency is required. Running the tests requires Node 22.6+.

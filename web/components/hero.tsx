@@ -1,5 +1,6 @@
 import { HeroBackground } from "./hero-background";
 import { Market } from "./market";
+import { LandingMarket } from "./landing-market";
 import { REPO_URL, btnGhost, btnPrimary } from "@/lib/ui";
 
 // A server component: the headline and actions are plain HTML that paint immediately.
@@ -15,7 +16,7 @@ export function Hero() {
         <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between [@media(max-height:560px)]:mt-3 [@media(max-height:560px)]:gap-3">
           <p className="rise max-w-[50ch] text-pretty text-lg leading-relaxed text-mute [@media(max-height:560px)]:text-base" style={{ "--d": "80ms" } as React.CSSProperties}>
             Pumpwatch reads social chatter, news and company filings next to live trades. It flags
-            tickers moving on hype alone and forecasts how far each one may swing.
+            tickers moving on hype alone and shows the evidence behind each signal.
           </p>
           <div className="rise flex flex-wrap gap-3" style={{ "--d": "140ms" } as React.CSSProperties}>
             <a href="#detector" className={btnPrimary}>
@@ -27,7 +28,7 @@ export function Hero() {
           </div>
         </div>
         <div className="mt-10 [@media(max-height:560px)]:mt-5">
-          <Market />
+          <LandingMarket><Market /></LandingMarket>
         </div>
       </div>
     </section>
