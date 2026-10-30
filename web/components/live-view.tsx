@@ -252,9 +252,12 @@ export function LiveView() {
         </div>
         {ticker && <>
           <div className="lg:col-span-8"><NewsPanel key={ticker} ticker={ticker} refreshKey={refreshKey} /></div>
-          <div className="lg:col-span-4"><SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} tracked={!!scores?.some((score) => score.ticker === ticker)} /></div>
+          <div className="lg:col-span-4"><SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} /></div>
         </>}
-        <div className="lg:col-span-12"><MoversPanel refreshKey={refreshKey} onPick={setPick} /></div>
+        <div className="lg:col-span-12"><MoversPanel refreshKey={refreshKey} selectedTicker={ticker} onPick={(symbol) => {
+          setPick(symbol);
+          requestAnimationFrame(() => document.getElementById("stock-sentiment")?.scrollIntoView({ block: "start" }));
+        }} /></div>
         <div className="lg:col-span-12"><NewsPanel refreshKey={refreshKey} /></div>
       </div>
       <p className="mt-6 max-w-[80ch] text-xs leading-relaxed text-mute">

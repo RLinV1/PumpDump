@@ -14,8 +14,12 @@ Model files download on the first enabled start and cache in ignored
 scores or a lexicon fallback.
 
 When the caller enables it, one public Bluesky Jetstream connection subscribes to the post collection.
-Only posts naming a configured cashtag, or an uppercase configured ticker alongside a finance word,
-enter classification. The model receives at most 256 tokens from a post. A single inference runs at a
+Only posts naming a tracked cashtag, or an uppercase tracked ticker alongside a finance word,
+enter classification. The configured watchlist is always tracked. Selecting a mover also tracks that
+symbol from the first sentiment read onward, even without a risk score. At most 64 additional selected
+symbols are tracked; the least recently read selection is evicted at the limit, and selections expire
+after one hour without reads. This does not backfill historical posts.
+The model receives at most 256 tokens from a post. A single inference runs at a
 time, with 64 queued posts, a ten-second inference deadline and at most 10,000 retained samples. Drops
 are reported. Reconnection resumes from the latest event cursor. Deletes remove the matching sample,
 including an inference still in progress.
