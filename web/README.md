@@ -28,6 +28,8 @@ Use the supplied `npm run dev` and `npm start` commands: their server replaces c
 
 The dashboard's **Refresh all** button reloads the watchlist, selected ticker history, flags and context panels. The environment template includes 20 tickers; keep `WATCHLIST` within your market-data plan's symbol limit.
 
+Use **Add stock** in the watchlist to save up to 30 ticker symbols in this browser. Symbols are normalized to uppercase; duplicate or malformed entries show a message. The saved list persists on reload and can be edited with each row's remove control. Selecting an added stock opens its news and starts sentiment collection. Stocks without backend coverage show **No risk score yet**. Personal watchlists do not change the shared market-data subscription, which is configured through `WATCHLIST` on the server. Browser storage must be available to save changes; this feature has no account or cross-device sync.
+
 **Today's movers** ranks daily price changes and intraday ranges from the screened symbols and labels that coverage. Stock news follows the selected ticker; daily market news is shown separately. These reads use Alpaca credentials only on the server and report provider failures without invented results.
 
 Set `SENTIMENT_ENABLED=true` in live mode to run the local Bluesky sentiment classifier. It downloads its pinned model on first use and exposes rolling positive/neutral/negative counts. See [live sentiment](../ml/LIVE-SENTIMENT.md) for the model, cache, limits and deletion handling. This model's sentiment counts are separate from the rules risk score; its accuracy on Bluesky posts has not been established.
