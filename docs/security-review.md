@@ -77,3 +77,15 @@ At 10,000 distinct keys the whole map is cleared, which hands every client one f
 - A gitleaks or trufflehog run (not installed), so unusual secret formats could be missed.
 - Load or DoS testing beyond reading the limits.
 - The Docker images were not built or scanned.
+
+## Lookup and paper-trading routes (new write surface)
+
+`POST /api/v1/paper/orders` and `POST /api/v1/paper/reset` are the first public write routes. They are anonymous by design, so the controls are in the data path, not in a login.
+
+- **Input.** JSON only, 1 KB cap, ticker `^[A-Z]{1,5}$`, integer quantity 1 to 10,000, reset needs `confirm: true`. Checked in `web/paper-api.mjs` and again in the private service.
+- **Rate limits.** Writes 20 per minute per client and 300 overall; reads 60 and 600. In memory, per web process.
+- **Identity.** A random 32-byte token in the browser, sent as `X-Paper-Token`. The service stores only its SHA-256 hash. Anyone holding the token controls that account; there is nothing else to steal (no email, no name, no funds).
+- **Money.** Integer cents, whole shares, no shorting, atomic `BEGIN IMMEDIATE` transactions so a double submit cannot overspend. Fill prices are decided by the server and a client `price` is ignored.
+- **Storage.** At most 5,000 accounts; idle ones expire after 30 days; 200 orders kept per account. The SQLite file sits on a named volume.
+- **Isolation.** The Python service publishes no port; only the web container reaches it. Upstream errors become generic messages.
+- **Not covered.** One client with many IPs can still create accounts up to the cap; a full cap makes new paper accounts unavailable until idle ones expire. Mock mode only on the public VM.

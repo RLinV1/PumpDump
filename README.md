@@ -50,7 +50,7 @@ Project status and the footer disclaimer.
 
 ![Terminal: command line, ticker strip, watchlist with prices and risk, score chart, flags, news, sentiment and movers](docs/img/live-watchlist-score-flags.png)
 
-The terminal fills the screen: a command line, a ticker strip, numbered panels (1 watchlist, 2 score chart, 3 flags, 4 news, 5 sentiment, 6 movers, 7 assistant; the screenshots below predate panel 7) and a status line with data mode, clock and link state.
+The terminal fills the screen: a command line, a ticker strip, numbered panels (1 watchlist, 2 score chart, 3 flags, 4 news, 5 sentiment, 6 movers, 7 stock lookup, 8 paper trading; the screenshots below predate panels 7 and 8) and a status line with data mode, clock and link state.
 
 ![Terminal after the MOV command: the movers panel is highlighted](docs/img/live-news-sentiment-movers.png)
 
@@ -97,7 +97,7 @@ After `MOV`: the movers panel is highlighted at the end of the column.
 | --- | --- |
 | [Tech stack](docs/tech-stack.md) | Technologies, versions, responsibilities and repository layout |
 | [Architecture](docs/architecture.md) | Service diagrams, event flow, APIs, storage and configuration |
-| [Research assistant spec](openspec/changes/add-research-assistant/design.md) | How Plutus is wired in, limits and the data policy |
+| [Lookup and paper trading spec](openspec/changes/add-paper-trading-lookup/design.md) | How Plutus is wired in, limits and the data policy |
 | [Web setup](web/README.md) | Mock/live modes, personal watchlists and frontend checks |
 | [Live sentiment](ml/LIVE-SENTIMENT.md) | Pretrained model, matching rules, retention and limits |
 | [Risk scorer](docs/rule-scorer.md) | Thresholds, catalyst deductions and feature contributions |
@@ -105,36 +105,26 @@ After `MOV`: the movers panel is highlighted at the end of the column.
 | [Source register](docs/data-sources.md) | Source permissions and verification status |
 | [Roadmap](docs/roadmap.md) | Planned milestones; implementation checklists live in `openspec/changes/` |
 
-## Research assistant (Plutus)
+## Stock lookup and paper trading (Plutus)
 
-`plutus/` is the owner's [Plutus](https://github.com/RLinV1/Plutus) project, imported with its git history: an MCP tool server, RAG over plain-English company notes, a Claude agent with a zero-key mock agent, and an eval harness. In this repo it runs as a private `plutus` compose service (apps profile, no published port, healthchecked) and is wired to Pumpwatch both ways.
+The pump watch is the product. `plutus/` is the owner's [Plutus](https://github.com/RLinV1/Plutus) project, imported with its git history and trimmed to two small features that sit beside the pump panels in the `/live` terminal. Everything else Plutus had (an AI agent, RAG, accounts, billing, portfolios, alerts, its React app and its AWS deploy files) was removed; git history keeps it.
 
-- **Pumpwatch to the assistant.** The Plutus tool `get_pump_risk` reads Pumpwatch's own read API (latest score, verdict, top contributors, recent flags, catalyst check), so "is GME being pumped?" is answered from the same evidence as the panels, and says whether it is mock or live.
-- **Terminal to the assistant.** `ASK <question>` on `/live` fills panel 7 with the answer, the tools used and the cited sources, with loading, error and empty states. `ASK` alone jumps to the panel.
-- **One origin.** The browser only calls `POST /api/v1/assistant/ask` on the web server, which checks the question (300 characters, 2 KB body, JSON only), rate limits it (5 per minute per client, 30 overall) and forwards it to the private service. Caddy is unchanged and the flag stream still bypasses Node.
-- **Not investment advice.** Every answer carries the notice. Paper trading in Plutus is simulated only; nothing here places an order or talks to a broker.
-- **Public data policy.** `deploy/up.sh` strips `ANTHROPIC_API_KEY` from the `.env` it copies and runs the assistant on mock data with the mock agent, so a visitor cannot spend your Claude credits or see real market data. On your own machine put `ANTHROPIC_API_KEY` in `.env` for real Claude (`claude-sonnet-5-5`) and set `PLUTUS_USE_MOCK_DATA=0` for live yfinance data.
+- **Stock lookup.** `LOOK GME` (alias `DES GME`) fills panel 7 with the name, sector, price, daily move, market cap and P/E, price performance, SMAs, RSI, 52-week range, beta and volatility, from the pure numpy/pandas code in `plutus/src/portfolio_risk/risk/`.
+- **Paper trading.** `BUY GME 10`, `SELL GME 10`, `PT` and `PT RESET` (then `PT RESET CONFIRM`) drive panel 8, marked PAPER: cash, positions, P&L and order history. Whole shares, no shorting, integer cents, atomic updates.
+- **Anonymous.** No sign-in. Your browser makes a random account token, keeps it in localStorage and sends it in a header; the service stores only its hash, in SQLite on the `plutuspaper` volume. Clear your browser data and the account is gone.
+- **Server-decided prices.** The browser never sends a price. Mock mode fills at the service's mock close. Live mode (your own machine only) fills at the web server's own Alpaca quote, and the order is refused if there is none. Lookups in live mode use yfinance.
+- **One origin.** The browser only calls `/api/v1/lookup` and `/api/v1/paper` on the web server, which validates, rate limits and forwards to the private `plutus` service (apps profile, no published port). Caddy is unchanged and the flag stream still bypasses Node.
+- **Public data policy.** `deploy/up.sh` keeps the VM on mock data, so every public figure is labelled MOCK. Real data stays on your machine: set `DATA_MODE=live` with Alpaca keys, and `PLUTUS_USE_MOCK_DATA=0` for yfinance lookups.
 
-![Terminal after ASK Is GME being pumped?: panel 7 shows the answer, get_pump_risk as the tool and Pumpwatch as the source](docs/img/live-assistant-mock.png)
+> **This is simulated trading, not advice.** There is no broker, no real order and no real money, and nothing here is investment advice. Pumpwatch is a non-commercial project.
 
-Mock mode: `ASK Is GME being pumped?` answered by the mock agent from the mock Pumpwatch API.
+![Terminal in mock mode after LOOK GME and a few paper orders: panel 7 shows the lookup, panel 8 the PAPER account, and the pump panels stay on the first screen](docs/img/live-lookup-paper-mock.png)
 
-Run it locally with the `apps` profile (`docker compose --profile apps up -d --build`, which builds a large image because of torch), or without Docker: `cd plutus`, `pip install -e ".[dev]"` on Python 3.13 or older, `uvicorn api.assistant_service:app --port 8090`, then start the web server with `PLUTUS_ORIGIN=http://127.0.0.1:8090` and the service with `PUMPWATCH_API_URL=http://127.0.0.1:3000`.
+![Panels 7 and 8 close up: lookup figures and the PAPER positions and orders](docs/img/live-lookup-paper-mock-panels.png)
 
-**Not reachable from the terminal.** The Plutus React frontend is kept in `plutus/frontend/` but is not built or served, and the service exposes no portfolio tools. So these Plutus features are unavailable here until you decide otherwise:
+Mock mode, 1440x900. Mock prices do not move, so a mock buy then sell returns the same cash with zero P&L.
 
-| Plutus feature | Where it lives |
-| --- | --- |
-| Portfolio holdings, P&L, risk report, CSV import, equity curve | `api/portfolio_routes.py`, PortfolioView |
-| Scenario stress tests and trade simulation, rebalance plans | ScenarioView, `portfolio/scenarios.py` |
-| Paper trading and the leaderboard (simulated only) | PaperView, LeaderboardView |
-| Price alerts and notifications | AlertsView |
-| Market overview, ticker research pages, charts, price search | MarketView, ResearchView |
-| Streaming chat widget and full Ask page | ChatWidget, AskView |
-| Sign-in (Clerk), daily prompt quotas and Stripe billing | `api/auth.py`, `api/billing_routes.py` |
-| Plutus's Elastic Beanstalk deploy scripts and workflows | `plutus/scripts/eb-*.sh`, `plutus/.github/workflows` (GitHub ignores them there) |
-
-The market-data and RAG tools (snapshot, performance, technicals, news, filing risks, fundamentals and so on) are reachable, but only through `ASK`.
+Run it locally with the `apps` profile (`docker compose --profile apps up -d --build`), or without Docker: `cd plutus`, `pip install -e ".[dev]"` on Python 3.13, `USE_MOCK_DATA=1 uvicorn api.service:app --port 8090`, then start the web server with `PLUTUS_ORIGIN=http://127.0.0.1:8090`. CI lints all of `plutus/` with ruff and runs its tests on Python 3.13.
 
 ## How it works
 
