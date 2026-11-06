@@ -50,7 +50,7 @@ Project status and the footer disclaimer.
 
 ![Terminal: command line, ticker strip, watchlist with prices and risk, score chart, flags, news, sentiment and movers](docs/img/live-watchlist-score-flags.png)
 
-The terminal fills the screen: a command line, a ticker strip, numbered panels (1 watchlist, 2 score chart, 3 flags, 4 news, 5 sentiment, 6 movers) and a status line with data mode, clock and link state.
+The terminal fills the screen: a command line, a ticker strip, numbered panels (1 watchlist, 2 score chart, 3 flags, 4 news, 5 sentiment, 6 movers, 7 assistant; the screenshots below predate panel 7) and a status line with data mode, clock and link state.
 
 ![Terminal after the MOV command: the movers panel is highlighted](docs/img/live-news-sentiment-movers.png)
 
@@ -97,12 +97,44 @@ After `MOV`: the movers panel is highlighted at the end of the column.
 | --- | --- |
 | [Tech stack](docs/tech-stack.md) | Technologies, versions, responsibilities and repository layout |
 | [Architecture](docs/architecture.md) | Service diagrams, event flow, APIs, storage and configuration |
+| [Research assistant spec](openspec/changes/add-research-assistant/design.md) | How Plutus is wired in, limits and the data policy |
 | [Web setup](web/README.md) | Mock/live modes, personal watchlists and frontend checks |
 | [Live sentiment](ml/LIVE-SENTIMENT.md) | Pretrained model, matching rules, retention and limits |
 | [Risk scorer](docs/rule-scorer.md) | Thresholds, catalyst deductions and feature contributions |
 | [Offline ML](ml/README.md) | Python training, evaluation and synthetic-data commands |
 | [Source register](docs/data-sources.md) | Source permissions and verification status |
 | [Roadmap](docs/roadmap.md) | Planned milestones; implementation checklists live in `openspec/changes/` |
+
+## Research assistant (Plutus)
+
+`plutus/` is the owner's [Plutus](https://github.com/RLinV1/Plutus) project, imported with its git history: an MCP tool server, RAG over plain-English company notes, a Claude agent with a zero-key mock agent, and an eval harness. In this repo it runs as a private `plutus` compose service (apps profile, no published port, healthchecked) and is wired to Pumpwatch both ways.
+
+- **Pumpwatch to the assistant.** The Plutus tool `get_pump_risk` reads Pumpwatch's own read API (latest score, verdict, top contributors, recent flags, catalyst check), so "is GME being pumped?" is answered from the same evidence as the panels, and says whether it is mock or live.
+- **Terminal to the assistant.** `ASK <question>` on `/live` fills panel 7 with the answer, the tools used and the cited sources, with loading, error and empty states. `ASK` alone jumps to the panel.
+- **One origin.** The browser only calls `POST /api/v1/assistant/ask` on the web server, which checks the question (300 characters, 2 KB body, JSON only), rate limits it (5 per minute per client, 30 overall) and forwards it to the private service. Caddy is unchanged and the flag stream still bypasses Node.
+- **Not investment advice.** Every answer carries the notice. Paper trading in Plutus is simulated only; nothing here places an order or talks to a broker.
+- **Public data policy.** `deploy/up.sh` strips `ANTHROPIC_API_KEY` from the `.env` it copies and runs the assistant on mock data with the mock agent, so a visitor cannot spend your Claude credits or see real market data. On your own machine put `ANTHROPIC_API_KEY` in `.env` for real Claude (`claude-sonnet-5-5`) and set `PLUTUS_USE_MOCK_DATA=0` for live yfinance data.
+
+![Terminal after ASK Is GME being pumped?: panel 7 shows the answer, get_pump_risk as the tool and Pumpwatch as the source](docs/img/live-assistant-mock.png)
+
+Mock mode: `ASK Is GME being pumped?` answered by the mock agent from the mock Pumpwatch API.
+
+Run it locally with the `apps` profile (`docker compose --profile apps up -d --build`, which builds a large image because of torch), or without Docker: `cd plutus`, `pip install -e ".[dev]"` on Python 3.13 or older, `uvicorn api.assistant_service:app --port 8090`, then start the web server with `PLUTUS_ORIGIN=http://127.0.0.1:8090` and the service with `PUMPWATCH_API_URL=http://127.0.0.1:3000`.
+
+**Not reachable from the terminal.** The Plutus React frontend is kept in `plutus/frontend/` but is not built or served, and the service exposes no portfolio tools. So these Plutus features are unavailable here until you decide otherwise:
+
+| Plutus feature | Where it lives |
+| --- | --- |
+| Portfolio holdings, P&L, risk report, CSV import, equity curve | `api/portfolio_routes.py`, PortfolioView |
+| Scenario stress tests and trade simulation, rebalance plans | ScenarioView, `portfolio/scenarios.py` |
+| Paper trading and the leaderboard (simulated only) | PaperView, LeaderboardView |
+| Price alerts and notifications | AlertsView |
+| Market overview, ticker research pages, charts, price search | MarketView, ResearchView |
+| Streaming chat widget and full Ask page | ChatWidget, AskView |
+| Sign-in (Clerk), daily prompt quotas and Stripe billing | `api/auth.py`, `api/billing_routes.py` |
+| Plutus's Elastic Beanstalk deploy scripts and workflows | `plutus/scripts/eb-*.sh`, `plutus/.github/workflows` (GitHub ignores them there) |
+
+The market-data and RAG tools (snapshot, performance, technicals, news, filing risks, fundamentals and so on) are reachable, but only through `ASK`.
 
 ## How it works
 
