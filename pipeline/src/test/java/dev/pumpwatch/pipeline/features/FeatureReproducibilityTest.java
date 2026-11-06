@@ -58,8 +58,10 @@ class FeatureReproducibilityTest {
         }
     }
 
-    static Rec closer() {
-        return new Rec(Topics.TICKS, "CLS", Fx.tick(at(400, 0), "CLS", "1.00", 1), at(400, 0));
+    /** Two ticks: the second closes the first one's pane, and windows close when a later pane arrives. */
+    static List<Rec> closer() {
+        return List.of(new Rec(Topics.TICKS, "CLS", Fx.tick(at(400, 0), "CLS", "1.00", 1), at(400, 0)),
+                new Rec(Topics.TICKS, "CLS", Fx.tick(at(410, 0), "CLS", "1.00", 1), at(410, 0)));
     }
 
     @Test
@@ -71,14 +73,14 @@ class FeatureReproducibilityTest {
                 new Rec(Topics.RAW_FILINGS, "x", Fx.filing(at(20, 0), "GME", "8-K", "2.02"), at(20, 0)),
                 new Rec(Topics.RAW_NEWS, "x", Fx.news(at(65, 0), "reuters", "GME"), at(65, 0))));
         List<Rec> past = new ArrayList<>(base);
-        past.add(closer());
+        past.addAll(closer());
         List<Rec> withFuture = new ArrayList<>(base);
         Instant t = at(70, 0); // windows ending at or before here must not see anything after it
         withFuture.add(new Rec(Topics.MENTIONS, "GME", mentionJson(t.plusSeconds(10), "a9", false, "u"), t));
         withFuture.add(new Rec(Topics.TICKS, "GME", Fx.tick(t.plusSeconds(20), "GME", "50.00", 99999), t));
         withFuture.add(new Rec(Topics.RAW_FILINGS, "x", Fx.filing(t.plusSeconds(30), "GME", "8-K", "1.01"), t));
         withFuture.add(new Rec(Topics.RAW_NEWS, "x", Fx.news(t.plusSeconds(40), "ap", "GME"), t));
-        withFuture.add(closer());
+        withFuture.addAll(closer());
 
         Map<String, Map<String, Double>> a = run(past), b = run(withFuture);
         Instant limit = t;
@@ -110,13 +112,13 @@ class FeatureReproducibilityTest {
         // replay: the recorder returns records in event-time order
         List<Rec> replay = new ArrayList<>(tape);
         replay.sort(Comparator.comparing(Rec::ts));
-        replay.add(closer());
+        replay.addAll(closer());
         // live: each record arrives up to 60 s after it happened, so order differs but stays inside the grace
         List<Rec> live = new ArrayList<>(tape);
         Map<Rec, Long> delay = new java.util.IdentityHashMap<>();
         live.forEach(r -> delay.put(r, (long) rnd.nextInt(60)));
         live.sort(Comparator.comparing((Rec r) -> r.ts().plusSeconds(delay.get(r))));
-        live.add(closer());
+        live.addAll(closer());
 
         Map<String, Map<String, Double>> fromReplay = run(replay), fromLive = run(live);
         assertThat(fromReplay.size()).isGreaterThan(400);
