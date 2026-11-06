@@ -41,7 +41,9 @@ not buy or sell advice. Sentiment describes sampled text; it does not predict re
    optional webhooks deliver alerts. The web app labels mock, live and simulated data.
 5. **Add context.** The Node web host separately reads Alpaca news and market movers
    and runs a pretrained Financial DistilRoBERTa model on matching Bluesky posts.
-   Positive, neutral and negative counts appear beside the selected stock.
+   The default sample searches top posts from the last 24 hours; users can choose
+   most recent posts or the live stream. Positive, neutral and negative counts
+   appear beside the selected stock, with the sample size and time window.
 
 The Java risk score and the web sentiment model are separate outputs. Enabling
 sentiment does not enable Java social features or change the risk score.
@@ -130,9 +132,9 @@ with npm. Set `SENTIMENT_ENABLED=true` for the independent web sentiment service
 after configuration changes; rebuild production web output after changing `API_ORIGIN`.
 
 Scores may lag while connectors backfill a gap; inspect their data age. Sentiment
-collects new matching posts rather than searching history, and its counts clear on
-web-server restart. A zero count means no retained matching samples, not an absence
-of all discussion about that stock.
+searches can classify recent posts immediately. The optional live-stream sample
+collects posts after startup/selection and clears on restart. A zero count means no
+matching posts in that sample, not an absence of all discussion about the stock.
 
 With `--apps`, health is at http://localhost:8080/actuator/health (connectors)
 and http://localhost:8081/actuator/health (replay), 8082 (pipeline), and 8083 (API).

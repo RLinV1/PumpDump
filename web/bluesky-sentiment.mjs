@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { mentionedTickers } from "./ticker-mentions.mjs";
 
 const MODEL = "Xenova/distilroberta-finetuned-financial-news-sentiment-analysis";
 const REVISION = "e6953e30167c7fc3d1ad62f3df31617dd712fbc1";
 const WINDOW = 3600000;
-const FINANCE = /\b(stock|shares?|earnings|revenue|profit|trading|invest|bullish|bearish|market|buy|sell|rally|price)\b/i;
 const LABELS = new Set(["positive", "negative", "neutral"]);
 
 async function loadClassifier(cacheDir) {
@@ -35,6 +35,7 @@ export function createBlueskySentiment({
   let modelStatus = enabled ? "loading" : "disabled";
   let running = false, connected = false, busy = false, generation = 0, dropped = 0;
   let socket, reconnectTimer, connectTimer, startPromise, cursor, reconnects = 0;
+  let inference = Promise.resolve(), queuedInference = 0;
 
   function prune() {
     const cutoff = now() - WINDOW;
@@ -56,15 +57,34 @@ export function createBlueskySentiment({
   }
 
   function matching(text) {
-    const found = new Set();
-    for (const match of text.matchAll(/(?<![\w$])\$([A-Za-z]{1,5})\b/g)) {
-      const ticker = match[1].toUpperCase();
-      if (tickers.has(ticker) || selectedTickers.has(ticker)) found.add(ticker);
-    }
-    if (FINANCE.test(text)) for (const match of text.matchAll(/\b[A-Z]{1,5}\b/g)) {
-      if (tickers.has(match[0]) || selectedTickers.has(match[0])) found.add(match[0]);
-    }
-    return [...found];
+    return [...mentionedTickers(text)].filter((ticker) => tickers.has(ticker) || selectedTickers.has(ticker));
+  }
+
+  async function classify(text) {
+    if (!enabled || !running || modelStatus !== "ready" || typeof text !== "string" || !text.length || queuedInference >= maxQueue)
+      throw new Error("Sentiment classifier unavailable");
+    queuedInference++;
+    const epoch = generation;
+    const task = inference.then(async () => {
+      let timer;
+      try {
+        if (!running || epoch !== generation || modelStatus !== "ready") throw new Error("Sentiment classifier unavailable");
+        const work = Promise.resolve().then(() => classifier(text));
+        const prediction = await Promise.race([work, new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Sentiment inference timed out")), inferenceTimeoutMs);
+          timer.unref?.();
+        })]);
+        const result = Array.isArray(prediction) ? prediction[0] : prediction;
+        const label = typeof result === "string" ? result.toLowerCase() : result?.label?.toLowerCase();
+        if (!LABELS.has(label)) throw new Error("Invalid sentiment prediction");
+        return label;
+      } catch (error) {
+        if (running && epoch === generation) modelStatus = "error";
+        throw error;
+      } finally { text = ""; queuedInference--; clearTimeout(timer); }
+    });
+    inference = task.catch(() => {});
+    return task;
   }
 
   async function drain() {
@@ -75,17 +95,10 @@ export function createBlueskySentiment({
       while (running && epoch === generation && modelStatus === "ready" && queue.length) {
         const item = queue.shift();
         if (records.get(item.id) !== item.record || item.record.at < now() - WINDOW) continue;
-        let timer;
         try {
-          const work = Promise.resolve(classifier(item.text));
+          const work = classify(item.text);
           item.text = "";
-          const prediction = await Promise.race([work, new Promise((_, reject) => {
-            timer = setTimeout(() => reject(new Error("Sentiment inference timed out")), inferenceTimeoutMs);
-            timer.unref?.();
-          })]);
-          const result = Array.isArray(prediction) ? prediction[0] : prediction;
-          const label = typeof result === "string" ? result.toLowerCase() : result?.label?.toLowerCase();
-          if (!LABELS.has(label)) throw new Error("Invalid sentiment prediction");
+          const label = await work;
           if (running && epoch === generation && records.get(item.id) === item.record) item.record.label = label;
           prune();
         } catch {
@@ -100,7 +113,6 @@ export function createBlueskySentiment({
           }
         } finally {
           item.text = "";
-          clearTimeout(timer);
         }
       }
     } finally { busy = false; }
@@ -235,5 +247,5 @@ export function createBlueskySentiment({
     };
   }
 
-  return { start, stop, snapshot, ingest };
+  return { start, stop, snapshot, ingest, classify };
 }

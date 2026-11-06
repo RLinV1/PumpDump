@@ -7,6 +7,7 @@ import { createMarketMoversLoader } from "./market-movers.mjs";
 import { createStockNewsLoader } from "./stock-news.mjs";
 import { createBlueskySentiment } from "./bluesky-sentiment.mjs";
 import { createContextApi } from "./context-api.mjs";
+import { createBlueskySearch } from "./bluesky-search.mjs";
 
 loadRootEnv();
 const mode = process.env.DATA_MODE ?? "mock";
@@ -17,6 +18,7 @@ const sentiment = createBlueskySentiment({ watchlist, enabled: mode === "live" &
 const contextApi = createContextApi({
   loadMovers: createMarketMoversLoader({ ...credentials, feed: process.env.ALPACA_FEED ?? "iex", watchlist }),
   loadNews: createStockNewsLoader(credentials), sentiment,
+  loadRecentSentiment: createBlueskySearch({ sentiment }),
 });
 
 const dev = process.argv.includes("--dev");

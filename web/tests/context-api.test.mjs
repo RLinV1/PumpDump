@@ -16,6 +16,10 @@ test("market context accepts valid movers, news and sentiment contracts", async 
     respond(data);
     assert.deepEqual((await get(path)).data, data);
   }
+  const search = { ...sentiment, windowMinutes: 1440, sample: { sort: "top", examined: 5 } };
+  respond(search);
+  assert.deepEqual((await get("/api/v1/tickers/AAPL/sentiment?sample=top")).data, search);
+  await assert.rejects(get("/api/v1/tickers/AAPL/sentiment?sample=latest"), /Invalid API data/);
 });
 
 test("market context rejects unsafe links, invalid numbers and mismatched tickers", async () => {
@@ -26,6 +30,8 @@ test("market context rejects unsafe links, invalid numbers and mismatched ticker
     ["/api/v1/tickers/AAPL/sentiment", { ...sentiment, total: 9 }],
     ["/api/v1/tickers/AAPL/sentiment", { ...sentiment, ticker: "GME" }],
     ["/api/v1/tickers/AAPL/sentiment", { ...sentiment, modelStatus: "made-up" }],
+    ["/api/v1/tickers/AAPL/sentiment", { ...sentiment, windowMinutes: 1440, sample: { sort: "invalid", examined: 5 } }],
+    ["/api/v1/tickers/AAPL/sentiment", { ...sentiment, windowMinutes: 1440, sample: { sort: "top", examined: 1 } }],
   ]) {
     respond(data);
     await assert.rejects(get(path), /Invalid API data/);

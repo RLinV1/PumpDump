@@ -34,6 +34,8 @@ Use **Add stock** in the watchlist to save up to 30 ticker symbols in this brows
 
 Set `SENTIMENT_ENABLED=true` in live mode to run the local Bluesky sentiment classifier. It downloads its pinned model on first use and exposes rolling positive/neutral/negative counts. See [live sentiment](../ml/LIVE-SENTIMENT.md) for the model, cache, limits and deletion handling. This model's sentiment counts are separate from the rules risk score; its accuracy on Bluesky posts has not been established.
 
+The sentiment panel defaults to **Top posts · last 24 hours**. **Most recent · last 24 hours** changes the search ranking, while **Live stream · last 60 minutes** shows only retained streaming samples. Searches use Bluesky's `api.bsky.app` endpoint, check at most 50 results, filter ticker relevance, remove duplicate post URIs and classify at most 25 matching posts. Only aggregate counts are cached, for one minute. The panel reports the actual classified/returned counts and links to the corresponding Bluesky search. A failed search shows an unavailable state instead of zero sentiment; results from different samples are never combined.
+
 The landing shell and labeled simulation render before any API call. API code is imported after the first painted frame, and the live/mock panel is loaded only for a complete snapshot. Snapshot requests share a 2.5-second deadline and poll every 30 seconds without overlap. No real and simulated values share a market panel. A quiet watchlist stays connected and explicitly says there are no recent flags.
 
 Only aggregate evidence is rendered: scores, counts, model versions, catalyst status and feature-group contributions. No post text or author names are displayed. The live panel shows no invented volatility forecast.

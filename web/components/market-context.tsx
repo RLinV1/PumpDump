@@ -1,15 +1,16 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { age, type MarketMovers, type Sentiment, type StockNews } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 import { btnGhost } from "@/lib/ui";
 
-function Panel<T>({ title, id, state, children }: { title: string; id?: string; state: ReturnType<typeof useApi<T>>; children: (data: T) => ReactNode }) {
+function Panel<T>({ title, id, state, controls, children }: { title: string; id?: string; state: ReturnType<typeof useApi<T>>; controls?: ReactNode; children: (data: T) => ReactNode }) {
   return <section id={id} className="min-w-0 scroll-mt-40 border border-line bg-surface">
     <header className="flex min-h-9 items-center justify-between gap-3 border-b border-line px-3 py-2 text-sm">
       <h2 className="font-medium">{title}</h2><span className="font-mono text-[11px] uppercase text-mute">{state.mode}</span>
     </header>
+    {controls && <div className="border-b border-line p-3">{controls}</div>}
     {!state.done ? <p className="p-4 text-sm text-mute" role="status">Loading…</p>
       : !state.data ? <div className="space-y-3 p-4 text-sm" role="alert"><p>Data is temporarily unavailable.</p><button className={btnGhost} onClick={state.retry}>Retry</button></div>
       : <>{state.failed && <p className="px-4 pt-3 text-xs text-mute" role="status">Could not refresh. Showing the last data received.</p>}{children(state.data)}</>}
@@ -57,17 +58,31 @@ export function NewsPanel({ ticker, refreshKey }: { ticker?: string; refreshKey:
 }
 
 export function SentimentPanel({ ticker, refreshKey }: { ticker: string; refreshKey: number }) {
-  const state = useApi<Sentiment>(`/api/v1/tickers/${ticker}/sentiment`, 15000, 0, undefined, refreshKey);
-  return <Panel title={`${ticker} Bluesky sentiment`} id="stock-sentiment" state={state}>{(data) => <div className="space-y-3 p-4 text-sm">
+  const [sample, setSample] = useState("top");
+  return <SentimentResults key={sample} ticker={ticker} refreshKey={refreshKey} sample={sample} controls={<>
+    <label htmlFor="sentiment-sample" className="mb-2 block text-xs text-mute">Posts to analyze</label>
+    <select id="sentiment-sample" value={sample} onChange={(event) => setSample(event.target.value)} className="h-11 w-full min-w-0 border border-line-strong bg-bg px-3 text-base focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      <option value="top">Top posts · last 24 hours</option>
+      <option value="latest">Most recent · last 24 hours</option>
+      <option value="stream">Live stream · last 60 minutes</option>
+    </select>
+  </>} />;
+}
+
+function SentimentResults({ ticker, refreshKey, sample, controls }: { ticker: string; refreshKey: number; sample: string; controls: ReactNode }) {
+  const state = useApi<Sentiment>(`/api/v1/tickers/${ticker}/sentiment?sample=${sample}`, sample === "stream" ? 15000 : 60000, 0, undefined, refreshKey);
+  return <Panel title={`${ticker} Bluesky sentiment`} id="stock-sentiment" state={state} controls={controls}>{(data) => <div className="space-y-3 p-4 text-sm">
     <p className="text-xs text-mute">Financial DistilRoBERTa · pretrained model · local inference</p>
     {!data.enabled ? <p>Sentiment collection is disabled.</p> : data.modelStatus === "loading" ? <p role="status">Loading the sentiment model. The first run downloads its weights.</p>
       : data.modelStatus === "error" ? <p role="alert">The sentiment model is unavailable. No sentiment has been estimated.</p>
       : <>
-        <p className="text-xs text-mute">{data.streamConnected ? "Bluesky connected" : "Bluesky reconnecting"} · last {data.windowMinutes} minutes</p>
-        {data.total === 0 ? <p>No classified posts for {ticker} in this window. Newly selected stocks collect posts from this point forward.</p> : <dl className="grid grid-cols-3 gap-3">
+        <p className="text-xs text-mute">{data.sample ? `${data.sample.sort === "top" ? "Top-ranked" : "Most recent"} matching posts · last 24 hours · checked ${time(data.asOf)}` : `${data.streamConnected ? "Bluesky connected" : "Bluesky reconnecting"} · last ${data.windowMinutes} minutes`}</p>
+        {data.sample && <p className="text-xs text-mute">Classified {data.total} matching posts from {data.sample.examined} search results. Up to 25 posts per sample.</p>}
+        {data.total === 0 ? <p>{data.sample ? `No matching stock posts found for ${ticker} in this search sample.` : `No classified posts for ${ticker} in this window. Newly selected stocks collect posts from this point forward.`}</p> : <dl className="grid grid-cols-3 gap-3">
           {([["Positive", data.positive], ["Neutral", data.neutral], ["Negative", data.negative]] as const).map(([label, count]) => <div key={label}><dt className="text-xs text-mute">{label}</dt><dd className="mt-1 font-mono text-xl">{count}</dd></div>)}
         </dl>}
         {data.lastPostAt && <p className="text-xs text-mute">Last classified post {age(data.lastPostAt)}.</p>}
+        {data.sample && <a href={`https://bsky.app/search?q=${encodeURIComponent(`$${ticker}`)}&sort=${data.sample.sort}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-xs underline underline-offset-4">View search on Bluesky</a>}
       </>}
     <p className="border-t border-line pt-3 text-xs leading-relaxed text-mute">This model classifies financial-language tone. Risk scores use rules-v1. The pump-detection LightGBM model remains an offline training pipeline.</p>
     {data.dropped > 0 && <p className="text-xs text-mute">{data.dropped} posts skipped during processing limits.</p>}

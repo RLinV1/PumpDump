@@ -23,6 +23,7 @@ flowchart TD
     API --> Web[Node and Next.js web host]
     Context[Alpaca news and screeners] --> Web
     Jetstream[Public Bluesky Jetstream] --> Model[Local pretrained sentiment model]
+    Search[Recent and top Bluesky search] --> Model
     Model --> Web
     Web --> Browser[React dashboard]
     Browser --> Preferences[(Browser saved watchlist)]
@@ -139,7 +140,7 @@ These Node services can operate while the Java risk backend is unavailable:
 | Daily news | Makes a separate market-wide news query |
 | Gainers/losers | Validates and ranks Alpaca SIP screener results |
 | Intraday swings | Screens configured symbols, movers and active stocks; ranks `(daily high - daily low) / previous close × 100` using the configured snapshot feed |
-| Sentiment | Filters public Jetstream posts and classifies matching text with local pretrained Financial DistilRoBERTa |
+| Sentiment | Searches recent top/latest posts or filters Jetstream, then classifies matching text with local pretrained Financial DistilRoBERTa |
 
 Intraday range is an observed volatility proxy over screened candidates, not a
 learned forecast or exhaustive market-wide volatility ranking. Provider reads are
@@ -147,6 +148,13 @@ cached/coalesced and bounded by deadlines. Failures produce unavailable states i
 of synthetic live values. Context routes reject replay `runId`s.
 
 ### Sentiment lifecycle
+
+The default panel sample searches top-ranked posts from the last 24 hours; users
+can choose latest-ranked posts instead. Node checks up to 50 results, filters ticker
+relevance/time bounds, removes duplicate post URIs and classifies at most 25 posts.
+Only aggregates are cached for one minute. Search and streaming share one serial
+model scheduler but maintain separate sample counts. Failures are unavailable states,
+not zero sentiment. The live-stream option follows this lifecycle:
 
 1. `SENTIMENT_ENABLED=true` in live mode loads the pinned quantized ONNX model and
    opens Jetstream. First startup may download the model into its ignored cache.
@@ -162,8 +170,8 @@ of synthetic live values. Context routes reject replay `runId`s.
    not text or author identifiers.
 
 Raw text is transient in the web queue. Retained samples are bounded, expire, and
-clear on web-server restart. There is no historical post search, persistent sentiment
-window or retraining. A connected stream can have zero matching samples; zero does
+clear on web-server restart. The live window is not populated from search results,
+persisted across restarts or used for retraining. A connected stream can have zero matching samples; zero does
 not mean no discussion of that company exists elsewhere on Bluesky.
 
 `BLUESKY_ENABLED` controls a different, Java connector that feeds social risk features.
@@ -228,7 +236,7 @@ Spring and context reads stay in Node.
 | `GET /api/v1/market-movers` | Node | Gainers, losers and screened ranges |
 | `GET /api/v1/news` | Node | Daily headlines |
 | `GET /api/v1/tickers/{ticker}/news` | Node | Selected-stock headlines |
-| `GET /api/v1/tickers/{ticker}/sentiment` | Node | One-hour label counts and status; also tracks the selected ticker |
+| `GET /api/v1/tickers/{ticker}/sentiment` | Node | `sample=top/latest`: recent 24-hour search counts; omitted or `sample=stream`: one-hour live counts; also tracks the ticker |
 | `POST /replays` on port 8081 | Replay | Starts an operator replay; not exposed by the web `/api` proxy |
 
 Ticker routes accept 1–5 uppercase A–Z letters. Risk JSON envelopes contain `notice`
@@ -275,7 +283,7 @@ handling for that path remain unfinished OpenSpec work. Source retention/trainin
 permissions are tracked in the [source register](data-sources.md).
 
 Compose is a single-broker development setup. Cloud deployment, production availability,
-learned model serving and historical sentiment backfill are not supplied by this architecture.
+learned model serving and a persistent historical sentiment archive are not supplied by this architecture.
 
 ## Troubleshooting
 
@@ -285,7 +293,7 @@ learned model serving and historical sentiment backfill are not supplied by this
 | Old score data | Connector backfill, Kafka/Streams health and event-window age |
 | Risk reads fail | API health on 8083, `API_ORIGIN`, database/Kafka readiness and proxy configuration |
 | News/movers unavailable | Provider credentials, entitlements, network responses and rate limits |
-| Zero sentiment | Model status, stream connection, time since startup/selection, matching rules and actual ticker discussion volume |
+| Zero sentiment | Selected sample, search result/match counts, model status and relevance rules; for live mode also check stream connection and time since startup |
 | Model unavailable | Model-download/cache access and inference errors; missing output must not become fabricated counts |
 | Watchlist does not persist | Storage permissions, storage clearing and whether the browser origin changed |
 | Shared-schema startup failure | Flyway history/baseline configuration; avoid deleting volumes as a first fix |
