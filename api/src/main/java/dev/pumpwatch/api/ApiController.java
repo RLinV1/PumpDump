@@ -6,6 +6,7 @@ import dev.pumpwatch.api.Views.FlagView;
 import dev.pumpwatch.api.Views.ScorePoint;
 import dev.pumpwatch.api.Views.ScoreView;
 import dev.pumpwatch.api.Views.Timeline;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -67,7 +68,7 @@ public class ApiController {
 
     @GetMapping("/api/v1/flags/stream")
     SseEmitter stream(@RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
-                      @RequestParam(required = false) String runId) {
+                      @RequestParam(required = false) String runId, HttpServletRequest request) {
         Long id = null;
         if (lastEventId != null && !lastEventId.isBlank()) {
             try {
@@ -76,7 +77,7 @@ public class ApiController {
                 throw new BadRequest("Last-Event-ID must be a number");
             }
         }
-        return hub.subscribe(run(runId), id);
+        return hub.subscribe(run(runId), id, RateLimitFilter.clientKey(request.getRemoteAddr()));
     }
 
     private static String run(String runId) {

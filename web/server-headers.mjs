@@ -13,3 +13,11 @@ export function isApiRequest(target) {
   }
   catch { return false; }
 }
+
+// Safe-by-default headers for every web response. No CSP script rules: Next injects inline scripts. No HSTS: the site is plain HTTP.
+export function applySecurityHeaders(response) {
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.setHeader("Content-Security-Policy", "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+  response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+}

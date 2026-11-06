@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import next from "next";
-import { isApiRequest, sanitizeForwardingHeaders } from "./server-headers.mjs";
+import { applySecurityHeaders, isApiRequest, sanitizeForwardingHeaders } from "./server-headers.mjs";
 import { serveMockApi } from "./mock-api.mjs";
 import { loadRootEnv } from "./env.cjs";
 import { createMarketMoversLoader } from "./market-movers.mjs";
@@ -30,6 +30,7 @@ const handle = app.getRequestHandler();
 const server = createServer((request, response) => {
   // Next's stock proxy preserves caller-provided forwarding headers. Set them from the actual socket instead.
   sanitizeForwardingHeaders(request);
+  applySecurityHeaders(response);
   if (isApiRequest(request.url)) {
     if (mode === "mock") return serveMockApi(request, response);
     response.setHeader("X-Pumpwatch-Data-Mode", "live");
