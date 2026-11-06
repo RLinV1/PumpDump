@@ -10,11 +10,62 @@ not buy or sell advice. Sentiment describes sampled text; it does not predict re
 
 ## Screenshots
 
-Captured with Playwright against mock data (`DATA_MODE=mock`, no keys or backend).
+All images come from a production build run with mock data (`DATA_MODE=mock`): no API keys, no backend, and every figure shown is invented for the demo.
 
-![Landing page: risk score chart with the evidence behind a flag](docs/img/landing.png)
+### Landing page
 
-![Live dashboard: watchlist, score history, flags, news and sentiment](docs/img/live-dashboard.png)
+![Landing hero: headline, GME risk score chart and the evidence behind the flag](docs/img/landing-hero.png)
+
+The hero pairs a risk score chart with the evidence behind the latest flag.
+
+![What it reads: social posts, live trades, news and company filings](docs/img/landing-what-it-reads.png)
+
+The four feeds Pumpwatch reads, matched to the same ticker and clock.
+
+![How it works: social chatter and price rise together with no news or filing](docs/img/landing-pump-shape-price.png)
+
+Scroll story, step one: chatter and price climb while the news row stays empty.
+
+![How it works: the flag is raised while the price is still high](docs/img/landing-pump-shape-flag.png)
+
+Scroll story, final step: the risk score crosses the flag level and the flag is raised.
+
+![Interactive detector with sliders and a Pump likely verdict](docs/img/landing-detector-pump-likely.png)
+
+The interactive detector with hype-only inputs gives a Pump likely verdict.
+
+![Interactive detector with the catalyst box ticked and a Watch verdict](docs/img/landing-detector-watch.png)
+
+Ticking "a filing or news story explains the move" lowers the same score to Watch.
+
+![Hype only versus hype with a catalyst, side by side](docs/img/landing-hype-vs-catalyst.png)
+
+Not every spike is a pump: the same chatter with an 8-K filed first scores lower.
+
+![Project status and footer disclaimer](docs/img/landing-status.png)
+
+Project status and the footer disclaimer.
+
+### Live dashboard
+
+![Live dashboard: watchlist, GME score chart and flags](docs/img/live-watchlist-score-flags.png)
+
+Watchlist, six-hour score history for the selected stock, and recent flags.
+
+![Live dashboard: stock news, sentiment panel, market movers and daily news](docs/img/live-news-sentiment-movers.png)
+
+Stock news, the Bluesky sentiment panel (collection is off in mock mode), market movers (gainers, losers, intraday swings) and daily market news.
+
+### Mobile (390x844)
+
+![Landing page on a phone-sized screen](docs/img/landing-mobile.png)
+
+Landing hero on mobile.
+
+![Live dashboard on a phone-sized screen](docs/img/live-mobile.png)
+
+Live dashboard watchlist on mobile.
+
 
 ## Documentation
 
