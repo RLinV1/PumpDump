@@ -13,6 +13,7 @@ spring:
         commit.interval.ms: 15000
         statestore.cache.max.bytes: 10485760
         processing.guarantee: exactly_once_v2
+        producer.transaction.timeout.ms: 60000
         # single-broker local stack; raise on a real cluster
         replication.factor: ${STREAMS_REPLICATION:1}
         state.dir: ${STREAMS_STATE_DIR:/tmp/pumpwatch-streams}

@@ -185,8 +185,6 @@ services:
     profiles: ["apps"]
     build:
       context: ./web
-      args:
-        NEXT_PUBLIC_API_URL: ""
     restart: unless-stopped
 
   proxy:

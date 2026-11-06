@@ -21,6 +21,7 @@ spring:
   flyway:
     table: flyway_history_api
     baseline-on-migrate: true
+    baseline-version: 0 # another app's tables must not cause this app's V1 to be skipped
 api:
   allowed-origins: ${API_ALLOWED_ORIGINS:http://localhost:3000}
   rate-limit-per-minute: ${API_RATE_LIMIT_PER_MINUTE:120}
@@ -36,6 +37,11 @@ alerts:
   max-per-minute: ${ALERTS_MAX_PER_MINUTE:5}
 server:
   port: ${API_PORT:8083}
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      # Only the private web host may supply client addresses. Override with its exact address in containers.
+      internal-proxies: ${API_TRUSTED_PROXIES:127\.0\.0\.1|::1|0:0:0:0:0:0:0:1}
 management:
   endpoints:
     web:

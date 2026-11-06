@@ -1,11 +1,9 @@
-# Build: docker build --build-arg NEXT_PUBLIC_API_URL= web   (empty = same-origin /api via the proxy)
+# The web client calls same-origin /api; in compose, Caddy routes it to the API.
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG NEXT_PUBLIC_API_URL=
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN npm run build
 
 FROM node:20-alpine

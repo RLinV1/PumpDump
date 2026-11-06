@@ -20,7 +20,7 @@ The stack is Kafka, Postgres, four Spring Boot services and a Next.js web app. C
 
 **Caddy as the proxy.** One small image, two routes, no config language to learn. `flush_interval -1` on `/api` keeps SSE unbuffered. Rejected: nginx (more tuning for SSE), a cloud load balancer (cost).
 
-**Same origin via empty `NEXT_PUBLIC_API_URL`.** The web client builds `/api/...` paths, so an empty base URL means relative requests through the proxy. No CORS needed in this deployment.
+**Same origin by default.** The web client already calls relative `/api/...` paths, so the proxy only has to route them. No CORS needed in this deployment.
 
 **Next.js standalone output.** `output: "standalone"` gives a small runtime image with no `node_modules` copy.
 

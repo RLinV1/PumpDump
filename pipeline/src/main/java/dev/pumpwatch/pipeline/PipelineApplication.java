@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.kafka.streams.Topology;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -45,10 +45,11 @@ public class PipelineApplication {
         return new ScorerHealth(scorer.modelVersion(), registry);
     }
 
-    @Autowired
-    void topology(StreamsBuilder builder, PipelineProperties p, Scorer scorer, ScorerHealth health,
-                  MeterRegistry registry) {
+    @Bean
+    Topology topology(StreamsBuilder builder, PipelineProperties p, Scorer scorer, ScorerHealth health,
+                      MeterRegistry registry) {
         build(builder, p, scorer, FeatureStage.WINDOW_MINUTES, registry, health);
+        return builder.build();
     }
 
     /** Exposes Kafka Streams metrics, including dropped-records (late data beyond grace), to Micrometer. */

@@ -1,40 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useApi } from "@/lib/use-api";
 import { LiveChart } from "@/components/live-chart";
-import { NOTICE, STREAM_URL, age, clock, get, type Flag, type Score, type Timeline } from "@/lib/api";
+import { MoversPanel, NewsPanel, SentimentPanel } from "@/components/market-context";
+import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag, type Score, type Timeline } from "@/lib/api";
 import { btnGhost } from "@/lib/ui";
 import { verdictOf } from "@/lib/verdict";
-
-type State<T> = { data?: T; notice?: string; failed: boolean; done: boolean };
-
-// Fetches after first paint, polls, and keeps the last good data when a poll fails.
-function useApi<T>(path: string, ms: number, nonce = 0, windowH?: number) {
-  const [s, setS] = useState<State<T>>({ failed: false, done: false });
-  const [retries, setRetries] = useState(0);
-  useEffect(() => {
-    let on = true;
-    const run = () => {
-      let p = path;
-      if (windowH) {
-        const to = new Date();
-        p += `?from=${new Date(+to - windowH * 3600e3).toISOString()}&to=${to.toISOString()}`;
-      }
-      get<T>(p).then(
-        (r) => on && setS({ data: r.data, notice: r.notice, failed: false, done: true }),
-        () => on && setS((o) => ({ ...o, failed: true, done: true })),
-      );
-    };
-    run();
-    const id = setInterval(run, ms);
-    return () => {
-      on = false;
-      clearInterval(id);
-    };
-  }, [path, ms, nonce, windowH, retries]);
-  return { ...s, retry: () => setRetries((n) => n + 1) };
-}
+import { addTicker, parseWatchlist, readWatchlist, saveWatchlist, subscribeWatchlist } from "@/lib/watchlist";
 
 function Pane({ title, tag, children }: { title: string; tag?: string; children: React.ReactNode }) {
   return (
@@ -50,7 +24,7 @@ function Pane({ title, tag, children }: { title: string; tag?: string; children:
 
 function Skeleton({ rows }: { rows: number }) {
   return (
-    <div className="space-y-3 p-3" aria-busy="true" aria-label="Loading">
+    <div className="space-y-3 p-3" role="status" aria-busy="true" aria-label="Loading">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="h-8 bg-line motion-safe:animate-pulse" />
       ))}
@@ -77,7 +51,7 @@ function Message({ title, body, onRetry }: { title: string; body: string; onRetr
   );
 }
 
-const DOWN = { title: "Live API not reachable", body: "The scoring API is down or still starting. Nothing is shown rather than guessing. Check that it is running, then retry." };
+const DOWN = { title: "Risk data unavailable", body: "The latest data could not be loaded. Retry, or use the simulated detector while the feed recovers." };
 
 function Verdict({ score }: { score: number }) {
   const v = verdictOf(score);
@@ -93,35 +67,57 @@ function Stale({ sources }: { sources: string[] }) {
   );
 }
 
-function Watchlist({ w, ticker, onPick }: { w: ReturnType<typeof useApi<Score[]>>; ticker?: string; onPick: (t: string) => void }) {
+function Watchlist({ w, ticker, onPick, symbols, onAdd, onRemove }: { w: ReturnType<typeof useApi<Score[]>>; ticker?: string; onPick: (t: string) => void; symbols: string[]; onAdd: (value: string) => string | undefined; onRemove: (ticker: string) => string | undefined }) {
   const { data, failed, done, retry } = w;
-  const rows = useMemo(() => [...(data ?? [])].sort((a, b) => b.score - a.score), [data]);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string>();
+  const rows = useMemo(() => symbols.map((symbol) => ({ ticker: symbol, score: data?.find((score) => score.ticker === symbol) }))
+    .sort((a, b) => (b.score?.score ?? -1) - (a.score?.score ?? -1)), [data, symbols]);
   return (
-    <Pane title="Watchlist" tag={done && !failed ? "live" : undefined}>
-      {!done ? (
+    <Pane title="Watchlist" tag={done && !failed ? w.mode : undefined}>
+      <form aria-label="Add stock to watchlist" className="border-b border-line p-3" onSubmit={(event) => {
+        event.preventDefault();
+        const message = onAdd(input);
+        setError(message);
+        if (!message) setInput("");
+      }}>
+        <label htmlFor="watchlist-symbol" className="mb-2 block text-xs text-mute">Stock ticker</label>
+        <div className="flex gap-2">
+          <input id="watchlist-symbol" value={input} onChange={(event) => { setInput(event.target.value); setError(undefined); }} placeholder="e.g. AAPL" maxLength={16} autoComplete="off" autoCapitalize="characters" spellCheck={false} aria-invalid={!!error} aria-describedby={error ? "watchlist-error" : "watchlist-help"} className="h-11 min-w-0 flex-1 border border-line-strong bg-bg px-3 font-mono text-base uppercase placeholder:normal-case placeholder:text-mute focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent" />
+          <button type="submit" className={`${btnGhost} shrink-0`}>Add stock</button>
+        </div>
+        <p id="watchlist-help" className="mt-2 text-xs leading-relaxed text-mute">Saved in this browser. News and sentiment are available for added stocks; risk scores require market tracking.</p>
+        {error && <p id="watchlist-error" role="alert" className="mt-2 text-sm">{error}</p>}
+      </form>
+      {!done && rows.length === 0 ? (
         <Skeleton rows={4} />
-      ) : failed && !data ? (
+      ) : failed && !data && rows.length === 0 ? (
         <Message {...DOWN} onRetry={retry} />
       ) : rows.length === 0 ? (
-        <Message title="No scores yet" body="The API is up but has not scored any ticker. Scores appear after the first full window of data." />
+        <Message title="Your watchlist is empty" body="Add a stock ticker to follow its news and sentiment." />
       ) : (
         <>
           {failed && <p className="border-b border-line px-3 py-2 text-xs text-mute">Connection lost. Showing the last scores received.</p>}
-          <ul>
+          <ul aria-label="Watchlist stocks" className="max-h-96 overflow-y-auto">
             {rows.map((r) => (
-              <li key={r.ticker} className="border-b border-line last:border-b-0">
+              <li key={r.ticker} className="flex items-center border-b border-line last:border-b-0">
                 <button
                   onClick={() => onPick(r.ticker)}
                   aria-pressed={r.ticker === ticker}
-                  className={`flex min-h-14 w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left transition-colors duration-150 hover:bg-line ${r.ticker === ticker ? "bg-line" : ""}`}
+                  className={`flex min-h-14 min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-left transition-colors duration-150 hover:bg-line ${r.ticker === ticker ? "bg-line" : ""}`}
                 >
                   <span className="w-14 font-mono font-medium">{r.ticker}</span>
-                  <span className="w-10 font-mono">{Math.round(r.score)}</span>
-                  <Verdict score={r.score} />
-                  <span className="ml-auto font-mono text-[11px] text-mute">{age(r.computedAt)}</span>
+                  {r.score ? <>
+                    <span className="w-10 font-mono">{Math.round(r.score.score)}</span>
+                    <Verdict score={r.score.score} />
+                    <span className="ml-auto font-mono text-[11px] text-mute" title={`Score window ended ${r.score.windowEnd}`}>data {age(r.score.windowEnd)}</span>
+                  </> : <span className="text-xs text-mute">No risk score yet</span>}
                   <span className="w-full empty:hidden">
-                    <Stale sources={r.staleSources} />
+                    <Stale sources={r.score?.staleSources ?? []} />
                   </span>
+                </button>
+                <button type="button" aria-label={`Remove ${r.ticker} from watchlist`} onClick={() => setError(onRemove(r.ticker))} className="mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center text-mute hover:text-text focus-visible:outline-1 focus-visible:outline-accent">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg>
                 </button>
               </li>
             ))}
@@ -132,14 +128,14 @@ function Watchlist({ w, ticker, onPick }: { w: ReturnType<typeof useApi<Score[]>
   );
 }
 
-function TimelinePane({ ticker, nonce, stale }: { ticker: string; nonce: number; stale: string[] }) {
-  const { data, failed, done, retry } = useApi<Timeline>(`/api/v1/tickers/${ticker}/timeline`, 30000, nonce, 6);
+function TimelinePane({ ticker, nonce, stale, refreshKey }: { ticker: string; nonce: number; stale: string[]; refreshKey: number }) {
+  const { data, failed, done, retry, mode } = useApi<Timeline>(`/api/v1/tickers/${ticker}/timeline`, 30000, nonce, 6, refreshKey);
   const last = data?.scores.at(-1);
   return (
-    <Pane title={`${ticker} score, last 6 hours`} tag={done && !failed ? "live" : undefined}>
+    <Pane title={`${ticker} score, last 6 hours`} tag={done && !failed ? mode : undefined}>
       <div className="p-3">
         {!done ? (
-          <div className="h-64 bg-line motion-safe:animate-pulse md:h-80" aria-busy="true" aria-label="Loading" />
+          <div className="h-64 bg-line motion-safe:animate-pulse md:h-80" role="status" aria-busy="true" aria-label="Loading" />
         ) : failed && !data ? (
           <Message {...DOWN} onRetry={retry} />
         ) : !data || (data.scores.length === 0 && data.flags.length === 0) ? (
@@ -164,30 +160,31 @@ function TimelinePane({ ticker, nonce, stale }: { ticker: string; nonce: number;
   );
 }
 
-function FlagFeed({ onPick, extra, setExtra }: { onPick: (t: string) => void; extra: Flag[]; setExtra: (f: (o: Flag[]) => Flag[]) => void }) {
-  const { data, failed, done, retry } = useApi<Flag[]>("/api/v1/flags?limit=20", 3600e3);
+function FlagFeed({ onPick, extra, setExtra, refreshKey }: { onPick: (t: string) => void; extra: Flag[]; setExtra: (f: (o: Flag[]) => Flag[]) => void; refreshKey: number }) {
+  const { data, failed, done, retry, mode } = useApi<Flag[]>("/api/v1/flags?limit=20", 3600e3, 0, undefined, refreshKey);
   const [open, setOpen] = useState(false);
 
   // EventSource reconnects by itself and resends Last-Event-ID, so a dropped stream resumes without gaps.
   useEffect(() => {
     const es = new EventSource(STREAM_URL);
-    es.onopen = () => setOpen(true);
+    es.onopen = () => { setOpen(true); retry(); };
     es.onerror = () => setOpen(false);
     es.addEventListener("flag", (e) => {
-      const f = (JSON.parse((e as MessageEvent).data) as { data: Flag }).data;
+      const f = parseFlagEvent((e as MessageEvent).data);
+      if (!f) return;
       setExtra((o) => (o.some((x) => x.id === f.id) ? o : [f, ...o].slice(0, 50)));
     });
     return () => es.close();
-  }, [setExtra]);
+  }, [setExtra, retry]);
 
   const flags = useMemo(() => {
     const seen = new Set<number>();
-    return [...extra, ...(data ?? [])].filter((f) => !seen.has(f.id) && seen.add(f.id)).sort((a, b) => b.id - a.id);
+    return [...extra, ...(data ?? [])].filter((f) => !seen.has(f.id) && seen.add(f.id)).sort(compareFlags);
   }, [extra, data]);
 
   return (
-    <Pane title="Flags" tag={open ? "streaming" : done ? "reconnecting" : undefined}>
-      {!done ? (
+    <Pane title="Flags" tag={open ? (mode === "mock" ? "mock stream" : "streaming") : done ? "reconnecting" : undefined}>
+      {!done && flags.length === 0 ? (
         <Skeleton rows={3} />
       ) : failed && !data && flags.length === 0 ? (
         <Message {...DOWN} onRetry={retry} />
@@ -198,7 +195,7 @@ function FlagFeed({ onPick, extra, setExtra }: { onPick: (t: string) => void; ex
           {flags.map((f) => (
             <li key={f.id} className="border-b border-line px-3 py-3 last:border-b-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button onClick={() => onPick(f.ticker)} className="font-mono font-medium underline decoration-line-strong hover:decoration-text">
+                <button onClick={() => onPick(f.ticker)} className="inline-flex min-h-11 min-w-11 items-center font-mono font-medium underline decoration-line-strong hover:decoration-text">
                   {f.ticker}
                 </button>
                 <span className="font-mono">{Math.round(f.evidence.score)}</span>
@@ -233,8 +230,12 @@ function FlagFeed({ onPick, extra, setExtra }: { onPick: (t: string) => void; ex
 export function LiveView() {
   const [pick, setPick] = useState<string>();
   const [extra, setExtra] = useState<Flag[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [, tick] = useState(0);
-  const w = useApi<Score[]>("/api/v1/watchlist", 15000);
+  const w = useApi<Score[]>("/api/v1/watchlist", 15000, 0, undefined, refreshKey);
+  const savedRaw = useSyncExternalStore(subscribeWatchlist, readWatchlist, () => null);
+  const saved = useMemo(() => parseWatchlist(savedRaw), [savedRaw]);
+  const symbols = useMemo(() => saved ?? (w.data ?? []).map((score) => score.ticker), [saved, w.data]);
 
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 5000);
@@ -242,38 +243,61 @@ export function LiveView() {
   }, []);
 
   const scores = w.data;
-  const top = useMemo(() => [...(scores ?? [])].sort((a, b) => b.score - a.score)[0], [scores]);
-  const ticker = pick ?? top?.ticker;
+  const top = useMemo(() => [...(scores ?? [])].filter((score) => symbols.includes(score.ticker)).sort((a, b) => b.score - a.score)[0], [scores, symbols]);
+  const ticker = pick ?? top?.ticker ?? symbols[0];
   const stale = scores?.find((s) => s.ticker === ticker)?.staleSources ?? [];
   const nonce = extra.find((f) => f.ticker === ticker)?.id ?? 0;
 
   return (
     <>
       <div className="sticky top-14 z-30 border-b border-line bg-bg">
-        <p className="mx-auto max-w-[1400px] px-4 py-2 text-xs text-mute md:px-8">{w.notice ?? NOTICE}</p>
+        <p className="mx-auto max-w-[1400px] px-4 py-2 text-xs text-mute md:px-8">{w.mode === "mock" && <strong className="text-accent">Mock data. No market feed connected. </strong>}{w.notice ?? NOTICE}</p>
       </div>
     <div className="mx-auto max-w-[1400px] px-4 pb-16 pt-6 md:px-8">
+      <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 text-sm text-mute"><span>{symbols.length} stocks</span><a className="inline-flex min-h-11 items-center underline" href="#stock-news">News</a><a className="inline-flex min-h-11 items-center underline" href="#stock-sentiment">Sentiment</a><a className="inline-flex min-h-11 items-center underline" href="#market-movers">Movers</a></div>
+        <button type="button" onClick={() => setRefreshKey((key) => key + 1)} className={`${btnGhost} shrink-0`} title="Reload watchlist, selected chart, flags, news, movers and sentiment">
+          Refresh all
+        </button>
+      </div>
       <div className="grid gap-3 lg:grid-cols-12">
         <div className="lg:col-span-4">
-          <Watchlist w={w} ticker={ticker} onPick={setPick} />
+          <Watchlist w={w} ticker={ticker} onPick={setPick} symbols={symbols} onAdd={(value) => {
+            const result = addTicker(symbols, value);
+            if (result.error !== undefined) return result.error;
+            try { saveWatchlist(result.tickers); } catch { return "Could not save your watchlist. Allow browser storage and try again."; }
+            setPick(result.ticker);
+          }} onRemove={(symbol) => {
+            try { saveWatchlist(symbols.filter((value) => value !== symbol)); } catch { return "Could not save your watchlist. Allow browser storage and try again."; }
+            if (ticker === symbol) setPick(undefined);
+          }} />
         </div>
         <div className="min-w-0 lg:col-span-8">
           {ticker ? (
-            <TimelinePane key={ticker} ticker={ticker} nonce={nonce} stale={stale} />
+            <TimelinePane key={ticker} ticker={ticker} nonce={nonce} stale={stale} refreshKey={refreshKey} />
           ) : (
             <Pane title="Score timeline">
-              <Message title="No ticker selected" body="Pick a ticker from the watchlist once the API has scored one." />
+              <Message title="No ticker selected" body="Add a stock to your watchlist or select a market mover." />
             </Pane>
           )}
         </div>
         <div className="lg:col-span-12">
-          <FlagFeed onPick={setPick} extra={extra} setExtra={setExtra} />
+          <FlagFeed onPick={setPick} extra={extra} setExtra={setExtra} refreshKey={refreshKey} />
         </div>
+        {ticker && <>
+          <div className="lg:col-span-8"><NewsPanel key={ticker} ticker={ticker} refreshKey={refreshKey} /></div>
+          <div className="lg:col-span-4"><SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} /></div>
+        </>}
+        <div className="lg:col-span-12"><MoversPanel refreshKey={refreshKey} selectedTicker={ticker} onPick={(symbol) => {
+          setPick(symbol);
+          requestAnimationFrame(() => document.getElementById("stock-sentiment")?.scrollIntoView({ block: "start" }));
+        }} /></div>
+        <div className="lg:col-span-12"><NewsPanel refreshKey={refreshKey} /></div>
       </div>
       <p className="mt-6 max-w-[80ch] text-xs leading-relaxed text-mute">
         Scores are model output about how much a ticker&apos;s chatter and price look like coordinated hype, not a
         prediction of price. Sources, where enabled: Alpaca market data and news, SEC EDGAR filings, and public
-        posts from Bluesky and Reddit. Posts contribute counts only; no post text or author is stored or shown.
+        posts from Bluesky and Reddit. This view shows aggregate evidence only, without post text or author names.
       </p>
     </div>
     </>

@@ -24,6 +24,7 @@ spring:
   flyway:
     table: flyway_history_replay
     baseline-on-migrate: true
+    baseline-version: 0 # another app's tables must not cause this app's V1 to be skipped
 server:
   port: ${REPLAY_PORT:8081}
 management:

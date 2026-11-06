@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Set `output: "standalone"` in `web/next.config.ts` and add `web/Dockerfile` and `.dockerignore`
 - [ ] 1.2 Add `deploy/Caddyfile` routing `/api/*` to the API (unbuffered) and everything else to the web app
-- [ ] 1.3 Add `web` and `proxy` services to `docker-compose.yml` under the `apps` profile with an empty `NEXT_PUBLIC_API_URL`
+- [ ] 1.3 Add `web` and `proxy` services to `docker-compose.yml` under the `apps` profile
 
 ## 2. Infrastructure
 
