@@ -257,6 +257,39 @@ classes; they reach Kafka on 127.0.0.1:9092 and Postgres on 127.0.0.1:5432.
 One Google Cloud VM runs the whole stack behind a Caddy proxy, with one public port.
 Terraform, deploy scripts and the runbook are in [docs/deploy-gcp.md](docs/deploy-gcp.md).
 
+### AWS (Terraform, not deployed by CI)
+
+`infra/aws/` describes the same stack on AWS: ECS Fargate services behind an Application Load Balancer, RDS PostgreSQL 17,
+ECR, Cloud Map, Secrets Manager, CloudWatch and a Budgets alarm, with Kafka either as one Fargate task (default, data lost
+on restart) or Amazon MSK (`enable_msk`). It runs mock data only. Nothing is deployed until you run `deploy/aws-up.sh`; it
+bills hourly, so destroy it with `deploy/aws-down.sh`. Runbook and cost estimates: [docs/deploy-aws.md](docs/deploy-aws.md).
+
+```mermaid
+flowchart LR
+  user([Browser]) --> alb[Application Load Balancer]
+  alb -- "/api/v1/flags/stream" --> api
+  alb -- "everything else" --> web
+  subgraph vpc [VPC, 2 AZs]
+    subgraph pub [Public subnets: Fargate tasks]
+      web[web] -- "Cloud Map: api.pumpwatch.local" --> api[api]
+      pipeline[pipeline]
+      kafka["kafka task (default)"]
+    end
+    subgraph priv [Private subnets]
+      rds[(RDS PostgreSQL 17)]
+      msk[("Amazon MSK (optional)")]
+    end
+  end
+  api --> rds
+  api --> kafka
+  pipeline --> kafka
+  api -.-> msk
+  pipeline -.-> msk
+  ecr[ECR] -. images .-> pub
+  sm[Secrets Manager] -. DB password .-> api
+  cw[CloudWatch alarms] --> sns[SNS email]
+```
+
 Load tests live in `load/`: a ramping [k6](https://k6.io) read-API test, and a live-stream test
 with real SSE clients that counts a client only if data actually reaches it.
 
@@ -275,6 +308,17 @@ tickers, 18,000 score rows and 200 flags (`load/seed.sql`), rate limit raised. N
 | Live stream | 1,000 of 1,000 clients receiving data, 0 dropped, 0 refused |
 | Flag delivery to 1,000 clients | all delivered, p95 between 0.9 s and 1.7 s over 4 runs (API polls once a second) |
 | Default limits, 80 parallel requests | 46 rejected with 429; a forged `X-Forwarded-For` did not help; a second client stayed at 200 |
+
+Limit tests, 2026-11-06, same machine. `load/kafka.sh` and `load/pipeline.sh` use throwaway topics and a throwaway stack.
+
+| Test | Result |
+| --- | --- |
+| Live clients | 7,999 of 8,000 received a flag, p95 4.9 s. Hard stop at about 8,190 (Tomcat `max-connections`). Above the cap, the API ran out of its default heap (about 1.4 GB). |
+| Kafka produce, one broker, 256-byte records, `acks=all` | 399,000 msg/s (97 MB/s) at p95 3 ms. Peak 470,000 msg/s; p99 spikes at higher offered rates |
+| Kafka consume | 1.02 million msg/s |
+| Scoring pipeline, backlog of 300,000 ticks replaying one hour, 50 tickers | 164,508 ticks processed in about 2 minutes, up from 3,507 before folding ticks into 15 second panes (about 47x). Worst case: event time runs far faster than real time |
+
+`api.max-streams` defaults to 100 as a safety limit. Raise it with `API_MAX_STREAMS`, and keep it under the limits above.
 
 ## Development checks
 

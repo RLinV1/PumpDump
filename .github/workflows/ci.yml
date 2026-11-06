@@ -78,6 +78,20 @@ jobs:
       - run: python -m pytest
       - run: bash ../scripts/license-gate.sh plutus
 
+  # No AWS credentials: format and syntax checks only, with no backend.
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - run: terraform -chdir=infra/aws fmt -check -recursive
+      - run: terraform -chdir=infra/aws init -backend=false -input=false
+      - run: terraform -chdir=infra/aws validate
+
   licenses:
     runs-on: ubuntu-latest
     steps:

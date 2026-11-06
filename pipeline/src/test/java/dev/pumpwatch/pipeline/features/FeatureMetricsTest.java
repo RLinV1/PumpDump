@@ -60,6 +60,7 @@ class FeatureMetricsTest {
         for (int i = 0; i < 40 * 4; i++) ticks.pipeInput("GME", Fx.tick(at(0, 0).plusSeconds(15L * i), "GME", "10.00", 100));
         ticks.pipeInput("GME", Fx.tick(at(41, 0), "GME", "10.00", 100000)); // a volume spike
         ticks.pipeInput("CLS", Fx.tick(at(60, 0), "CLS", "1.00", 1)); // close every window of interest
+        ticks.pipeInput("CLS", Fx.tick(at(70, 0), "CLS", "1.00", 1)); // and that tick's pane, which closes the windows
         List<Features> all = out.readValuesToList().stream().map(v -> Json.fromJson(v, Features.class))
                 .filter(f -> f.ticker().equals("GME")).toList();
         assertThat(all.get(0).values()).doesNotContainKey("z.volume");
