@@ -17,8 +17,12 @@
 
 ## 3. Web
 
-- [ ] 3.1 Add a client component that fetches the API after first paint with a short timeout
-- [ ] 3.2 Show live flags and the real ticker timeline when live data exists, labelled live
-- [ ] 3.3 Keep the labelled simulation as the fallback and never mix the two in one view
-- [ ] 3.4 Proxy `/api` through the web host
-- [ ] 3.5 Verify first paint and total JavaScript size did not regress
+- [x] 3.1 Add a client component that fetches the API after first paint with a short timeout
+- [x] 3.2 Show live flags and the real ticker timeline when live data exists, labelled live
+- [x] 3.3 Keep the labelled simulation as the fallback and never mix the two in one view
+- [x] 3.4 Proxy `/api` through the web host
+- [x] 3.5 Verify first paint and total JavaScript size did not regress
+
+Verification: `docs/verification-2026-10-29.md`. Live proxy behavior uses controlled upstream responses;
+actual provider verification is documented in the report's live activation section. The user-requested `DATA_MODE=mock|live` switch keeps aggregate mock
+records isolated from the real backend and labels both web surfaces explicitly.
