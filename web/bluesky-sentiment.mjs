@@ -26,6 +26,7 @@ export function createBlueskySentiment({
   reconnectDelayMs = 1000,
 } = {}) {
   const tickers = new Set(watchlist.filter((ticker) => typeof ticker === "string" && /^[A-Z]{1,5}$/.test(ticker)));
+  const selectedTickers = new Map();
   if (![maxQueue, maxSamples, inferenceTimeoutMs, reconnectDelayMs].every((n) => Number.isSafeInteger(n) && n > 0))
     throw new Error("Invalid sentiment limits");
   const records = new Map();
@@ -37,6 +38,9 @@ export function createBlueskySentiment({
 
   function prune() {
     const cutoff = now() - WINDOW;
+    for (const [ticker, requestedAt] of selectedTickers) {
+      if (requestedAt < cutoff) selectedTickers.delete(ticker);
+    }
     let samples = 0;
     for (const [id, record] of records) {
       if (record.at < cutoff) records.delete(id);
@@ -55,10 +59,10 @@ export function createBlueskySentiment({
     const found = new Set();
     for (const match of text.matchAll(/(?<![\w$])\$([A-Za-z]{1,5})\b/g)) {
       const ticker = match[1].toUpperCase();
-      if (tickers.has(ticker)) found.add(ticker);
+      if (tickers.has(ticker) || selectedTickers.has(ticker)) found.add(ticker);
     }
     if (FINANCE.test(text)) for (const match of text.matchAll(/\b[A-Z]{1,5}\b/g)) {
-      if (tickers.has(match[0])) found.add(match[0]);
+      if (tickers.has(match[0]) || selectedTickers.has(match[0])) found.add(match[0]);
     }
     return [...found];
   }
@@ -212,6 +216,11 @@ export function createBlueskySentiment({
 
   function snapshot(ticker) {
     prune();
+    if (enabled && /^[A-Z]{1,5}$/.test(ticker) && !tickers.has(ticker)) {
+      selectedTickers.delete(ticker);
+      selectedTickers.set(ticker, now());
+      if (selectedTickers.size > 64) selectedTickers.delete(selectedTickers.keys().next().value);
+    }
     const counts = { positive: 0, negative: 0, neutral: 0 };
     let last = null;
     for (const record of records.values()) if (record.label && record.tickers.includes(ticker)) {

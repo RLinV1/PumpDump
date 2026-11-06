@@ -20,7 +20,7 @@ const price = (value: number) => new Intl.NumberFormat("en-US", { style: "curren
 const pct = (value: number) => `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
 const time = (iso: string) => `${new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ET`;
 
-export function MoversPanel({ refreshKey, onPick }: { refreshKey: number; onPick: (ticker: string) => void }) {
+export function MoversPanel({ refreshKey, onPick, selectedTicker }: { refreshKey: number; onPick: (ticker: string) => void; selectedTicker?: string }) {
   const state = useApi<MarketMovers>("/api/v1/market-movers", 60000, 0, undefined, refreshKey);
   return <Panel title="Market movers" id="market-movers" state={state}>{(data) => <>
     <p className="px-4 py-3 text-xs text-mute">Latest session · {time(data.asOf)}. Gainers and losers: Alpaca SIP screener.</p>
@@ -32,7 +32,7 @@ export function MoversPanel({ refreshKey, onPick }: { refreshKey: number; onPick
           <caption className="sr-only">{group.title}</caption>
           <thead className="text-mute"><tr><th scope="col" className="py-2 font-normal">Stock</th><th scope="col" className="text-right font-normal">Price</th><th scope="col" className="text-right font-normal">{group.range ? "Range" : "Change"}</th></tr></thead>
           <tbody>{group.rows.slice(0, 6).map((row) => <tr key={row.ticker} className="border-t border-line">
-            <th scope="row" className="font-normal"><button onClick={() => onPick(row.ticker)} className="inline-flex min-h-11 min-w-11 items-center font-mono underline decoration-line-strong hover:decoration-text" title={`View ${row.ticker} news and available score history`}>{row.ticker}</button></th>
+            <th scope="row" className="font-normal"><button onClick={() => onPick(row.ticker)} aria-pressed={row.ticker === selectedTicker} className="inline-flex min-h-11 min-w-11 items-center font-mono underline decoration-line-strong hover:decoration-text" title={`View ${row.ticker} sentiment, news and available score history`}>{row.ticker}</button></th>
             <td className="text-right font-mono">{price(row.price)}</td>
             <td className={`text-right font-mono ${group.range ? "" : row.changePct >= 0 ? "text-up" : "text-down"}`}>{group.range && "rangePct" in row ? `${Number(row.rangePct).toFixed(2)}%` : pct(row.changePct)}</td>
           </tr>)}</tbody>
@@ -56,16 +56,15 @@ export function NewsPanel({ ticker, refreshKey }: { ticker?: string; refreshKey:
   </>}</Panel>;
 }
 
-export function SentimentPanel({ ticker, refreshKey, tracked }: { ticker: string; refreshKey: number; tracked: boolean }) {
+export function SentimentPanel({ ticker, refreshKey }: { ticker: string; refreshKey: number }) {
   const state = useApi<Sentiment>(`/api/v1/tickers/${ticker}/sentiment`, 15000, 0, undefined, refreshKey);
   return <Panel title={`${ticker} Bluesky sentiment`} id="stock-sentiment" state={state}>{(data) => <div className="space-y-3 p-4 text-sm">
     <p className="text-xs text-mute">Financial DistilRoBERTa · pretrained model · local inference</p>
     {!data.enabled ? <p>Sentiment collection is disabled.</p> : data.modelStatus === "loading" ? <p role="status">Loading the sentiment model. The first run downloads its weights.</p>
       : data.modelStatus === "error" ? <p role="alert">The sentiment model is unavailable. No sentiment has been estimated.</p>
-      : !tracked ? <p>This stock is outside the sentiment watchlist.</p>
       : <>
         <p className="text-xs text-mute">{data.streamConnected ? "Bluesky connected" : "Bluesky reconnecting"} · last {data.windowMinutes} minutes</p>
-        {data.total === 0 ? <p>No classified posts for {ticker} in this window.</p> : <dl className="grid grid-cols-3 gap-3">
+        {data.total === 0 ? <p>No classified posts for {ticker} in this window. Newly selected stocks collect posts from this point forward.</p> : <dl className="grid grid-cols-3 gap-3">
           {([["Positive", data.positive], ["Neutral", data.neutral], ["Negative", data.negative]] as const).map(([label, count]) => <div key={label}><dt className="text-xs text-mute">{label}</dt><dd className="mt-1 font-mono text-xl">{count}</dd></div>)}
         </dl>}
         {data.lastPostAt && <p className="text-xs text-mute">Last classified post {age(data.lastPostAt)}.</p>}
