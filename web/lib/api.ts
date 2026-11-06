@@ -39,6 +39,8 @@ export type MarketMovers = {
   gainers: MarketMover[]; losers: MarketMover[];
   ranges: (MarketMover & { rangePct: number; volume: number; at: string })[];
 };
+export type Quote = { ticker: string; price: number; changePct: number; prevClose: number; at: string };
+export type Quotes = { asOf: string; feed: string; quotes: Quote[] };
 export type StockNews = {
   asOf: string; ticker: string | null;
   items: { id: string; title: string; url: string; source: string; publishedAt: string; symbols: string[] }[];
@@ -110,6 +112,14 @@ function validMovers(data: MarketMovers): boolean {
     && Array.isArray(data.ranges) && data.ranges.every((r) => row(r) && Number.isFinite(r.rangePct) && r.rangePct >= 0 && validCount(r.volume) && validDate(r.at));
 }
 
+function validQuotes(data: Quotes): boolean {
+  const seen = new Set<string>();
+  return !!data && validDate(data.asOf) && typeof data.feed === "string" && Array.isArray(data.quotes) && data.quotes.length <= 30
+    && data.quotes.every((q) => !!q && validTicker(q.ticker) && !seen.has(q.ticker) && !!seen.add(q.ticker)
+      && Number.isFinite(q.price) && q.price > 0 && Number.isFinite(q.prevClose) && q.prevClose > 0
+      && Number.isFinite(q.changePct) && q.changePct > -100 && validDate(q.at));
+}
+
 function safeLink(value: string) {
   try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password; } catch { return false; }
 }
@@ -134,6 +144,7 @@ function validSentiment(data: Sentiment, ticker: string): boolean {
 function validPublicData(path: string, data: unknown): boolean {
   const endpoint = path.split("?")[0];
   if (endpoint === "/api/v1/market-movers") return validMovers(data as MarketMovers);
+  if (endpoint === "/api/v1/quotes") return validQuotes(data as Quotes);
   if (endpoint === "/api/v1/news") return validNews(data as StockNews, null);
   const context = /^\/api\/v1\/tickers\/([A-Z]{1,5})\/(news|sentiment)$/.exec(endpoint);
   if (context) {
