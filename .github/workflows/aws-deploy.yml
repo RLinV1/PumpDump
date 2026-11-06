@@ -1,0 +1,53 @@
+# Manual only. This workflow has no push, pull_request or schedule trigger and must never get one:
+# CI does not deploy to AWS. Start it yourself from the Actions tab.
+# One-time setup: apply infra/aws with enable_github_oidc = true, then set repository variables
+# AWS_DEPLOY_ROLE_ARN (terraform output github_deploy_role_arn), AWS_REGION and WEB_API_ORIGIN (terraform output web_api_origin).
+name: aws-deploy
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type deploy to build, push to ECR and update ECS"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency: aws-deploy
+
+jobs:
+  deploy:
+    if: inputs.confirm == 'deploy'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets the job ask GitHub for an OIDC token; no long-lived AWS keys are stored
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          WEB_API_ORIGIN: ${{ vars.WEB_API_ORIGIN }}
+        run: |
+          for pair in api:8083 pipeline:8082 connectors:8080 replay:8081; do
+            m=${pair%%:*}
+            docker build --build-arg "MODULE=$m" --build-arg "PORT=${pair##*:}" -t "$REGISTRY/pumpwatch/$m:latest" .
+            docker push "$REGISTRY/pumpwatch/$m:latest"
+          done
+          docker build --build-arg "API_ORIGIN=$WEB_API_ORIGIN" -t "$REGISTRY/pumpwatch/web:latest" web
+          docker push "$REGISTRY/pumpwatch/web:latest"
+      - name: Update ECS services
+        run: |
+          for s in web api pipeline; do
+            aws ecs update-service --cluster pumpwatch --service "$s" --force-new-deployment >/dev/null
+          done
+          aws ecs wait services-stable --cluster pumpwatch --services web api pipeline
