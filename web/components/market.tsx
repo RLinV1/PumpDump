@@ -26,9 +26,9 @@ function Pane({
 }) {
   return (
     <section className={`flex min-w-0 flex-col bg-surface ${className}`}>
-      <header className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-line px-4 text-xs">
-        <h2 className="flex items-baseline gap-2 font-medium">{title}</h2>
-        {tag ? <span className="truncate text-xs text-mute">{tag}</span> : null}
+      <header className="bar flex h-8 shrink-0 items-center justify-between gap-3 px-3 text-xs">
+        <h2 className="flex items-baseline gap-2 font-semibold">{title}</h2>
+        {tag ? <span className="truncate text-xs uppercase text-white">{tag}</span> : null}
       </header>
       {children}
     </section>
@@ -59,6 +59,7 @@ export function Market() {
       text: css.getPropertyValue("--text").trim(),
       mute: css.getPropertyValue("--mute").trim(),
       accent: css.getPropertyValue("--accent").trim(),
+      yellow: css.getPropertyValue("--yellow").trim(),
       up: css.getPropertyValue("--up").trim(),
       down: css.getPropertyValue("--down").trim(),
     };
@@ -137,7 +138,7 @@ export function Market() {
       for (let g = 0; g <= 3; g++) {
         const v = vmin + ((vmax - vmin) * g) / 3;
         const y = Math.round(py(v)) + 0.5;
-        ctx.strokeStyle = "rgb(241 237 226 / 0.07)";
+        ctx.strokeStyle = "rgb(255 255 255 / 0.10)";
         ctx.beginPath();
         ctx.moveTo(left, y);
         ctx.lineTo(right, y);
@@ -151,7 +152,7 @@ export function Market() {
       for (let i = 0; i < n; i++) {
         const c = cands[i];
         const h = (c.v / volMax) * volH;
-        ctx.fillStyle = c.c >= c.o ? "rgb(61 220 132 / 0.35)" : "rgb(255 93 93 / 0.35)";
+        ctx.fillStyle = c.c >= c.o ? "rgb(25 224 107 / 0.35)" : "rgb(255 77 77 / 0.35)";
         ctx.fillRect(cx(i) - cw * 0.31, volTop + volH - h, Math.max(1, cw * 0.62), h);
       }
 
@@ -171,7 +172,7 @@ export function Market() {
 
       // Chatter indicator.
       const cy = (v: number) => chTop + chH * (1 - Math.min(v, 15) / 15);
-      ctx.strokeStyle = "rgb(241 237 226 / 0.12)";
+      ctx.strokeStyle = "rgb(255 255 255 / 0.18)";
       ctx.setLineDash([3, 4]);
       ctx.beginPath();
       ctx.moveTo(left, cy(1));
@@ -186,7 +187,7 @@ export function Market() {
       ctx.lineTo(cx(n - 1), chTop + chH);
       ctx.lineTo(cx(0), chTop + chH);
       ctx.closePath();
-      ctx.fillStyle = "rgb(241 237 226 / 0.08)";
+      ctx.fillStyle = "rgb(255 255 255 / 0.12)";
       ctx.fill();
       ctx.lineWidth = 1;
       ctx.fillStyle = C.mute;
@@ -207,7 +208,7 @@ export function Market() {
       const fi = cands.findIndex((c) => c.flag);
       if (fi >= 0) {
         const x = Math.round(cx(fi)) + 0.5;
-        ctx.strokeStyle = "rgb(255 93 93 / 0.75)";
+        ctx.strokeStyle = "rgb(255 225 77 / 0.85)";
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(x, top);
@@ -216,7 +217,7 @@ export function Market() {
         ctx.setLineDash([]);
         const w = 36;
         const bx = Math.min(x + 5, right - w);
-        ctx.fillStyle = C.down;
+        ctx.fillStyle = C.yellow;
         ctx.fillRect(bx, top + 2, w, 16);
         ctx.fillStyle = C.bg;
         ctx.textAlign = "center";
@@ -245,7 +246,7 @@ export function Market() {
       if (hover && hover.x > left && hover.x < right) {
         const i = Math.min(n - 1, Math.max(0, Math.floor((hover.x - left) / cw)));
         const c = cands[i];
-        ctx.strokeStyle = "rgb(241 237 226 / 0.35)";
+        ctx.strokeStyle = "rgb(255 255 255 / 0.45)";
         ctx.beginPath();
         ctx.moveTo(Math.round(cx(i)) + 0.5, top);
         ctx.lineTo(Math.round(cx(i)) + 0.5, chTop + chH);
@@ -278,7 +279,7 @@ export function Market() {
       const c = hist[hist.length - 1];
       const v = verdictOf(c.score);
       set("verdict", `${v.label}.`);
-      q("verdict").className = `text-2xl font-semibold leading-tight tracking-[-0.02em] ${v.tone}`;
+      q("verdict").className = `font-display text-3xl font-extrabold uppercase leading-none ${v.tone}`;
       set("note", v.note);
       set("score", String(c.score));
       q("segs")
@@ -377,15 +378,15 @@ export function Market() {
   return (
     <div
       ref={root}
-      className="rise overflow-hidden border border-line bg-line"
+      className="rise overflow-hidden border border-line-strong bg-line"
       style={{ "--d": "140ms" } as React.CSSProperties}
     >
-      <div className="grid grid-cols-1 gap-px md:grid-cols-12">
+      <div className="grid grid-cols-1 gap-px">
         <Pane
-          className="md:col-span-8"
+          className=""
           title={
             <>
-              <span className="font-mono text-sm font-semibold">YZEN</span>
+              <span className="font-mono text-sm font-semibold text-yellow">YZEN</span>
               <span data-k="last" className="font-mono text-sm tabular-nums" style={{ color: dirColor(lastC.c - base0) }}>
                 {price(lastC.c)}
               </span>
@@ -396,7 +397,7 @@ export function Market() {
           }
           tag="Simulated, one-minute candles"
         >
-          <div className="relative h-[260px] md:h-[330px] [@media(max-height:560px)]:h-[240px]">
+          <div className="relative h-[230px] md:h-[250px] [@media(max-height:560px)]:h-[200px]">
             <canvas
               ref={canvas}
               className="absolute inset-0 h-full w-full touch-pan-y"
@@ -405,15 +406,15 @@ export function Market() {
             />
             <p
               data-k="readout"
-              className="pointer-events-none absolute left-3 top-2 hidden whitespace-nowrap bg-surface/90 px-1 font-mono text-[11px] tabular-nums text-mute opacity-0 transition-opacity duration-150 ease-out md:block"
+              className="pointer-events-none absolute left-3 top-2 hidden whitespace-nowrap bg-black px-1 font-mono text-xs tabular-nums text-white opacity-0 transition-opacity duration-150 ease-out md:block"
             />
           </div>
         </Pane>
 
-        <Pane className="md:col-span-4" title="Why YZEN" tag="Evidence, simulated">
-          <div className="flex flex-1 flex-col gap-4 px-4 py-4">
+        <Pane className="" title="Why YZEN" tag="Evidence, simulated">
+          <div className="flex flex-1 flex-col gap-3 px-3 py-3">
             <div>
-              <p data-k="verdict" className={`text-2xl font-semibold leading-tight tracking-[-0.02em] ${verdict0.tone}`}>
+              <p data-k="verdict" className={`font-display text-3xl font-extrabold uppercase leading-none ${verdict0.tone}`}>
                 {verdict0.label}.
               </p>
               <p data-k="note" className="mt-1 min-h-[2.5rem] text-pretty text-sm leading-relaxed text-mute">
@@ -430,7 +431,7 @@ export function Market() {
                 {lastC.score}
               </span>
             </div>
-            <dl className="mt-auto grid gap-2 text-sm">
+            <dl className="mt-auto grid gap-1 text-xs">
               {[
                 ["Chatter", "chatter", `x${lastC.chatter.toFixed(1)}`],
                 ["Posts from new accounts", "newacc", `${Math.round(lastC.newShare * 100)}%`],
@@ -439,14 +440,14 @@ export function Market() {
                 ["Expected 1h swing", "swing", `±${lastC.swing.toFixed(0)}% ${swingRegime(lastC.swing)}`],
               ].map(([label, k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
-                  <dt className="text-mute">{label}</dt>
+                  <dt className="text-accent">{label}</dt>
                   <dd data-k={k} className="font-mono tabular-nums">
                     {v}
                   </dd>
                 </div>
               ))}
               <div className="flex justify-between gap-3 border-t border-line pt-2">
-                <dt className="text-mute">Catalyst</dt>
+                <dt className="text-accent">Catalyst</dt>
                 <dd className="font-mono text-accent">none found</dd>
               </div>
             </dl>

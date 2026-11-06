@@ -25,50 +25,47 @@ const FEEDS = [
 ] as const;
 
 // A server component with CSS scroll-driven reveals: it ships no JavaScript of its own.
-// Each feed carries a trace of its own character: many small posts, a price walk, sparse headlines, a rare filing.
+// Rendered as a numbered menu, the way a terminal lists its functions. Each feed carries a trace of its own character:
+// many small posts, a price walk, sparse headlines, a rare filing.
 export function Feeds() {
   const { W, H } = TRACE_BOX;
   return (
-    <section id="feeds" className="py-24 md:py-32">
-      <div className="mx-auto max-w-[1400px] px-4 md:px-8">
-        <h2 className={`${heading} max-w-3xl`}>What it reads.</h2>
-        <p className="mt-4 max-w-[56ch] text-pretty leading-relaxed text-mute">
-          Four feeds, matched to the same ticker and the same clock. Every record keeps the time it
-          really happened, so any past day can be replayed through the same code as live data.
-        </p>
+    <section id="feeds" className="border-b border-line py-12 md:py-16">
+      <div className="mx-auto grid max-w-[1500px] gap-8 px-4 md:px-8 lg:grid-cols-[4fr_8fr] lg:gap-14">
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <h2 className={heading}>What it reads.</h2>
+          <p className="mt-4 max-w-[44ch] text-pretty leading-relaxed text-mute">
+            Four feeds, matched to the same ticker and the same clock. Every record keeps the time it
+            really happened, so any past day can be replayed through the same code as live data.
+          </p>
+        </div>
 
-        <div className="mt-12">
-          {FEEDS.map((f) => (
-            <div
+        <ol className="border-y border-line-strong">
+          {FEEDS.map((f, i) => (
+            <li
               key={f.name}
-              className="vr group relative grid items-center gap-4 py-8 md:grid-cols-[190px_1fr_260px] md:gap-10"
+              className="vr group grid items-center gap-x-5 gap-y-2 border-b border-line py-5 last:border-b-0 md:grid-cols-[2.25rem_9rem_1fr_150px]"
             >
-              <span className="vline absolute inset-x-0 top-0 h-px bg-line-strong transition-colors duration-200 group-hover:bg-accent" />
-              <h3 className="text-xl font-semibold tracking-tight">{f.name}</h3>
-              <p className="max-w-[52ch] text-pretty leading-relaxed text-mute">{f.body}</p>
-              <svg
-                aria-hidden
-                viewBox={`0 0 ${W} ${H}`}
-                className="h-14 w-full max-w-[260px] md:justify-self-end"
-              >
-                {[0, 1, 2].map((i) => (
+              <span className="font-mono text-sm font-semibold text-yellow">{i + 1}</span>
+              <h3 className="font-display text-2xl font-extrabold uppercase leading-none text-accent">{f.name}</h3>
+              <p className="max-w-[52ch] text-pretty text-[13px] leading-relaxed text-text">{f.body}</p>
+              <svg aria-hidden viewBox={`0 0 ${W} ${H}`} className="hidden h-10 w-full md:block">
+                {[0, 1, 2].map((t) => (
                   <path
-                    key={i}
-                    d={TRACES[f.kind](i + 1)}
+                    key={t}
+                    d={TRACES[f.kind](t + 1)}
                     fill="none"
-                    stroke="var(--text)"
-                    strokeOpacity={0.18 + i * 0.12}
+                    stroke="var(--cyan)"
+                    strokeOpacity={0.35 + t * 0.25}
                     strokeWidth="1"
                     vectorEffect="non-scaling-stroke"
-                    className="transition-[stroke,stroke-opacity] duration-200 group-hover:stroke-accent group-hover:[stroke-opacity:0.9]"
-                    transform={`translate(0 ${(i - 1) * 4})`}
+                    transform={`translate(0 ${(t - 1) * 4})`}
                   />
                 ))}
               </svg>
-            </div>
+            </li>
           ))}
-          <div className="h-px bg-line-strong" />
-        </div>
+        </ol>
       </div>
     </section>
   );

@@ -62,8 +62,8 @@ export function Detector() {
   const factor = explained ? CATALYST_FACTOR : 1;
 
   return (
-    <section id="detector" className="border-t border-line py-24 md:py-32">
-      <div className="mx-auto grid max-w-[1400px] gap-12 px-4 md:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+    <section id="detector" className="border-b border-line py-20 md:py-28">
+      <div className="mx-auto grid max-w-[1500px] gap-10 px-4 md:px-8 lg:grid-cols-[5fr_7fr] lg:gap-16">
         <div>
           <h2 className={heading}>Try the detector.</h2>
           <p className="mt-4 max-w-[46ch] text-pretty leading-relaxed text-mute">
@@ -74,11 +74,11 @@ export function Detector() {
           </p>
         </div>
 
-        <div className="grid gap-x-12 gap-y-8 border border-line bg-surface p-5 md:grid-cols-2 md:p-8">
+        <div className="grid gap-x-8 gap-y-6 border border-line-strong bg-surface p-4 md:grid-cols-2 md:p-6">
           {/* On a phone the result stays pinned above the sliders, so dragging one shows its effect. */}
-          <div className="max-md:sticky max-md:top-14 max-md:z-10 max-md:order-first max-md:-mx-5 max-md:border-b max-md:border-line max-md:bg-surface max-md:px-5 max-md:pb-4 md:order-last md:border-l md:border-line md:pl-12">
+          <div className="max-md:sticky max-md:top-12 max-md:z-10 max-md:order-first max-md:-mx-4 max-md:border-b max-md:border-line max-md:bg-surface max-md:px-4 max-md:pb-4 md:order-last md:border-l md:border-line md:pl-8">
             <div ref={verdictEl}>
-              <p className={`text-[clamp(2rem,3.4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.03em] ${verdict.tone}`}>
+              <p className={`font-display text-[clamp(2.5rem,4vw,3.75rem)] font-extrabold uppercase leading-none ${verdict.tone}`}>
                 {verdict.label}.
               </p>
               <p className="mt-2 min-h-[2.75rem] max-w-[34ch] text-pretty text-sm leading-relaxed text-mute">{verdict.note}</p>
@@ -125,7 +125,7 @@ export function Detector() {
             {CONTROLS.map((c) => (
               <label key={c.key} className="block">
                 <span className="flex items-baseline justify-between gap-4">
-                  <span className="text-sm font-medium">{c.label}</span>
+                  <span className="text-sm font-semibold text-accent">{c.label}</span>
                   <span className="font-mono text-sm tabular-nums text-accent">{values[c.key]}</span>
                 </span>
                 <span className="block text-xs text-mute">{c.hint}</span>
@@ -148,7 +148,7 @@ export function Detector() {
                 className="mt-0.5 size-4 shrink-0"
               />
               <span>
-                <span className="block text-sm font-medium">A filing or news story explains the move</span>
+                <span className="block text-sm font-semibold text-accent">A filing or news story explains the move</span>
                 <span className="block text-xs text-mute">It lowers the score and never clears it.</span>
               </span>
             </label>

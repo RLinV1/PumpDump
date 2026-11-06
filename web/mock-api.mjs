@@ -1,3 +1,5 @@
+import { parseSymbols } from "./market-quotes.mjs";
+
 const NOTICE = "Risk signal only. Not investment advice. Pumpwatch is a non-commercial project.";
 const SYMBOLS = ["GME", "AMC", "SNDL"];
 const SCORE = [74, 66, 32];
@@ -32,6 +34,18 @@ export function serveMockApi(request, response, now = Date.now()) {
     return json(200, { asOf: iso(now), feed: "mock", rangeUniverseSize: 3,
       gainers: [{ ticker: "GME", price: 24.5, changePct: 8.2 }], losers: [{ ticker: "AMC", price: 3.7, changePct: -4.1 }],
       ranges: [{ ticker: "GME", price: 24.5, changePct: 8.2, rangePct: 12.6, volume: 123000, at: iso(now) }] });
+  }
+  if (url.pathname === "/api/v1/quotes") {
+    const symbols = parseSymbols(url.searchParams.get("symbols"));
+    if (!symbols) return json(400, null, "Invalid symbols");
+    // Invented, deterministic demo prices. The client labels them MOCK.
+    return json(200, { asOf: iso(now), feed: "mock", quotes: symbols.map((ticker) => {
+      const seed = [...ticker].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 7);
+      const fixed = { GME: [22.64, 8.2], AMC: [3.86, -4.1], SNDL: [1.81, 2.7] }[ticker];
+      const prevClose = fixed?.[0] ?? Math.round((2 + (seed % 480) / 4) * 100) / 100;
+      const changePct = fixed?.[1] ?? ((seed % 241) - 120) / 10;
+      return { ticker, price: Math.round(prevClose * (1 + changePct / 100) * 100) / 100, changePct, prevClose, at: iso(now) };
+    }) });
   }
   const context = /^\/api\/v1\/tickers\/([A-Z]{1,5})\/(news|sentiment)$/.exec(url.pathname);
   if (context?.[2] === "sentiment") {

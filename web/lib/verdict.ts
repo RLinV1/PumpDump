@@ -1,4 +1,4 @@
-// Verdicts say how risky a ticker looks, not which way it will move: orange for a likely pump or a watch, never green or red.
+// Verdicts say how risky a ticker looks, not which way it will move: amber or yellow, never green or red.
 export function verdictOf(score: number) {
   if (score >= 65) {
     return {
@@ -11,8 +11,8 @@ export function verdictOf(score: number) {
   if (score >= 35) {
     return {
       label: "Watch",
-      tone: "text-text",
-      style: "border border-accent text-accent",
+      tone: "text-yellow",
+      style: "border border-yellow text-yellow",
       note: "Elevated, or explained only in part. Worth a look.",
     };
   }

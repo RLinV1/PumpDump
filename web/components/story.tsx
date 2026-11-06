@@ -43,7 +43,7 @@ function Dot({ k, tone }: { k: string; tone: string }) {
     <span
       data-dot={k}
       aria-hidden
-      className={`absolute left-0 top-0 z-[3] hidden size-2 rounded-full ${tone}`}
+      className={`absolute left-0 top-0 z-[3] hidden size-2 ${tone}`}
     />
   );
 }
@@ -163,14 +163,14 @@ export function Story() {
   }, []);
 
   return (
-    <section id="how" ref={root} className="border-t border-line">
-      <div className="mx-auto flex min-h-[100dvh] max-w-[1400px] flex-col justify-center gap-8 px-4 pb-12 pt-24 md:px-8">
+    <section id="how" ref={root} className="border-t border-accent">
+      <div className="mx-auto flex min-h-[100dvh] max-w-[1500px] flex-col justify-center gap-8 px-4 pb-12 pt-24 md:px-8">
         <div>
           <h2 className={`${heading} max-w-3xl`}>A pump has a shape.</h2>
           <div className="cap-stack mt-4 grid gap-3">
             {CAPTIONS.map((c) => (
-              <p key={c.title} data-cap className="max-w-[60ch] text-pretty text-lg leading-snug">
-                <span className="font-medium">{c.title}</span>{" "}
+              <p key={c.title} data-cap className="max-w-[60ch] text-pretty text-[15px] leading-snug">
+                <span className="font-semibold text-yellow">{c.title}</span>{" "}
                 <span className="text-mute">{c.body}</span>
               </p>
             ))}
@@ -187,7 +187,7 @@ export function Story() {
           {/* Social posts */}
           <div className={`${row} border-t border-line`}>
             <div className={label}>
-              <p className="text-sm font-medium">Social posts</p>
+              <p className="text-sm font-semibold text-accent">Social posts</p>
               <p className="text-xs text-mute">Finance boards, all day</p>
               <p data-read="chatter" className="mt-1 hidden font-mono text-sm tabular-nums text-text md:block" />
             </div>
@@ -212,7 +212,7 @@ export function Story() {
           {/* Live trades */}
           <div className={`${row} border-t border-line`}>
             <div className={label}>
-              <p className="text-sm font-medium">Live trades</p>
+              <p className="text-sm font-semibold text-accent">Live trades</p>
               <p className="text-xs text-mute">Price for the ticker</p>
               <p data-read="price" className="mt-1 hidden font-mono text-sm tabular-nums md:block" />
             </div>
@@ -236,7 +236,7 @@ export function Story() {
           {/* News and filings */}
           <div className={`${row} border-t border-line`}>
             <div className={label}>
-              <p className="text-sm font-medium">News and filings</p>
+              <p className="text-sm font-semibold text-accent">News and filings</p>
               <p className="text-xs text-mute">Headlines and 8-K reports</p>
               <p data-read="news" className="mt-1 hidden font-mono text-sm text-mute md:block" />
             </div>
@@ -261,7 +261,7 @@ export function Story() {
           {/* Risk score */}
           <div className={`${row} border-y border-line`}>
             <div className={label}>
-              <p className="text-sm font-medium">Risk score</p>
+              <p className="text-sm font-semibold text-accent">Risk score</p>
               <p className="text-xs text-mute">Chatter and price, minus any catalyst</p>
               <p data-read="score" className="mt-1 hidden font-mono text-sm tabular-nums text-text md:block" />
             </div>
@@ -277,8 +277,8 @@ export function Story() {
                 Flag level
               </p>
               <div data-a="flag" className="absolute inset-y-0 z-[2]" style={{ left: `${tFlag * 100}%` }}>
-                <span className="absolute inset-y-0 w-px bg-down" />
-                <span className="absolute right-2 top-1 whitespace-nowrap bg-down px-1.5 py-0.5 font-mono text-xs font-medium uppercase text-bg">
+                <span className="absolute inset-y-0 w-px bg-yellow" />
+                <span className="absolute right-2 top-1 whitespace-nowrap bg-yellow px-1.5 py-0.5 font-mono text-xs font-medium uppercase text-bg">
                   Flag raised
                 </span>
               </div>

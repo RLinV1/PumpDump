@@ -234,6 +234,7 @@ Spring and context reads stay in Node.
 | `GET /api/v1/flags?limit=20` | Spring | Recent flags; maximum limit 100 |
 | `GET /api/v1/flags/stream` | Spring | SSE flags/heartbeats; resumes via `Last-Event-ID` |
 | `GET /api/v1/market-movers` | Node | Gainers, losers and screened ranges |
+| `GET /api/v1/quotes?symbols=A,B` | Node | Last trade and change vs the previous close for up to 30 symbols (Alpaca snapshots, cached 15 s, server-side keys) |
 | `GET /api/v1/news` | Node | Daily headlines |
 | `GET /api/v1/tickers/{ticker}/news` | Node | Selected-stock headlines |
 | `GET /api/v1/tickers/{ticker}/sentiment` | Node | `sample=top/latest`: recent 24-hour search counts; omitted or `sample=stream`: one-hour live counts; also tracks the ticker |

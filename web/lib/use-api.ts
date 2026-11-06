@@ -12,6 +12,7 @@ export function useApi<T>(path: string, ms: number, nonce = 0, windowH?: number,
   const requestedRefresh = useRef(refreshKey);
   const retry = useCallback(() => refresh.current(), []);
   useEffect(() => {
+    if (!path) return; // an empty path means nothing to fetch yet
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     let pending = false;

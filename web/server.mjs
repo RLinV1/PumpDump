@@ -4,6 +4,7 @@ import { applySecurityHeaders, isApiRequest, sanitizeForwardingHeaders } from ".
 import { serveMockApi } from "./mock-api.mjs";
 import { loadRootEnv } from "./env.cjs";
 import { createMarketMoversLoader } from "./market-movers.mjs";
+import { createQuotesLoader } from "./market-quotes.mjs";
 import { createStockNewsLoader } from "./stock-news.mjs";
 import { createBlueskySentiment } from "./bluesky-sentiment.mjs";
 import { createContextApi } from "./context-api.mjs";
@@ -18,6 +19,7 @@ const sentiment = createBlueskySentiment({ watchlist, enabled: mode === "live" &
 const contextApi = createContextApi({
   loadMovers: createMarketMoversLoader({ ...credentials, feed: process.env.ALPACA_FEED ?? "iex", watchlist }),
   loadNews: createStockNewsLoader(credentials), sentiment,
+  loadQuotes: createQuotesLoader({ ...credentials, feed: process.env.ALPACA_FEED ?? "iex" }),
   loadRecentSentiment: createBlueskySearch({ sentiment }),
 });
 

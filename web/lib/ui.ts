@@ -2,11 +2,12 @@
 // client module receives a client reference, not the string.
 export const REPO_URL = "https://github.com/RLinV1/PumpDump";
 
+// Buttons are terminal keys: square, mono, uppercase. Primary is reverse video; ghost is an amber outline.
 const btn =
-  "inline-flex h-11 items-center px-5 text-sm font-medium transition-[background-color,color,border-color,scale] duration-100 ease-out active:scale-[0.97] focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-accent";
+  "inline-flex h-11 items-center justify-center px-4 font-mono text-xs font-semibold uppercase tracking-wide transition-colors duration-100 ease-out active:translate-y-px";
 
-export const btnPrimary = `${btn} bg-accent text-bg hover:bg-text`;
-export const btnGhost = `${btn} border border-line-strong text-text hover:border-text`;
+export const btnPrimary = `${btn} bg-accent text-bg hover:bg-yellow`;
+export const btnGhost = `${btn} border border-accent text-accent hover:bg-accent hover:text-bg`;
 
 export const heading =
-  "text-[clamp(1.9rem,4.2vw,3.25rem)] font-semibold leading-[1.08] tracking-[-0.03em]";
+  "font-display text-[clamp(2.4rem,5vw,4.25rem)] font-extrabold uppercase leading-[0.95] tracking-[0.005em] text-accent";
