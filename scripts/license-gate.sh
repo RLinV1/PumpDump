@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 BAD='NC|Non[- ]?Commercial|Share[- ]?Alike|CC-BY-NC|CC-BY-SA|GPL|AGPL|SSPL|BUSL|BSL|UNKNOWN|UNLICENSED|Custom'
 ALLOW=$(grep -v '^\s*#' scripts/license-allow.txt | sed 's/\s*#.*//; s/\s*$//' | grep -v '^$' || true)
 fail=0
-only="${1:-all}"  # all | python
+only="${1:-all}"  # all | python (ml) | plutus
 
 # prints "name<TAB>license" lines on stdin; flags bad ones not on the allow-list
 flag() {
@@ -50,7 +50,8 @@ else
 fi
 
 echo "== python (ml) =="
-if [ -f ml/requirements.txt ]; then
+if [ "$only" = plutus ]; then echo "skipped"
+elif [ -f ml/requirements.txt ]; then
   # reads license metadata of the installed packages named in ml/requirements.txt (pip install -r it first)
   PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
   flag < <("$PY" - <<'PY'
@@ -71,6 +72,40 @@ PY
   )
 else
   echo "ml/requirements.txt missing: skipping python license scan"
+fi
+
+echo "== python (plutus, with transitive dependencies) =="
+if [ "$only" = python ]; then echo "skipped"
+elif [ -f plutus/pyproject.toml ]; then
+  # walks plutus/pyproject.toml dependencies and everything they pull in (pip install ./plutus first)
+  PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
+  flag < <("$PY" - <<'PY'
+import re, tomllib
+from importlib.metadata import metadata, requires, PackageNotFoundError
+from packaging.requirements import Requirement
+norm = lambda n: re.sub(r"[-_.]+", "-", n).lower()
+todo = [norm(re.split(r"[\[=<>~ ;]", d, maxsplit=1)[0]) for d in tomllib.load(open("plutus/pyproject.toml", "rb"))["project"]["dependencies"]]
+seen = set()
+while todo:
+    name = todo.pop()
+    if name in seen:
+        continue
+    seen.add(name)
+    try:
+        m = metadata(name)
+    except PackageNotFoundError:
+        print(name + chr(9) + "UNKNOWN (not installed)"); continue
+    lic = m.get("License-Expression") or " OR ".join(c.split(" :: ")[-1] for c in m.get_all("Classifier", []) if c.startswith("License ::"))
+    lic = lic or (m.get("License") or "")[:60].split(chr(10))[0] or "UNKNOWN"
+    print(name + chr(9) + lic)
+    for r in requires(name) or []:
+        req = Requirement(r)
+        if not req.marker or req.marker.evaluate({"extra": ""}):  # skip extras and other platforms
+            todo.append(norm(req.name))
+PY
+  )
+else
+  echo "plutus/pyproject.toml missing: skipping"
 fi
 
 [ $fail -eq 0 ] && echo "license gate: OK" || echo "license gate: FAILED"
