@@ -257,6 +257,39 @@ classes; they reach Kafka on 127.0.0.1:9092 and Postgres on 127.0.0.1:5432.
 One Google Cloud VM runs the whole stack behind a Caddy proxy, with one public port.
 Terraform, deploy scripts and the runbook are in [docs/deploy-gcp.md](docs/deploy-gcp.md).
 
+### AWS (Terraform, not deployed by CI)
+
+`infra/aws/` describes the same stack on AWS: ECS Fargate services behind an Application Load Balancer, RDS PostgreSQL 17,
+ECR, Cloud Map, Secrets Manager, CloudWatch and a Budgets alarm, with Kafka either as one Fargate task (default, data lost
+on restart) or Amazon MSK (`enable_msk`). It runs mock data only. Nothing is deployed until you run `deploy/aws-up.sh`; it
+bills hourly, so destroy it with `deploy/aws-down.sh`. Runbook and cost estimates: [docs/deploy-aws.md](docs/deploy-aws.md).
+
+```mermaid
+flowchart LR
+  user([Browser]) --> alb[Application Load Balancer]
+  alb -- "/api/v1/flags/stream" --> api
+  alb -- "everything else" --> web
+  subgraph vpc [VPC, 2 AZs]
+    subgraph pub [Public subnets: Fargate tasks]
+      web[web] -- "Cloud Map: api.pumpwatch.local" --> api[api]
+      pipeline[pipeline]
+      kafka["kafka task (default)"]
+    end
+    subgraph priv [Private subnets]
+      rds[(RDS PostgreSQL 17)]
+      msk[("Amazon MSK (optional)")]
+    end
+  end
+  api --> rds
+  api --> kafka
+  pipeline --> kafka
+  api -.-> msk
+  pipeline -.-> msk
+  ecr[ECR] -. images .-> pub
+  sm[Secrets Manager] -. DB password .-> api
+  cw[CloudWatch alarms] --> sns[SNS email]
+```
+
 Load tests live in `load/`: a ramping [k6](https://k6.io) read-API test, and a live-stream test
 with real SSE clients that counts a client only if data actually reaches it.
 
