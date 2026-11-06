@@ -9,7 +9,7 @@ import { createStockNewsLoader } from "./stock-news.mjs";
 import { createBlueskySentiment } from "./bluesky-sentiment.mjs";
 import { createContextApi } from "./context-api.mjs";
 import { createBlueskySearch } from "./bluesky-search.mjs";
-import { createAssistantApi } from "./assistant-api.mjs";
+import { createPaperApi } from "./paper-api.mjs";
 
 loadRootEnv();
 const mode = process.env.DATA_MODE ?? "mock";
@@ -17,15 +17,17 @@ if (mode !== "mock" && mode !== "live") throw new Error("DATA_MODE must be mock 
 const watchlist = (process.env.WATCHLIST ?? "GME,AMC,SNDL").split(",").map((t) => t.trim()).filter((t) => /^[A-Z]{1,5}$/.test(t));
 const credentials = { keyId: process.env.ALPACA_KEY_ID, secretKey: process.env.ALPACA_SECRET_KEY };
 const sentiment = createBlueskySentiment({ watchlist, enabled: mode === "live" && process.env.SENTIMENT_ENABLED === "true" });
+const loadQuotes = createQuotesLoader({ ...credentials, feed: process.env.ALPACA_FEED ?? "iex" });
 const contextApi = createContextApi({
   loadMovers: createMarketMoversLoader({ ...credentials, feed: process.env.ALPACA_FEED ?? "iex", watchlist }),
   loadNews: createStockNewsLoader(credentials), sentiment,
-  loadQuotes: createQuotesLoader({ ...credentials, feed: process.env.ALPACA_FEED ?? "iex" }),
+  loadQuotes,
   loadRecentSentiment: createBlueskySearch({ sentiment }),
 });
 
-// PLUTUS_ORIGIN is the private research-assistant service; unset means the route answers 503.
-const assistant = createAssistantApi({ origin: process.env.PLUTUS_ORIGIN?.replace(/\/$/, "") });
+// PLUTUS_ORIGIN is the private lookup and paper-trading service; unset means those routes answer 503.
+// In live mode (your own machine) paper fills use the Alpaca quote read here; mock mode lets the service price them.
+const paper = createPaperApi({ origin: process.env.PLUTUS_ORIGIN?.replace(/\/$/, ""), mode, loadQuotes });
 
 const dev = process.argv.includes("--dev");
 const port = Number(process.env.PORT ?? 3000);
@@ -38,7 +40,7 @@ const server = createServer((request, response) => {
   sanitizeForwardingHeaders(request);
   applySecurityHeaders(response);
   if (isApiRequest(request.url)) {
-    if (assistant(request, response)) return; // before the mock branch: the assistant labels its own data mode
+    if (paper(request, response)) return; // before the mock branch: the service labels its own data mode
     if (mode === "mock") return serveMockApi(request, response);
     response.setHeader("X-Pumpwatch-Data-Mode", "live");
     if (contextApi(request, response)) return;

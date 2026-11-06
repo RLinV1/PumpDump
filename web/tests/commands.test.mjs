@@ -31,7 +31,7 @@ test("add, remove and explicit select take a ticker", () => {
 });
 
 test("anything else is a clear inline error", () => {
-  for (const input of ["FOO BAR", "8", "GME1", "TOOLONG", "../etc"]) {
+  for (const input of ["FOO BAR", "9", "GME1", "TOOLONG", "../etc"]) {
     const result = parseCommand(input);
     assert.equal(result.type, "error", input);
     assert.match(result.message, /UNKNOWN COMMAND/);
@@ -40,14 +40,28 @@ test("anything else is a clear inline error", () => {
   assert.ok(parseCommand("X".repeat(80) + "1").message.length < 80);
 });
 
-test("ASK carries the question with its own case, and ASK alone is the panel", () => {
-  assert.deepEqual(parseCommand("ASK Is GME being pumped?"), { type: "ask", question: "Is GME being pumped?" });
-  assert.deepEqual(parseCommand("  ask   compare  Apple and Tesla <GO> "), { type: "ask", question: "compare Apple and Tesla" });
-  for (const input of ["ASK", "ask", "ASK <GO>", "AI", "7", "ASSISTANT"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "assistant" }, input);
+test("LOOK and DES look a ticker up; alone they open the lookup panel", () => {
+  for (const input of ["LOOK gme", "des $gme", "look GME <GO>"]) assert.deepEqual(parseCommand(input), { type: "look", ticker: "GME" }, input);
+  for (const input of ["LOOK", "des", "7", "LOOKUP"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "lookup" }, input);
+  assert.equal(parseCommand("LOOK TOOLONG").type, "error");
+  assert.equal(parseCommand("LOOK 12").type, "error");
 });
 
-test("ASK rejects a question over 300 characters; SEL still reaches a ticker named ASK", () => {
-  assert.equal(parseCommand(`ASK ${"x".repeat(301)}`).type, "error");
-  assert.deepEqual(parseCommand(`ASK ${"x".repeat(300)}`), { type: "ask", question: "x".repeat(300) });
-  assert.deepEqual(parseCommand("SEL ASK"), { type: "select", ticker: "ASK" });
+test("BUY and SELL take a ticker and a whole quantity from 1 to 10,000", () => {
+  assert.deepEqual(parseCommand("buy gme 10"), { type: "trade", side: "BUY", ticker: "GME", qty: 10 });
+  assert.deepEqual(parseCommand("SELL $amc 2 <GO>"), { type: "trade", side: "SELL", ticker: "AMC", qty: 2 });
+  assert.deepEqual(parseCommand("BUY GME 10000"), { type: "trade", side: "BUY", ticker: "GME", qty: 10000 });
+  for (const input of ["BUY", "BUY GME", "BUY GME 0", "BUY GME -5", "BUY GME 1.5", "BUY GME 10001", "BUY GME ten", "BUY GME 5 6", "SELL 12 5", "BUY TOOLONG 5"]) {
+    const result = parseCommand(input);
+    assert.equal(result.type, "error", input);
+    assert.match(result.message, /USAGE: (BUY|SELL) <TICKER> <QTY>/);
+  }
+  assert.deepEqual(parseCommand("SEL BUY"), { type: "select", ticker: "BUY" });
+});
+
+test("PT opens the paper panel and PT RESET needs a second, explicit confirmation", () => {
+  for (const input of ["PT", "pt <GO>", "8", "PAPER"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "paper" }, input);
+  assert.deepEqual(parseCommand("PT RESET"), { type: "reset", confirmed: false });
+  assert.deepEqual(parseCommand("pt reset confirm"), { type: "reset", confirmed: true });
+  assert.equal(parseCommand("PT NOW").type, "error");
 });

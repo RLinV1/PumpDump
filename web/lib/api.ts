@@ -212,22 +212,59 @@ export function age(iso: string) {
   return `${Math.round(s / 3600)}h ago`;
 }
 
-export type AssistantSource = { kind: string; title: string; url: string | null };
-export type AssistantAnswer = { answer: string; toolsUsed: string[]; sources: AssistantSource[]; llm: "mock" | "claude"; dataMode: DataMode };
 
-// The research assistant. Errors carry the server's own short message, which never includes provider details.
-export async function askAssistant(question: string, signal: AbortSignal): Promise<{ notice: string; data: AssistantAnswer }> {
-  const res = await fetch(`${API_URL}/api/v1/assistant/ask`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(50_000)]), cache: "no-store",
-  });
+// ---- Stock lookup and simulated paper trading. Money is integer cents; nothing here is a real order. ----
+export type Lookup = {
+  ticker: string; name: string; sector: string; price: number; changePct: number; marketCap: number | null; peRatio: number | null;
+  performance: Record<string, number | null>;
+  indicators: { sma50: number | null; sma200: number | null; rsi: number | null; low52w: number | null; high52w: number | null; rangePosition: number | null; trend: "above" | "below" | null };
+  risk: { beta: number | null; volatilityPct: number | null; movement: string; sensitivity: string; benchmark: string };
+  dataMode: DataMode;
+};
+export type PaperPosition = { ticker: string; qty: number; avgCostCents: number; costCents: number; markCents: number | null; valueCents: number | null; pnlCents: number | null };
+export type PaperOrder = { id: number; ts: number; side: "BUY" | "SELL"; ticker: string; qty: number; priceCents: number };
+export type PaperAccount = {
+  cashCents: number; positionsValueCents: number; totalCents: number; startCents: number; pnlCents: number; realizedCents: number;
+  positions: PaperPosition[]; orders: PaperOrder[]; dataMode: DataMode; fill?: { side: "BUY" | "SELL"; ticker: string; qty: number; priceCents: number };
+};
+
+const TOKEN_KEY = "pumpwatch.paper.token";
+const TOKEN_SHAPE = /^[A-Za-z0-9_-]{32,64}$/;
+
+// An anonymous account is just a random token this browser keeps. Lose it and the account is gone; there is no sign-in.
+export function paperToken(): string {
+  try {
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved && TOKEN_SHAPE.test(saved)) return saved;
+  } catch { /* storage blocked: fall through to a token for this page view */ }
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  try { localStorage.setItem(TOKEN_KEY, token); } catch { /* the account then lasts until this page closes */ }
+  return token;
+}
+
+const isMode = (m: unknown): m is DataMode => m === "mock" || m === "live";
+const num = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+const nullNum = (v: unknown) => v === null || num(v);
+
+async function send<T>(path: string, init: RequestInit, signal: AbortSignal | undefined, valid: (d: T) => boolean): Promise<{ notice: string; data: T }> {
+  const res = await fetch(`${API_URL}${path}`, { ...init, signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(20_000)]), cache: "no-store" });
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(typeof body?.error === "string" ? body.error : `The assistant is unavailable (${res.status}).`);
-  const d = body?.data;
-  const ok = typeof body?.notice === "string" && d && typeof d.answer === "string" && strings(d.toolsUsed)
-    && Array.isArray(d.sources) && d.sources.every((s: AssistantSource) => s && typeof s.kind === "string" && typeof s.title === "string")
-    && (d.dataMode === "mock" || d.dataMode === "live") && (d.llm === "mock" || d.llm === "claude");
-  if (!ok) throw new Error("The assistant sent an unreadable answer.");
-  d.sources = d.sources.map((s: AssistantSource) => ({ ...s, url: s.url && safeLink(s.url) ? s.url : null }));
+  if (!res.ok) throw new Error(typeof body?.error === "string" ? body.error : `Unavailable (${res.status}).`);
+  if (typeof body?.notice !== "string" || !body.data || !isMode(body.data.dataMode) || !valid(body.data)) throw new Error("The server sent an unreadable answer.");
   return body;
 }
+
+export const getLookup = (ticker: string, signal?: AbortSignal) => send<Lookup>(`/api/v1/lookup/${ticker}`, {}, signal, (d) =>
+  d.ticker === ticker && num(d.price) && num(d.changePct) && typeof d.name === "string" && !!d.performance && !!d.indicators && !!d.risk && nullNum(d.marketCap) && nullNum(d.peRatio));
+
+const validAccount = (d: PaperAccount) => num(d.cashCents) && num(d.totalCents) && num(d.pnlCents) && num(d.startCents) && num(d.realizedCents) && num(d.positionsValueCents)
+  && Array.isArray(d.positions) && d.positions.every((p) => typeof p.ticker === "string" && num(p.qty) && num(p.avgCostCents) && nullNum(p.markCents) && nullNum(p.pnlCents))
+  && Array.isArray(d.orders) && d.orders.every((o) => typeof o.ticker === "string" && (o.side === "BUY" || o.side === "SELL") && num(o.qty) && num(o.priceCents));
+const mine = () => ({ "X-Paper-Token": paperToken() });
+
+export const getPaperAccount = (signal?: AbortSignal) => send<PaperAccount>("/api/v1/paper/account", { headers: mine() }, signal, validAccount);
+export const placePaperOrder = (side: "BUY" | "SELL", ticker: string, qty: number, signal?: AbortSignal) =>
+  send<PaperAccount>("/api/v1/paper/orders", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ side, ticker, qty }) }, signal, validAccount);
+export const resetPaperAccount = (signal?: AbortSignal) =>
+  send<PaperAccount>("/api/v1/paper/reset", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) }, signal, validAccount);

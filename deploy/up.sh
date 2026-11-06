@@ -11,12 +11,11 @@ until ssh -o StrictHostKeyChecking=accept-new "$SSH" 'test -f /opt/pumpwatch/.vm
 git archive HEAD | ssh "$SSH" 'tar -x -C /opt/pumpwatch'
 # Secrets travel over SSH, never through Terraform state. Alpaca keys never reach this public VM: their terms cover
 # personal use, and public redistribution is unverified (docs/data-sources.md). DEPLOY_DATA_MODE=live is for load tests.
-# The research assistant is held to the same rule: no ANTHROPIC_API_KEY (anyone could spend your Claude credits), and mock data and mock agent only.
-{ grep -vE '^(ALPACA_|DATA_MODE=|ANTHROPIC_API_KEY=|USE_MOCK_DATA=|USE_MOCK_LLM=|PLUTUS_)' .env; printf 'ALPACA_ENABLED=false
+# Lookup and paper trading are held to the same rule: mock data only, so the public VM never shows real prices.
+{ grep -vE '^(ALPACA_|DATA_MODE=|USE_MOCK_DATA=|PLUTUS_)' .env; printf 'ALPACA_ENABLED=false
 ALPACA_NEWS_ENABLED=false
 DATA_MODE=%s
 PLUTUS_USE_MOCK_DATA=1
-PLUTUS_USE_MOCK_LLM=1
 ' "${DEPLOY_DATA_MODE:-mock}"; } | ssh "$SSH" 'umask 077; cat > /opt/pumpwatch/.env'
 ssh "$SSH" 'cd /opt/pumpwatch && PROXY_BIND=0.0.0.0 docker compose --profile apps up -d --build'
 deploy/ready.sh "http://$IP"

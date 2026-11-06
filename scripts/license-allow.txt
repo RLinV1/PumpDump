@@ -2,5 +2,4 @@
 # npm: name@version or name. Maven: groupId:artifactId.
 gsap  # GSAP standard no-charge license, verified free in docs/free-use-audit.md
 jakarta.annotation:jakarta.annotation-api  # dual EPL-2.0 / GPL2 with Classpath Exception; EPL-2.0 option is permissive-enough, CPE allows linking
-torch  # PyPI expression is all permissive; its BSL-1.0 is the Boost license, not Business Source (checked 2026-11-06)
-peewee  # blank package metadata; upstream repo license is MIT (checked 2026-11-06)
+peewee  # blank package metadata; upstream repo license is MIT (checked 2026-11-06); still pulled in by yfinance
