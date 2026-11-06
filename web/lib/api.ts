@@ -268,3 +268,23 @@ export const placePaperOrder = (side: "BUY" | "SELL", ticker: string, qty: numbe
   send<PaperAccount>("/api/v1/paper/orders", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ side, ticker, qty }) }, signal, validAccount);
 export const resetPaperAccount = (signal?: AbortSignal) =>
   send<PaperAccount>("/api/v1/paper/reset", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) }, signal, validAccount);
+
+export type AssistantSource = { kind: string; title: string; url: string | null };
+export type AssistantAnswer = { answer: string; toolsUsed: string[]; sources: AssistantSource[]; llm: "mock" | "gemini"; note: string; dataMode: DataMode };
+
+// The research assistant. Errors carry the server's own short message, which never includes provider details.
+export async function askAssistant(question: string, signal: AbortSignal): Promise<{ notice: string; data: AssistantAnswer }> {
+  const res = await fetch(`${API_URL}/api/v1/assistant/ask`, {
+    method: "POST", headers: { "Content-Type": "application/json", ...mine() }, body: JSON.stringify({ question }),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(50_000)]), cache: "no-store",
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(typeof body?.error === "string" ? body.error : `The assistant is unavailable (${res.status}).`);
+  const d = body?.data;
+  const ok = typeof body?.notice === "string" && d && typeof d.answer === "string" && strings(d.toolsUsed)
+    && Array.isArray(d.sources) && d.sources.every((s: AssistantSource) => s && typeof s.kind === "string" && typeof s.title === "string")
+    && (d.dataMode === "mock" || d.dataMode === "live") && (d.llm === "mock" || d.llm === "gemini") && typeof d.note === "string";
+  if (!ok) throw new Error("The assistant sent an unreadable answer.");
+  d.sources = d.sources.map((s: AssistantSource) => ({ ...s, url: s.url && safeLink(s.url) ? s.url : null }));
+  return body;
+}

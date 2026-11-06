@@ -5,18 +5,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useApi } from "@/lib/use-api";
 import { LiveChart } from "@/components/live-chart";
 import { MoversPanel, NewsPanel, SentimentPanel } from "@/components/market-context";
+import { AssistantPanel, useAssistant } from "@/components/assistant-panel";
 import { LookupPanel, PaperPanel, useLookup, usePaper } from "@/components/trade-panels";
 import { Message, Panel, Skeleton, Stale, Verdict, dirTone, modeTag, money, signed } from "@/components/term-panel";
-import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag, type MarketMovers, type Quote, type Quotes, type Score, type Timeline } from "@/lib/api";
+import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag, type MarketMovers, type Quote, type Quotes, type Score, type Sentiment, type Timeline } from "@/lib/api";
 import { PANELS, parseCommand, type Panel as PanelId } from "@/lib/commands";
 import { btnGhost } from "@/lib/ui";
 import { addTicker, parseWatchlist, readWatchlist, saveWatchlist, subscribeWatchlist } from "@/lib/watchlist";
 
 const DOWN = { title: "Risk data unavailable", body: "The latest data could not be loaded. Retry, or use the simulated detector while the feed recovers." };
-const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers", lookup: "lookup", paper: "paper" };
+const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers", lookup: "lookup", paper: "paper", assistant: "assistant" };
 const HELP: [string, string][] = [
   ["GME <GO>", "Select a ticker (1 to 5 letters). Chart, news and sentiment follow it."],
-  ["WL  GR  FLAG  NEWS  SENT  MOV  LOOK  PT", "Jump to a panel. The panel numbers 1 to 8 work too."],
+  ["WL  GR  FLAG  NEWS  SENT  MOV  LOOK  PT  ASK", "Jump to a panel. The panel numbers 1 to 9 work too."],
+  ["ASK Is GME being pumped?", "Ask the research assistant (panel 9). Read-only tools, cited sources, not investment advice. Says whether Gemini or the mock agent answered."],
   ["LOOK GME  /  DES GME", "Stock lookup (panel 7): snapshot, performance, indicators, beta and volatility."],
   ["BUY GME 10  /  SELL GME 10", "Simulated paper order (panel 8). Whole shares, filled at the server's price. No broker, no real money."],
   ["PT  /  PT RESET", "Open the paper account. PT RESET asks you to confirm with PT RESET CONFIRM."],
@@ -142,6 +144,17 @@ function Watchlist({ w, q, ticker, onPick, symbols, onAdd, onRemove, active }: {
   );
 }
 
+// The sentiment model's read of the selected ticker, shown beside the verdict as context. It is not an input to the score.
+function SentimentBeside({ ticker, refreshKey }: { ticker: string; refreshKey: number }) {
+  const { data, done, failed } = useApi<Sentiment>(`/api/v1/tickers/${ticker}/sentiment?sample=top`, 60000, 0, undefined, refreshKey);
+  const body = !done ? "Checking..." : !data ? (failed ? "Sentiment unavailable right now." : "Sentiment unavailable.")
+    : !data.enabled ? "Not collected (the model is off, as in mock mode). No sentiment has been estimated."
+    : data.modelStatus !== "ready" ? `Model ${data.modelStatus}. No sentiment has been estimated.`
+    : data.total === 0 ? "No matching posts to classify in the last 24 hours."
+    : `${data.positive} positive, ${data.neutral} neutral, ${data.negative} negative of ${data.total} top posts, last 24 hours.`;
+  return <p className="mb-2 text-xs text-mute" data-testid="sentiment-beside"><span className="text-accent">SENTIMENT</span> <span className="text-white">{body}</span> Financial DistilRoBERTa, context only: not part of the score and not shown to predict pumps.</p>;
+}
+
 function ChartPanel({ ticker, nonce, stale, refreshKey, quote, active }: { ticker: string; nonce: number; stale: string[]; refreshKey: number; quote?: Quote; active: boolean }) {
   const { data, failed, done, retry, mode } = useApi<Timeline>(`/api/v1/tickers/${ticker}/timeline`, 30000, nonce, 6, refreshKey);
   const last = data?.scores.at(-1);
@@ -162,6 +175,7 @@ function ChartPanel({ ticker, nonce, stale, refreshKey, quote, active }: { ticke
               <Stale sources={stale} />
               {failed && <span className="text-xs text-yellow">Connection lost. Showing the last data received.</span>}
             </div>
+            <SentimentBeside ticker={ticker} refreshKey={refreshKey} />
             <div className="min-h-0 flex-1"><LiveChart t={data} tall /></div>
           </>
         )}
@@ -258,6 +272,7 @@ export function LiveView() {
   const movers = useApi<MarketMovers>("/api/v1/market-movers", 60000, 0, undefined, refreshKey);
   const lookup = useLookup();
   const paper = usePaper();
+  const assistant = useAssistant();
 
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 5000);
@@ -343,6 +358,7 @@ export function LiveView() {
       }
       case "help": setOut({ kind: "help", text: "" }); break;
       case "refresh": setRefreshKey((key) => key + 1); void paper.refresh(); setOut({ kind: "info", text: "RELOADING ALL PANELS." }); break;
+      case "ask": void assistant.ask(cmd.question); jump("assistant"); setOut({ kind: "info", text: "ASKING THE ASSISTANT. THE ANSWER APPEARS IN PANEL 9." }); break;
       case "look": void lookup.look(cmd.ticker); jump("lookup"); setOut({ kind: "info", text: `LOOKING UP ${cmd.ticker}. THE RESULT APPEARS IN PANEL 7.` }); break;
       case "trade":
         jump("paper");
@@ -424,7 +440,7 @@ export function LiveView() {
         <button type="button" onClick={() => setRefreshKey((key) => key + 1)} title="Reload watchlist, quotes, selected chart, flags, news, movers and sentiment" className="ml-auto flex min-h-11 shrink-0 items-center gap-1.5 px-3 uppercase text-accent hover:bg-accent hover:text-bg lg:min-h-9"><span className="font-semibold text-yellow [button:hover_&]:text-bg">RF</span>Refresh all</button>
       </nav>
 
-      <main className="grid flex-1 gap-px bg-line p-px lg:min-h-0 lg:grid-cols-[3fr_5fr_4fr] lg:grid-rows-[repeat(3,minmax(0,1fr))]">
+      <main className="grid flex-1 gap-px bg-line p-px lg:min-h-0 lg:grid-cols-[3fr_5fr_4fr] lg:grid-rows-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)]">
         <Watchlist w={w} q={q} ticker={ticker} onPick={(t) => { setPick(t); }} symbols={symbols} onAdd={add} onRemove={remove} active={active === "watchlist"} />
         {ticker ? (
           <ChartPanel key={ticker} ticker={ticker} nonce={nonce} stale={stale} refreshKey={refreshKey} quote={quote} active={active === "chart"} />
@@ -452,6 +468,7 @@ export function LiveView() {
           <div className="min-h-0 lg:col-start-3 lg:row-start-3 [&>section]:h-full">
             <PaperPanel paper={paper} onConfirmReset={() => void paper.reset().then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }))} active={active === "paper"} />
           </div>
+          <AssistantPanel state={assistant.state} onAsk={(question) => void assistant.ask(question)} active={active === "assistant"} />
         </div>
       </main>
 

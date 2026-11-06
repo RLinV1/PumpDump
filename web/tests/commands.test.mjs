@@ -65,3 +65,10 @@ test("PT opens the paper panel and PT RESET needs a second, explicit confirmatio
   assert.deepEqual(parseCommand("pt reset confirm"), { type: "reset", confirmed: true });
   assert.equal(parseCommand("PT NOW").type, "error");
 });
+
+test("ASK sends the question with its own case, 9 and ASK jump to the assistant panel, long questions are refused", () => {
+  assert.deepEqual(parseCommand("ask Is GME being pumped? <GO>"), { type: "ask", question: "Is GME being pumped?" });
+  assert.deepEqual(parseCommand("ASK  what   is a P/E ratio"), { type: "ask", question: "what is a P/E ratio" });
+  for (const input of ["ASK", "ask <GO>", "9", "AI"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "assistant" }, input);
+  assert.equal(parseCommand(`ASK ${"x".repeat(301)}`).type, "error");
+});

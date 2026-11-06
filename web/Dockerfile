@@ -7,11 +7,15 @@ ENV API_ORIGIN=$API_ORIGIN
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# The sentiment model (Financial DistilRoBERTa, pinned revision, quantized ONNX, about 80 MB) is downloaded here, once,
+# so the running container never needs the network for it. The script also runs one classification as a self-test.
+ENV SENTIMENT_MODEL_DIR=/app/models
+RUN node scripts/fetch-sentiment-model.mjs
 RUN npm run build && npm prune --omit=dev
 
 FROM node:20-alpine
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 SENTIMENT_MODEL_DIR=/app/models
 COPY --from=build --chown=node:node /app ./
 USER node
 EXPOSE 3000

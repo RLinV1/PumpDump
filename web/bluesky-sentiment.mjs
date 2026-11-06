@@ -7,7 +7,11 @@ const REVISION = "e6953e30167c7fc3d1ad62f3df31617dd712fbc1";
 const WINDOW = 3600000;
 const LABELS = new Set(["positive", "negative", "neutral"]);
 
-async function loadClassifier(cacheDir) {
+// SENTIMENT_MODEL_DIR lets the Docker image keep the weights it downloaded at build time (see scripts/fetch-sentiment-model.mjs).
+export const MODEL_CACHE_DIR = process.env.SENTIMENT_MODEL_DIR || fileURLToPath(new URL("../.playwright-mcp/sentiment-model-cache/", import.meta.url));
+export const MODEL_NAME = "Financial DistilRoBERTa";
+
+export async function loadClassifier(cacheDir = MODEL_CACHE_DIR) {
   const { pipeline, env } = await import("@huggingface/transformers");
   env.cacheDir = cacheDir;
   const classifier = await pipeline("text-classification", MODEL, {
@@ -21,7 +25,7 @@ async function loadClassifier(cacheDir) {
 export function createBlueskySentiment({
   watchlist = [], enabled = false, classify: injectedClassifier,
   webSocketFactory = (url) => new WebSocket(url), now = Date.now,
-  cacheDir = fileURLToPath(new URL("../.playwright-mcp/sentiment-model-cache/", import.meta.url)),
+  cacheDir = MODEL_CACHE_DIR,
   maxQueue = 64, maxSamples = 10000, inferenceTimeoutMs = 10000,
   reconnectDelayMs = 1000,
 } = {}) {
