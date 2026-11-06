@@ -173,3 +173,22 @@ def generate_prices(
         cols[t] = price
 
     return pd.DataFrame(cols, index=dates)
+
+
+def generate_news(ticker: str, limit: int = 6) -> list[dict]:
+    """Deterministic synthetic headlines for mock mode. Clearly labeled fake, with no dates or links."""
+    t = ticker.upper()
+    name = generate_company_info(t).get("name", f"{t} Corporation")
+    templates = [
+        (f"{name} reports quarterly earnings", "Synthetic Newswire"),
+        (f"Analysts weigh in on {name}'s outlook", "Mock Markets"),
+        (f"{name} announces a new product line", "Demo Daily"),
+        (f"What investors should know about {name}", "Offline Observer"),
+        (f"{name} shares move with sector trends", "Sample Street Journal"),
+        (f"{name} faces competitive pressure", "Example Examiner"),
+    ]
+    return [
+        {"title": title, "publisher": pub, "url": "", "published": "",
+         "summary": "Synthetic offline news item for demo and testing. Not a real article."}
+        for title, pub in templates[: max(0, limit)]
+    ]

@@ -351,3 +351,43 @@ def get_company_info(
         cache.cache_set_json(rkey, clean, _MAX_INFO_AGE_DAYS * 86400)
         out[t] = clean
     return out
+
+
+# --- News. Headlines are untrusted text: tools hand them to the model as data, never as instructions. ---
+_NEWS_TTL_SEC = 300.0
+
+
+def _parse_news_item(item: dict) -> dict | None:
+    """Normalize a yfinance news item (the nested schema, or the older flat one)."""
+    content = item.get("content") if isinstance(item, dict) else None
+    c = content if isinstance(content, dict) else item
+    title = c.get("title")
+    if not title:
+        return None
+    url = (c.get("canonicalUrl") or {}).get("url") or (c.get("clickThroughUrl") or {}).get("url") or c.get("link") or ""
+    return {
+        "title": str(title)[:200],
+        "publisher": str((c.get("provider") or {}).get("displayName") or c.get("publisher") or "")[:80],
+        "url": url if str(url).startswith(("http://", "https://")) else "",
+        "published": str(c.get("pubDate") or c.get("displayTime") or ""),
+        "summary": str(c.get("summary") or c.get("description") or "")[:300],
+    }
+
+
+def get_news(ticker: str, limit: int = 6) -> list[dict]:
+    """Recent headlines for a ticker. Mock mode returns synthetic ones; live mode reads yfinance (cached 5 minutes)."""
+    t = ticker.upper()
+    if config.use_mock_data():
+        return mock_data.generate_news(t, limit)
+    key = f"news:{t}"
+    cached = cache.cache_get_json(key)
+    if cached is None:
+        try:
+            import yfinance as yf
+
+            cached = [p for p in (_parse_news_item(it) for it in (yf.Ticker(t).news or [])) if p]
+        except SOFT_ERRORS as exc:
+            log.warning("News lookup failed for %s: %s", t, exc)
+            return []
+        cache.cache_set_json(key, cached, _NEWS_TTL_SEC)
+    return cached[:limit]

@@ -1,9 +1,10 @@
-# Pumpwatch lookup and paper-trading service: only api/service.py, no frontend, no broker, no model, no key.
+# Pumpwatch private service: stock lookup, paper trading and the research assistant (api/service.py).
 # Build context is this directory (plutus/). Python 3.13 because pyproject requires it.
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=/app/src:/app USE_MOCK_DATA=1 PLUTUS_DATA_DIR=/data
+    PYTHONPATH=/app/src:/app USE_MOCK_DATA=1 PLUTUS_DATA_DIR=/data \
+    HOME=/app RAG_DIR=/app/rag-store ANONYMIZED_TELEMETRY=False
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
@@ -16,9 +17,14 @@ RUN python -c "import tomllib;print('\n'.join(tomllib.load(open('pyproject.toml'
 
 COPY src ./src
 COPY api ./api
+COPY evals ./evals
 # /data is the named volume holding the paper-trading SQLite file and the price cache.
-RUN useradd --system --home /app plutus && mkdir /data && chown plutus /data
+RUN useradd --system --home /app plutus && mkdir /data /app/.cache /app/rag-store && chown -R plutus /data /app/.cache /app/rag-store
 USER plutus
+# Build the knowledge library now: this downloads Chroma's ONNX embedding model once (no key) and embeds the seed files,
+# so the container starts fast and works offline. The store lives in the image, not the volume.
+# The downloaded archive is not needed once extracted (checked: queries still work with no network).
+RUN python -m portfolio_risk.rag.ingest && rm -f /app/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
 VOLUME /data
 
 EXPOSE 8090

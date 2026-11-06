@@ -7,3 +7,6 @@ __pycache__/
 .ruff_cache/
 # generated data: price cache and the paper-trading SQLite file
 data/
+# eval score files and a locally built knowledge store
+evals/results/
+rag-store/

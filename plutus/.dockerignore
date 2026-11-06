@@ -8,3 +8,5 @@ __pycache__/
 data/
 tests/
 .env
+evals/results/
+rag-store/

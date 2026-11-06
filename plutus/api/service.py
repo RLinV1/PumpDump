@@ -11,19 +11,27 @@ from __future__ import annotations
 
 import math
 import re
+import threading
+import time
+from collections import deque
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from portfolio_risk import config, paper
+from portfolio_risk.agent.client import run_agent
 from portfolio_risk.data.market_data import SOFT_ERRORS
 from portfolio_risk.lookup import lookup, mock_close
 
 NOTICE = "Simulated paper trading with no real orders. Not investment advice."
+ASSISTANT_NOTICE = "Not investment advice. Pumpwatch is a non-commercial project."
+MAX_QUESTION = 300
+GLOBAL_PER_MINUTE = 30  # spend guard behind the web server's per-client limit: agent runs per minute in total
+MAX_SOURCES = 8
 MAX_PRICE = 10_000_000.0
 MAX_MARKS = 30
 
-app = FastAPI(title="Pumpwatch lookup and paper trading", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="Pumpwatch lookup, paper trading and research assistant", docs_url=None, redoc_url=None, openapi_url=None)
 
 
 class Order(BaseModel):
@@ -130,3 +138,79 @@ def order(body: Order, x_paper_token: str | None = Header(default=None)) -> dict
 @app.post("/paper/reset")
 def reset(x_paper_token: str | None = Header(default=None)) -> dict:
     return _body(_wrap(lambda: paper.reset_account(_db(), _token(x_paper_token))))
+
+
+# --- Research assistant. Read-only tools only; the web server validates and rate-limits before anything reaches here. ---
+class Ask(BaseModel):
+    question: str = Field(min_length=1, max_length=MAX_QUESTION)
+
+
+_calls: deque[float] = deque()
+_lock = threading.Lock()
+
+
+def _allow(now: float) -> bool:
+    with _lock:
+        while _calls and now - _calls[0] > 60:
+            _calls.popleft()
+        if len(_calls) >= GLOBAL_PER_MINUTE:
+            return False
+        _calls.append(now)
+        return True
+
+
+def _sources(calls: list[dict], data_mode: str) -> list[dict]:
+    """What the answer rests on: knowledge files, headlines, Pumpwatch, the sentiment model, plus a line per other tool."""
+    out: list[dict] = []
+    seen: set[str] = set()
+
+    def add(kind: str, title: str, url: str | None = None) -> None:
+        if title and title not in seen and len(out) < MAX_SOURCES:
+            seen.add(title)
+            out.append({"kind": kind, "title": title[:140], "url": url if url and url.startswith(("http://", "https://")) else None})
+
+    for call in calls:
+        name, res = call["name"], call.get("output")
+        res = res if isinstance(res, dict) else {}
+        if "error" in res:
+            continue
+        if name == "search_knowledge":
+            for r in res.get("results", []):
+                add("knowledge", str(r.get("source", "")))
+        elif name == "get_pump_risk":
+            add("pumpwatch", f"Pumpwatch rules-v1 risk score ({res.get('data_mode', 'live')} data)")
+            if (res.get("sentiment") or {}).get("available"):
+                add("sentiment", "Financial DistilRoBERTa sentiment (context only)")
+        elif name == "get_sentiment":
+            if res.get("available"):
+                add("sentiment", "Financial DistilRoBERTa sentiment (context only)")
+        elif name.startswith("get_paper"):
+            add("paper", "Your simulated paper account")
+        elif "articles" in res:
+            for a in res["articles"]:
+                add("news", str(a.get("title", "")), a.get("url"))
+        else:
+            add("data", f"{name} ({data_mode} market data)")
+    return out
+
+
+@app.post("/assistant/ask")
+def ask(body: Ask, x_paper_token: str | None = Header(default=None)) -> dict:
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(status_code=422, detail="Empty question.")
+    if not _allow(time.monotonic()):
+        raise HTTPException(status_code=429, detail="Busy. Try again in a minute.")
+    token = x_paper_token if x_paper_token and paper.TOKEN.match(x_paper_token) else ""
+    try:
+        result = run_agent(question, token)
+    except Exception:  # noqa: BLE001  (never leak provider or stack details to the browser)
+        raise HTTPException(status_code=502, detail="The assistant could not answer. Try again.") from None
+    answer = result.answer.strip()
+    if "not investment advice" not in answer.lower():
+        answer += f"\n\n{ASSISTANT_NOTICE}"
+    data_mode = "mock" if config.use_mock_data() else "live"
+    return {
+        "answer": answer, "tools_used": result.tool_names(), "sources": _sources(result.tool_calls, data_mode),
+        "mode": {"data": data_mode, "llm": result.llm}, "note": result.note, "notice": ASSISTANT_NOTICE,
+    }
