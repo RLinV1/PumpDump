@@ -8,6 +8,7 @@ target/
 *.pem
 *.tfstate
 *.tfstate.*
+*.tfvars
 .terraform/
 
 # editors and OS
