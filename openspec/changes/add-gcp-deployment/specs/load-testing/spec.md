@@ -18,7 +18,7 @@ The system SHALL provide a load test that holds many concurrent stream connectio
 
 #### Scenario: Concurrent clients
 - **WHEN** the test opens its configured number of stream connections
-- **THEN** it reports the connected count and the dropped count
+- **THEN** it reports how many clients received data, how many dropped and how many were refused
 
 ### Requirement: Rate limit awareness
 The system SHALL let the load test run against a target with the per-client rate limit raised, and SHALL record the limit used in the results.

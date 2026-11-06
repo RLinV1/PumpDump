@@ -5,6 +5,9 @@ loadRootEnv();
 
 const nextConfig: NextConfig = {
   /* config options here */
+  poweredByHeader: false,
+  // Gzip here buffers the proxied SSE stream, so flags never reach a browser. Caddy compresses pages instead.
+  compress: false,
   async rewrites() {
     const origin = (process.env.API_ORIGIN ?? "http://127.0.0.1:8083").replace(/\/$/, "");
     return [{ source: "/api/:path*", destination: `${origin}/api/:path*` }];

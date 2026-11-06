@@ -18,7 +18,7 @@ The stack is Kafka, Postgres, four Spring Boot services and a Next.js web app. C
 
 **One Compute Engine VM running compose.** Kafka needs a stateful broker and the services share a network; Cloud Run does not fit. An `e2-standard-2` (8 GB) gives headroom for Kafka, Postgres and four JVMs; `e2-medium` (4 GB) is too tight. Rejected: GKE (cost, setup), Managed Kafka (cost).
 
-**Caddy as the proxy.** One small image, two routes, no config language to learn. `flush_interval -1` on `/api` keeps SSE unbuffered. Rejected: nginx (more tuning for SSE), a cloud load balancer (cost).
+**Caddy as the proxy.** One small image, two routes, no config language to learn. The live stream goes straight to the API with `flush_interval -1`; everything else goes to the web server, which owns news, movers and sentiment. Next compression stays off because it buffers SSE; Caddy compresses pages. Rejected: nginx (more tuning for SSE), a cloud load balancer (cost).
 
 **Same origin by default.** The web client already calls relative `/api/...` paths, so the proxy only has to route them. No CORS needed in this deployment.
 
@@ -26,7 +26,7 @@ The stack is Kafka, Postgres, four Spring Boot services and a Next.js web app. C
 
 **Terraform with plain google provider.** One VM, one static address, firewall rules, one budget. Startup script installs Docker and clones nothing: the operator copies the repo archive and `.env` over SSH after boot, so secrets never enter state. Budget alarm is optional-by-variable because it needs a billing account id.
 
-**k6 for load tests.** One JavaScript file per scenario, built-in thresholds and percentile output, runs from the `grafana/k6` image so nothing is installed. Alternatives: Gatling and JMeter (heavier), Locust (Python, weaker SSE).
+**k6 for the read API, real clients for the stream.** k6 gives thresholds and percentiles for request/response load. k6 buffers response bodies, so it cannot tell a live stream from a stalled one; its first stream test reported 1,000 held connections while no events were arriving. `load/stream.mjs` uses real SSE clients and counts only clients that receive bytes. Alternatives: Gatling and JMeter (heavier), Locust (Python, weaker SSE).
 
 **Honest numbers.** Load tests run from a separate machine against the VM public address (or locally for a baseline). The summary records the VM size, VU count and rate limit so a quoted number can be reproduced. The API rate limit is raised for the run via `API_RATE_LIMIT_PER_MINUTE`.
 

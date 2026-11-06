@@ -12,4 +12,5 @@ public record ApiProperties(
         @DefaultValue("30") int burst,
         @DefaultValue("PT15S") Duration heartbeat,
         @DefaultValue("PT1S") Duration pollInterval,
-        @DefaultValue("100") int maxStreams) {}
+        @DefaultValue("100") int maxStreams,
+        @DefaultValue("5") int maxStreamsPerClient) {}

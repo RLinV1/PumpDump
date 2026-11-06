@@ -18,7 +18,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class SseHubTest {
     static final Instant T = Instant.parse("2026-01-01T00:00:00Z");
     static final ApiProperties PROPS =
-            new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 2);
+            new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 2, 5);
 
     ReadRepository repo = mock(ReadRepository.class);
     SseHub hub = new SseHub(repo, PROPS);
@@ -69,11 +69,11 @@ class SseHubTest {
 
     @Test
     void oneClientCannotTakeEverySlot() {
-        var wide = new SseHub(repo, new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 100));
-        for (int i = 0; i < SseHub.MAX_STREAMS_PER_CLIENT; i++) wide.subscribe("live", 0L, "greedy");
+        var wide = new SseHub(repo, new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 100, 5));
+        for (int i = 0; i < 5; i++) wide.subscribe("live", 0L, "greedy");
         org.junit.jupiter.api.Assertions.assertThrows(SseHub.TooManyStreams.class, () -> wide.subscribe("live", 0L, "greedy"));
         wide.subscribe("live", 0L, "other"); // another client still gets in
-        assertThat(wide.clientCount()).isEqualTo(SseHub.MAX_STREAMS_PER_CLIENT + 1);
+        assertThat(wide.clientCount()).isEqualTo(5 + 1);
     }
 
     @Test

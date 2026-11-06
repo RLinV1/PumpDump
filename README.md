@@ -208,18 +208,27 @@ classes; they reach Kafka on 127.0.0.1:9092 and Postgres on 127.0.0.1:5432.
 
 ## Deploy and load test
 
-One Google Cloud VM runs the whole stack behind a Caddy proxy (web and `/api` on one port).
+One Google Cloud VM runs the whole stack behind a Caddy proxy, with one public port.
 Terraform, deploy scripts and the runbook are in [docs/deploy-gcp.md](docs/deploy-gcp.md).
 
-[k6](https://k6.io) load tests live in `load/`: a ramping read-API test (requests per second,
-p50/p95/p99 latency, error rate) and a live-stream test (concurrent SSE connections held).
+Load tests live in `load/`: a ramping [k6](https://k6.io) read-API test, and a live-stream test
+with real SSE clients that counts a client only if data actually reaches it.
 
 ```bash
-BASE=http://<host> VUS=100 CONNS=80 load/run.sh   # writes load/results/summary.md
+BASE=http://<host> VUS=100 CONNS=1000 load/run.sh   # writes load/results/summary.md
 ```
 
-Results are measured, not claimed: paste the generated summary here with the VM size and
-rate limit used. No run has been recorded yet.
+Local baseline, 2026-11-05. Full compose stack (Caddy, Next.js, Spring Boot, Postgres, Kafka) on
+Docker Desktop for Windows, with the load generator on the same 16-core machine. Seeded with 50
+tickers, 18,000 score rows and 200 flags (`load/seed.sql`), rate limit raised. Not a cloud result.
+
+| Test | Result |
+| --- | --- |
+| Read API, 100 virtual users, 90 s | 39,504 requests, 438.8 req/s, 0.00% errors |
+| Read API latency | p50 174 ms, p95 397 ms, p99 1,024 ms |
+| Live stream | 1,000 of 1,000 clients receiving data, 0 dropped, 0 refused |
+| Flag delivery to 1,000 clients | all delivered, p95 between 0.9 s and 1.7 s over 4 runs (API polls once a second) |
+| Default limits, 80 parallel requests | 46 rejected with 429; a forged `X-Forwarded-For` did not help; a second client stayed at 200 |
 
 ## Development checks
 
