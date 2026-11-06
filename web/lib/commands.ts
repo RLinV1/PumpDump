@@ -1,5 +1,5 @@
 // The terminal command line. Pure, so the grammar is testable without a browser.
-export type Panel = "watchlist" | "chart" | "flags" | "news" | "sentiment" | "movers" | "assistant";
+export type Panel = "watchlist" | "chart" | "flags" | "news" | "sentiment" | "movers" | "lookup" | "paper";
 
 export type Command =
   | { type: "empty" }
@@ -7,9 +7,11 @@ export type Command =
   | { type: "select"; ticker: string }
   | { type: "add"; ticker: string }
   | { type: "remove"; ticker: string }
+  | { type: "look"; ticker: string }
+  | { type: "trade"; side: "BUY" | "SELL"; ticker: string; qty: number }
+  | { type: "reset"; confirmed: boolean }
   | { type: "help" }
   | { type: "refresh" }
-  | { type: "ask"; question: string }
   | { type: "error"; message: string };
 
 // Panel numbers are shown in each panel's title bar, so typing the number jumps there.
@@ -20,22 +22,15 @@ export const PANELS: { id: Panel; number: number; mnemonic: string; title: strin
   { id: "news", number: 4, mnemonic: "NEWS", title: "News", aliases: [] },
   { id: "sentiment", number: 5, mnemonic: "SENT", title: "Sentiment", aliases: ["SENTIMENT"] },
   { id: "movers", number: 6, mnemonic: "MOV", title: "Movers", aliases: ["MOVERS"] },
-  { id: "assistant", number: 7, mnemonic: "ASK", title: "Assistant", aliases: ["AI", "ASSISTANT"] },
+  { id: "lookup", number: 7, mnemonic: "LOOK", title: "Stock lookup", aliases: ["DES", "LOOKUP"] },
+  { id: "paper", number: 8, mnemonic: "PT", title: "Paper trading", aliases: ["PAPER"] },
 ];
 
-export const MAX_QUESTION = 300;
+export const MAX_QTY = 10_000;
 
 const TICKER = /^[A-Z]{1,5}$/;
 
 export function parseCommand(input: string): Command {
-  // ASK keeps the question's own case: the assistant reads "GME" and "Apple" differently.
-  const ask = /^ask\s+([\s\S]+)$/i.exec(input.trim());
-  if (ask) {
-    const question = ask[1].replace(/\s*<GO>\s*$/i, "").replace(/\s+/g, " ").trim();
-    if (!question || /^go$/i.test(question)) return { type: "panel", panel: "assistant" }; // "ASK <GO>" is the panel mnemonic
-    if (question.length > MAX_QUESTION) return { type: "error", message: `A QUESTION IS AT MOST ${MAX_QUESTION} CHARACTERS. YOURS IS ${question.length}.` };
-    return { type: "ask", question };
-  }
   // "GME <GO>" and "GME GO" mean the same as "GME".
   const text = input.trim().toUpperCase().replace(/\s*<?\bGO\b>?$/, "").replace(/\s+/g, " ").replace(/^\$/, "");
   if (!text) return { type: "empty" };
@@ -47,11 +42,28 @@ export function parseCommand(input: string): Command {
   if (text === "HELP" || text === "?") return { type: "help" };
   if (text === "RF" || text === "REFRESH") return { type: "refresh" };
 
-  const verb = /^(ADD|RM|SEL) (.*)$/.exec(text);
+  if (text === "PT RESET") return { type: "reset", confirmed: false };
+  if (text === "PT RESET CONFIRM") return { type: "reset", confirmed: true };
+  if (/^PT /.test(text)) return { type: "error", message: "USAGE: PT, PT RESET, THEN PT RESET CONFIRM." };
+
+  // BUY and SELL always mean an order, so a ticker of that name is reached with SEL.
+  const trade = /^(BUY|SELL)(?: (.*))?$/.exec(text);
+  if (trade) {
+    const [ticker, qty, ...rest] = (trade[2] ?? "").split(" ");
+    const usage = `USAGE: ${trade[1]} <TICKER> <QTY>, E.G. ${trade[1]} GME 10. QTY IS A WHOLE NUMBER FROM 1 TO ${MAX_QTY.toLocaleString("en-US")}.`;
+    const symbol = (ticker ?? "").replace(/^\$/, "");
+    if (!TICKER.test(symbol) || rest.length || !/^\d{1,5}$/.test(qty ?? "")) return { type: "error", message: usage };
+    const n = Number(qty);
+    if (n < 1 || n > MAX_QTY) return { type: "error", message: usage };
+    return { type: "trade", side: trade[1] as "BUY" | "SELL", ticker: symbol, qty: n };
+  }
+
+  const verb = /^(ADD|RM|SEL|LOOK|DES) (.*)$/.exec(text);
   if (verb) {
     const ticker = verb[2].replace(/^\$/, "");
     if (!TICKER.test(ticker)) return { type: "error", message: `USAGE: ${verb[1]} <TICKER>, A TICKER IS 1 TO 5 LETTERS.` };
-    return { type: verb[1] === "ADD" ? "add" : verb[1] === "RM" ? "remove" : "select", ticker };
+    const type = verb[1] === "ADD" ? "add" : verb[1] === "RM" ? "remove" : verb[1] === "SEL" ? "select" : "look";
+    return { type, ticker };
   }
   if (TICKER.test(text)) return { type: "select", ticker: text };
   const shown = text.length > 24 ? `${text.slice(0, 24)}...` : text;
