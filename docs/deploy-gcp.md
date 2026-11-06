@@ -1,6 +1,6 @@
 # Deploy to Google Cloud
 
-One Compute Engine VM runs the whole stack with Docker Compose. Caddy serves the web app and forwards `/api` to the API on port 80. This is a test deployment, not production: plain HTTP, one VM, no autoscaling.
+One Compute Engine VM runs the whole stack with Docker Compose. Caddy forwards everything on port 80 to the web server, which answers market-movers, news and sentiment itself and proxies the rest of `/api` to the private API. The compose `web` service forces `DATA_MODE=live`. This is a test deployment, not production: plain HTTP, one VM, no autoscaling.
 
 ## Prerequisites
 
@@ -29,8 +29,10 @@ deploy/ready.sh http://<vm-ip>
 Run from a second machine (Cloud Shell works) so the VM link is what you measure.
 
 ```bash
-BASE=http://<vm-ip> VUS=100 CONNS=80 load/run.sh
+BASE=http://<vm-ip> VUS=100 CONNS=80 RATE_LIMIT=100000 load/run.sh
 ```
+
+`RATE_LIMIT` is only recorded in the summary; set it to the `API_RATE_LIMIT_PER_MINUTE` the VM runs with. Needs `k6` or Docker on the machine (Node is optional; Docker supplies it). Behind Caddy and the web server every visitor shares one rate-limit bucket, so raise the limit for capacity runs.
 
 Output lands in `load/results/summary.md`: requests per second, p50/p95/p99 latency, error rate, 429 count, and live-stream connections held. Quote the VM size (`e2-standard-2` by default), VU count and rate limit with any number.
 

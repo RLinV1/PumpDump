@@ -1,11 +1,7 @@
+# The web server owns every route: it answers news, movers and sentiment itself and proxies the
+# rest of /api to the private Java API. flush_interval -1 keeps the SSE stream unbuffered.
 :80 {
-	handle /api/* {
-		# flush_interval -1 sends SSE events immediately instead of buffering
-		reverse_proxy api:8083 {
-			flush_interval -1
-		}
-	}
-	handle {
-		reverse_proxy web:3000
+	reverse_proxy web:3000 {
+		flush_interval -1
 	}
 }

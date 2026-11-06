@@ -5,6 +5,7 @@ import { Counter, Rate } from "k6/metrics";
 
 const BASE = __ENV.BASE || "http://localhost";
 const VUS = Number(__ENV.VUS || 100);
+const RATE_LIMIT = __ENV.RATE_LIMIT || "unknown (set RATE_LIMIT to the API_RATE_LIMIT_PER_MINUTE in use)";
 const limited = new Counter("rate_limited"); // 429s are the limiter working, not failures
 
 export const options = {
@@ -38,9 +39,10 @@ export default function () {
 
 export function handleSummary(data) {
   const m = data.metrics;
-  const d = m.http_req_duration.values;
+  // latency of successful responses only: 429s return fast and would flatter the percentiles
+  const d = (m["http_req_duration{expected_response:true}"] ?? m.http_req_duration).values;
   const out = {
-    target: BASE, vus: VUS, date: new Date().toISOString(),
+    target: BASE, vus: VUS, rate_limit: RATE_LIMIT, date: new Date().toISOString(),
     requests: m.http_reqs.values.count, rps: +m.http_reqs.values.rate.toFixed(1),
     p50_ms: +d.med.toFixed(1), p95_ms: +d["p(95)"].toFixed(1), p99_ms: +(d["p(99)"] ?? d.max).toFixed(1),
     error_rate: +(m.errors?.values.rate ?? 0).toFixed(4),

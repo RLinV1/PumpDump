@@ -185,6 +185,14 @@ services:
     profiles: ["apps"]
     build:
       context: ./web
+      args:
+        API_ORIGIN: http://api:8083
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_MODE: live # mock would answer /api itself and bypass the Java API
+      API_ORIGIN: http://api:8083
     restart: unless-stopped
 
   proxy:
@@ -195,8 +203,10 @@ services:
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
-      - web
-      - api
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
