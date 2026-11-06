@@ -8,6 +8,14 @@ The dashboard brings together risk scores, stock news, gainers/losers, observed 
 swings and pretrained Bluesky sentiment. The output is a risk signal with its evidence,
 not buy or sell advice. Sentiment describes sampled text; it does not predict returns.
 
+## Screenshots
+
+Captured with Playwright against mock data (`DATA_MODE=mock`, no keys or backend).
+
+![Landing page: risk score chart with the evidence behind a flag](docs/img/landing.png)
+
+![Live dashboard: watchlist, score history, flags, news and sentiment](docs/img/live-dashboard.png)
+
 ## Documentation
 
 | Guide | What it explains |
@@ -146,6 +154,21 @@ To run the apps from the IDE instead, use `scripts/dev-up.sh` (infra only) and
 export `.env` first, because Spring Boot does not read it:
 `set -a; source .env; set +a`. Then start the `connectors` and `replay` main
 classes; they reach Kafka on 127.0.0.1:9092 and Postgres on 127.0.0.1:5432.
+
+## Deploy and load test
+
+One Google Cloud VM runs the whole stack behind a Caddy proxy (web and `/api` on one port).
+Terraform, deploy scripts and the runbook are in [docs/deploy-gcp.md](docs/deploy-gcp.md).
+
+[k6](https://k6.io) load tests live in `load/`: a ramping read-API test (requests per second,
+p50/p95/p99 latency, error rate) and a live-stream test (concurrent SSE connections held).
+
+```bash
+BASE=http://<host> VUS=100 CONNS=80 load/run.sh   # writes load/results/summary.md
+```
+
+Results are measured, not claimed: paste the generated summary here with the VM size and
+rate limit used. No run has been recorded yet.
 
 ## Development checks
 
