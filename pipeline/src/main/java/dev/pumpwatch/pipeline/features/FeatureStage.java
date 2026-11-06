@@ -49,11 +49,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * mentions + ticks + filings + news to features. Hopping event-time windows of 1, 5 and 30 minutes advance every 15
- * seconds, with a 2 minute grace. Only final windows are emitted ({@code suppress(untilWindowCloses)}): a window is
- * written once, when stream time passes its end + grace, so eventTime (= window end) is never ahead of the data and
- * the output does not depend on how records were chunked. A record arriving after window end + grace is dropped for
- * that window and counted by Kafka Streams' dropped-records metric. Catalyst and baseline context comes from the
+ * mentions + ticks + filings + news to features. Records first fold into one 15 second pane per ticker, with a 2
+ * minute grace, and each closed pane then feeds hopping event-time windows of 1, 5 and 30 minutes that advance every
+ * 15 seconds. A window's total is the merge of its panes, so a tick costs one small update instead of one update per
+ * overlapping window (144), which capped the pipeline at about 17 ticks a second. Only final windows are emitted
+ * ({@code suppress(untilWindowCloses)}): a window is written once, after its last pane closes and stream time passes
+ * its end, so eventTime (= window end) is never ahead of the data and the output does not depend on how records were
+ * chunked. A record arriving after pane end + grace is dropped and counted by Kafka Streams' dropped-records metric.
+ * Catalyst and baseline context comes from the
  * "ctx" state store (see {@link Ctx}).
  */
 public final class FeatureStage {
@@ -102,10 +105,19 @@ public final class FeatureStage {
                         Materialized.<String, Ctx, KeyValueStore<Bytes, byte[]>>as(CTX_STORE)
                                 .withKeySerde(Serdes.String()).withValueSerde(CTX));
 
-        KStream<String, Agg> windowed = deltas.filter((k, d) -> d.cats().isEmpty());
+        KStream<String, Agg> panes = deltas.filter((k, d) -> d.cats().isEmpty())
+                .groupByKey(Grouped.with(Serdes.String(), AGG))
+                .windowedBy(TimeWindows.ofSizeAndGrace(ADVANCE, GRACE))
+                .aggregate(() -> Agg.EMPTY, (k, d, agg) -> agg.merge(d),
+                        Materialized.<String, Agg, WindowStore<Bytes, byte[]>>as("pane")
+                                .withKeySerde(Serdes.String()).withValueSerde(AGG))
+                .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()).withName("final-pane"))
+                .toStream((w, agg) -> w.key())
+                .repartition(Repartitioned.<String, Agg>with(Serdes.String(), AGG).withName("panes"));
         for (int minutes : windowMinutes) {
-            windowed.groupByKey(Grouped.with(Serdes.String(), AGG))
-                    .windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofMinutes(minutes), GRACE).advanceBy(ADVANCE))
+            // no grace here: panes already waited for late data, and they close in event-time order
+            panes.groupByKey(Grouped.with(Serdes.String(), AGG))
+                    .windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofMinutes(minutes), Duration.ZERO).advanceBy(ADVANCE))
                     .aggregate(() -> Agg.EMPTY, (k, d, agg) -> agg.merge(d),
                             Materialized.<String, Agg, WindowStore<Bytes, byte[]>>as("agg-" + minutes + "m")
                                     .withKeySerde(Serdes.String()).withValueSerde(AGG))

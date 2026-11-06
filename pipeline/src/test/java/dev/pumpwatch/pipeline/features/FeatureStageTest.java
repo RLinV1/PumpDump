@@ -67,9 +67,13 @@ class FeatureStageTest {
         ticks.pipeInput("GME", Fx.tick(when, "GME", price, size), FAR);
     }
 
-    /** Moves stream time far ahead, which closes every window of interest (a different ticker, so GME is untouched). */
+    /**
+     * Moves stream time far ahead, which closes every window of interest (a different ticker, so GME is untouched).
+     * The second tick closes the first one's pane: windows close when a later pane arrives.
+     */
     void close() {
         ticks.pipeInput("CLS", Fx.tick(at(300, 0), "CLS", "1.00", 1), FAR);
+        ticks.pipeInput("CLS", Fx.tick(at(310, 0), "CLS", "1.00", 1), FAR);
     }
 
     /** Emitted value for a window, or null. */

@@ -286,6 +286,17 @@ tickers, 18,000 score rows and 200 flags (`load/seed.sql`), rate limit raised. N
 | Flag delivery to 1,000 clients | all delivered, p95 between 0.9 s and 1.7 s over 4 runs (API polls once a second) |
 | Default limits, 80 parallel requests | 46 rejected with 429; a forged `X-Forwarded-For` did not help; a second client stayed at 200 |
 
+Limit tests, 2026-11-06, same machine. `load/kafka.sh` and `load/pipeline.sh` use throwaway topics and a throwaway stack.
+
+| Test | Result |
+| --- | --- |
+| Live clients | 7,999 of 8,000 received a flag, p95 4.9 s. Hard stop at about 8,190 (Tomcat `max-connections`). Above the cap, the API ran out of its default heap (about 1.4 GB). |
+| Kafka produce, one broker, 256-byte records, `acks=all` | 399,000 msg/s (97 MB/s) at p95 3 ms. Peak 470,000 msg/s; p99 spikes at higher offered rates |
+| Kafka consume | 1.02 million msg/s |
+| Scoring pipeline, backlog of 300,000 ticks replaying one hour, 50 tickers | 164,508 ticks processed in about 2 minutes, up from 3,507 before folding ticks into 15 second panes (about 47x). Worst case: event time runs far faster than real time |
+
+`api.max-streams` defaults to 100 as a safety limit. Raise it with `API_MAX_STREAMS`, and keep it under the limits above.
+
 ## Development checks
 
 Run `mvn -B verify` from the root. In `web/`, run `npm test`, `npm run lint` and
