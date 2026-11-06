@@ -196,7 +196,29 @@ services:
       DATA_MODE: ${DATA_MODE:-mock} # live needs Alpaca keys; deploy/up.sh keeps the public VM on mock
       API_ORIGIN: http://api:8083
       TRUST_PROXY_HEADERS: "true" # web has no published port; Caddy is its only peer
+      PLUTUS_ORIGIN: http://plutus:8090 # web validates and rate-limits /api/v1/assistant/ask, then forwards here
     restart: unless-stopped
+
+  # Research assistant (Plutus). Private: only web talks to it, and it publishes no port. It reads Pumpwatch scores
+  # from web, so what it says matches the panels. deploy/up.sh pins it to mock data and the mock agent on the public VM.
+  plutus:
+    profiles: ["apps"]
+    build:
+      context: ./plutus
+      dockerfile: Dockerfile.service
+    environment:
+      PUMPWATCH_API_URL: http://web:3000
+      PLUTUS_PUBLIC: "1" # no portfolio or paper-trading tools
+      USE_MOCK_DATA: ${PLUTUS_USE_MOCK_DATA:-1} # 0 = live yfinance, for your own machine only (data terms)
+      USE_MOCK_LLM: ${PLUTUS_USE_MOCK_LLM:-auto} # auto = mock agent unless ANTHROPIC_API_KEY is set
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-} # only this key is passed in, not the whole .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8090/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   proxy:
     profiles: ["apps"]

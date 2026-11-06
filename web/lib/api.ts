@@ -211,3 +211,23 @@ export function age(iso: string) {
   if (s < 5400) return `${Math.round(s / 60)}m ago`;
   return `${Math.round(s / 3600)}h ago`;
 }
+
+export type AssistantSource = { kind: string; title: string; url: string | null };
+export type AssistantAnswer = { answer: string; toolsUsed: string[]; sources: AssistantSource[]; llm: "mock" | "claude"; dataMode: DataMode };
+
+// The research assistant. Errors carry the server's own short message, which never includes provider details.
+export async function askAssistant(question: string, signal: AbortSignal): Promise<{ notice: string; data: AssistantAnswer }> {
+  const res = await fetch(`${API_URL}/api/v1/assistant/ask`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(50_000)]), cache: "no-store",
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(typeof body?.error === "string" ? body.error : `The assistant is unavailable (${res.status}).`);
+  const d = body?.data;
+  const ok = typeof body?.notice === "string" && d && typeof d.answer === "string" && strings(d.toolsUsed)
+    && Array.isArray(d.sources) && d.sources.every((s: AssistantSource) => s && typeof s.kind === "string" && typeof s.title === "string")
+    && (d.dataMode === "mock" || d.dataMode === "live") && (d.llm === "mock" || d.llm === "claude");
+  if (!ok) throw new Error("The assistant sent an unreadable answer.");
+  d.sources = d.sources.map((s: AssistantSource) => ({ ...s, url: s.url && safeLink(s.url) ? s.url : null }));
+  return body;
+}

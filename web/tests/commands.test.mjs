@@ -31,11 +31,23 @@ test("add, remove and explicit select take a ticker", () => {
 });
 
 test("anything else is a clear inline error", () => {
-  for (const input of ["FOO BAR", "7", "GME1", "TOOLONG", "../etc"]) {
+  for (const input of ["FOO BAR", "8", "GME1", "TOOLONG", "../etc"]) {
     const result = parseCommand(input);
     assert.equal(result.type, "error", input);
     assert.match(result.message, /UNKNOWN COMMAND/);
     assert.match(result.message, /HELP/);
   }
   assert.ok(parseCommand("X".repeat(80) + "1").message.length < 80);
+});
+
+test("ASK carries the question with its own case, and ASK alone is the panel", () => {
+  assert.deepEqual(parseCommand("ASK Is GME being pumped?"), { type: "ask", question: "Is GME being pumped?" });
+  assert.deepEqual(parseCommand("  ask   compare  Apple and Tesla <GO> "), { type: "ask", question: "compare Apple and Tesla" });
+  for (const input of ["ASK", "ask", "ASK <GO>", "AI", "7", "ASSISTANT"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "assistant" }, input);
+});
+
+test("ASK rejects a question over 300 characters; SEL still reaches a ticker named ASK", () => {
+  assert.equal(parseCommand(`ASK ${"x".repeat(301)}`).type, "error");
+  assert.deepEqual(parseCommand(`ASK ${"x".repeat(300)}`), { type: "ask", question: "x".repeat(300) });
+  assert.deepEqual(parseCommand("SEL ASK"), { type: "select", ticker: "ASK" });
 });

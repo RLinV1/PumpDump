@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useApi } from "@/lib/use-api";
 import { LiveChart } from "@/components/live-chart";
 import { MoversPanel, NewsPanel, SentimentPanel } from "@/components/market-context";
+import { AssistantPanel, useAssistant } from "@/components/assistant-panel";
 import { Message, Panel, Skeleton, Stale, Verdict, dirTone, modeTag, money, signed } from "@/components/term-panel";
 import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag, type MarketMovers, type Quote, type Quotes, type Score, type Timeline } from "@/lib/api";
 import { PANELS, parseCommand, type Panel as PanelId } from "@/lib/commands";
@@ -12,10 +13,11 @@ import { btnGhost } from "@/lib/ui";
 import { addTicker, parseWatchlist, readWatchlist, saveWatchlist, subscribeWatchlist } from "@/lib/watchlist";
 
 const DOWN = { title: "Risk data unavailable", body: "The latest data could not be loaded. Retry, or use the simulated detector while the feed recovers." };
-const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers" };
+const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers", assistant: "assistant" };
 const HELP: [string, string][] = [
   ["GME <GO>", "Select a ticker (1 to 5 letters). Chart, news and sentiment follow it."],
-  ["WL  GR  FLAG  NEWS  SENT  MOV", "Jump to a panel. The panel numbers 1 to 6 work too."],
+  ["WL  GR  FLAG  NEWS  SENT  MOV  ASK", "Jump to a panel. The panel numbers 1 to 7 work too."],
+  ["ASK Is GME being pumped?", "Ask the research assistant. It cites its tools and sources, and is not investment advice."],
   ["ADD AMC  /  RM AMC", "Add a stock to your browser-saved watchlist, or remove it."],
   ["SEL FLAG", "Select a ticker that shares its name with a command."],
   ["RF", "Reload every panel."],
@@ -189,7 +191,7 @@ function FlagFeed({ onPick, extra, setExtra, refreshKey, onStream, active }: { o
   }, [extra, data]);
 
   return (
-    <Panel id="flags" number={3} title="Flags" tag={open ? (mode === "mock" ? "MOCK STREAM" : "STREAMING") : done ? "RECONNECTING" : undefined} active={active} className="lg:col-start-3 lg:row-span-2 lg:row-start-1">
+    <Panel id="flags" number={3} title="Flags" tag={open ? (mode === "mock" ? "MOCK STREAM" : "STREAMING") : done ? "RECONNECTING" : undefined} active={active} className="lg:col-start-3 lg:row-start-1">
       {!done && flags.length === 0 ? (
         <Skeleton rows={3} />
       ) : failed && !data && flags.length === 0 ? (
@@ -252,6 +254,7 @@ export function LiveView() {
   const quotePath = symbols.length ? `/api/v1/quotes?symbols=${[...symbols].sort().join(",")}` : "";
   const q = useApi<Quotes>(quotePath, 15000, 0, undefined, refreshKey);
   const movers = useApi<MarketMovers>("/api/v1/market-movers", 60000, 0, undefined, refreshKey);
+  const assistant = useAssistant();
 
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 5000);
@@ -337,6 +340,7 @@ export function LiveView() {
       }
       case "help": setOut({ kind: "help", text: "" }); break;
       case "refresh": setRefreshKey((key) => key + 1); setOut({ kind: "info", text: "RELOADING ALL PANELS." }); break;
+      case "ask": void assistant.ask(cmd.question); jump("assistant"); setOut({ kind: "info", text: "ASKING THE ASSISTANT. THE ANSWER APPEARS IN PANEL 7." }); break;
       case "error": setOut({ kind: "error", text: cmd.message }); break;
     }
     setCommand("");
@@ -367,7 +371,7 @@ export function LiveView() {
                 }
               }}
               placeholder="TICKER OR COMMAND"
-              maxLength={24}
+              maxLength={330}
               autoComplete="off"
               autoCapitalize="characters"
               autoCorrect="off"
@@ -418,16 +422,19 @@ export function LiveView() {
         )}
         <FlagFeed onPick={(t) => { setPick(t); }} extra={extra} setExtra={setExtra} refreshKey={refreshKey} onStream={onStream} active={active === "flags"} />
         <div className="contents">
-          <div className="min-h-0 lg:col-start-2 lg:row-span-2 lg:row-start-2 [&>section]:h-full">
+          <div className="min-h-0 lg:col-start-2 lg:row-start-2 [&>section]:h-full">
             <NewsPanel key={ticker ?? "market"} ticker={ticker} refreshKey={refreshKey} active={active === "news"} />
           </div>
           {ticker ? (
-            <div className="min-h-0 lg:col-start-3 lg:row-start-3 [&>section]:h-full">
+            <div className="min-h-0 lg:col-start-2 lg:row-start-3 [&>section]:h-full">
               <SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} active={active === "sentiment"} />
             </div>
           ) : null}
           <div className="min-h-0 lg:col-start-1 lg:row-start-3 [&>section]:h-full">
             <MoversPanel state={movers} selectedTicker={ticker} active={active === "movers"} onPick={(symbol) => { setPick(symbol); }} />
+          </div>
+          <div className="min-h-0 lg:col-start-3 lg:row-span-2 lg:row-start-2 [&>section]:h-full">
+            <AssistantPanel state={assistant.state} onAsk={(question) => void assistant.ask(question)} active={active === "assistant"} />
           </div>
         </div>
       </main>

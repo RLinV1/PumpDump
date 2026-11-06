@@ -9,6 +9,7 @@ import { createStockNewsLoader } from "./stock-news.mjs";
 import { createBlueskySentiment } from "./bluesky-sentiment.mjs";
 import { createContextApi } from "./context-api.mjs";
 import { createBlueskySearch } from "./bluesky-search.mjs";
+import { createAssistantApi } from "./assistant-api.mjs";
 
 loadRootEnv();
 const mode = process.env.DATA_MODE ?? "mock";
@@ -23,6 +24,9 @@ const contextApi = createContextApi({
   loadRecentSentiment: createBlueskySearch({ sentiment }),
 });
 
+// PLUTUS_ORIGIN is the private research-assistant service; unset means the route answers 503.
+const assistant = createAssistantApi({ origin: process.env.PLUTUS_ORIGIN?.replace(/\/$/, "") });
+
 const dev = process.argv.includes("--dev");
 const port = Number(process.env.PORT ?? 3000);
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
@@ -34,6 +38,7 @@ const server = createServer((request, response) => {
   sanitizeForwardingHeaders(request);
   applySecurityHeaders(response);
   if (isApiRequest(request.url)) {
+    if (assistant(request, response)) return; // before the mock branch: the assistant labels its own data mode
     if (mode === "mock") return serveMockApi(request, response);
     response.setHeader("X-Pumpwatch-Data-Mode", "live");
     if (contextApi(request, response)) return;
