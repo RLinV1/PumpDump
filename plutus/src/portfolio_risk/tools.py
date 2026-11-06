@@ -689,6 +689,80 @@ def search_knowledge(query: str, ticker: str = "", k: int = 4) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# Pumpwatch bridge: the pump-and-dump risk score, flags and catalyst check.
+# --------------------------------------------------------------------------- #
+# Tools that touch one user's portfolio; PLUTUS_PUBLIC=1 hides them from the agent.
+PORTFOLIO_TOOLS = frozenset({
+    "get_portfolio_overview", "get_portfolio_risk_report", "get_portfolio_news",
+    "get_portfolio_briefing", "run_portfolio_scenario", "simulate_trade", "get_rebalance_plan",
+})
+
+
+def _pump_verdict(score: float) -> str:
+    # Same cut-offs as web/lib/verdict.ts.
+    return "Pump likely" if score >= 65 else "Watch" if score >= 35 else "Low risk"
+
+
+def _pumpwatch_get(base: str, path: str):
+    import requests
+
+    resp = requests.get(base + path, timeout=4)
+    resp.raise_for_status()
+    body = resp.json()
+    return body.get("data"), body.get("mode")
+
+
+def get_pump_risk(ticker: str) -> dict:
+    """Pumpwatch's own pump-and-dump risk read for one ticker.
+
+    Returns {ticker, tracked, score, verdict, top_contributors, recent_flags,
+    catalyst, data_mode}. It is a risk signal about coordinated hype, not a price
+    prediction. ``tracked`` is False when Pumpwatch does not score the ticker.
+    """
+    import re
+
+    t = (ticker or "").strip().upper().lstrip("$")
+    if not re.fullmatch(r"[A-Z]{1,5}", t):
+        return {"error": "ticker must be 1 to 5 letters"}
+    base = config.pumpwatch_api_url()
+    if not base:
+        return {"error": "Pumpwatch API is not configured (set PUMPWATCH_API_URL)"}
+    try:
+        scores, mode = _pumpwatch_get(base, "/api/v1/watchlist")
+        flags, _ = _pumpwatch_get(base, "/api/v1/flags?limit=100")
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"Pumpwatch API unreachable: {type(exc).__name__}"}
+    row = next((s for s in scores or [] if s.get("ticker") == t), None)
+    recent = [
+        {
+            "raised_at": f["raisedAt"],
+            "score": f["evidence"]["score"],
+            "posts": f["evidence"]["postCount"],
+            "trades": f["evidence"]["tradeCount"],
+            "top_contributors": f["evidence"]["topContributors"],
+            "catalyst": f["evidence"].get("catalyst"),
+        }
+        for f in [f for f in flags or [] if f.get("ticker") == t][:5]
+    ]
+    latest = recent[0] if recent else None
+    score = row["score"] if row else (latest["score"] if latest else None)
+    return {
+        "ticker": t,
+        "tracked": row is not None,
+        "score": score,
+        "verdict": _pump_verdict(score) if score is not None else "Not scored",
+        "model_version": row.get("modelVersion") if row else None,
+        "window_end": row.get("windowEnd") if row else None,
+        "stale_sources": row.get("staleSources", []) if row else [],
+        "top_contributors": latest["top_contributors"] if latest else [],
+        "recent_flags": recent,
+        "catalyst": latest["catalyst"] if latest else None,
+        "data_mode": mode or "live",
+        "source": "Pumpwatch API",
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Portfolio tools (read-only: the agent can analyze the user's portfolio but
 # can never modify it — transactions are written only through the REST API).
 # The heavy lifting lives in portfolio/{analytics,scenarios}.py; imports are

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Beginner-friendly AI stock research assistant: MCP server + RAG + Claude agent + eval harness"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "mcp>=1.2",
+    "mcp>=1.2,<2",  # mcp 2 renamed FastMCP; the server imports mcp.server.fastmcp
     "anthropic[mcp]>=0.40",
     "yfinance>=0.2.40",
     "pandas>=2.1",

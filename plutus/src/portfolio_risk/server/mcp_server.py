@@ -283,6 +283,19 @@ def get_rebalance_plan(portfolio: str = "default", target: str = "equal_weight")
     return tools.get_rebalance_plan(portfolio, target)
 
 
+@mcp.tool()
+def get_pump_risk(ticker: str) -> dict:
+    """Pumpwatch's pump-and-dump risk read for a ticker, from its own API.
+
+    Use this for "is X being pumped", "is X a pump and dump", "is the hype on X
+    real", "any unusual chatter on X". Returns the latest 0-100 score, a verdict
+    (Low risk / Watch / Pump likely), the top contributing signal groups, recent
+    flags and whether a catalyst (news that explains the move) was found. It is a
+    risk signal, never a price prediction. ``data_mode`` says mock or live.
+    """
+    return tools.get_pump_risk(ticker)
+
+
 def main() -> None:
     mcp.run()
 

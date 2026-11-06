@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import re
 
-from .. import tools
+from .. import config, tools
 from .base import AgentResult
 
 _DISCLAIMER = "This is educational information, not investment advice."
+_PUBLIC_NO_PORTFOLIO = "Portfolio and paper-trading questions are not available in the Pumpwatch terminal."
 
 # All-caps tokens that are NOT tickers (so we don't treat "RSI" as a stock).
 _STOPWORDS = {
@@ -190,9 +191,19 @@ def run(question: str, feedback: str | None = None) -> AgentResult:
     # Portfolio questions are checked FIRST: "how risky is my portfolio?" must
     # hit the portfolio tools, not the single-stock risk branch.
     if portfolio_kw:
+        if config.public_mode():
+            return AgentResult(answer=_PUBLIC_NO_PORTFOLIO + " " + _DISCLAIMER)
         return _route_portfolio(q, ql, tickers, period, calls)
 
-    if digest_kw and tickers:
+    pump_kw = any(
+        k in ql for k in ("pump", "dump", "manipulat", "coordinated", "hype", "meme stock", "squeeze")
+    )
+    if pump_kw and tickers:
+        out = tools.get_pump_risk(tickers[0])
+        calls.append({"name": "get_pump_risk", "input": {"ticker": tickers[0]}, "output": out})
+        answer = _format_pump_risk(out)
+
+    elif digest_kw and tickers:
         out = tools.get_watchlist_digest(tickers[:10], period=period)
         calls.append(
             {"name": "get_watchlist_digest", "input": {"tickers": tickers[:10], "period": period}, "output": out}
@@ -532,6 +543,43 @@ def _format_filing_risks(out: dict) -> str:
     url = next((r.get("url") for r in results if r.get("url")), "")
     if src:
         lines.append(f"Source: [{src}]" + (f" — {url}" if url else ""))
+    lines.append(_DISCLAIMER)
+    return "\n".join(lines)
+
+
+def _format_pump_risk(out: dict) -> str:
+    if "error" in out:
+        return f"Sorry, I couldn't read Pumpwatch's risk data: {out['error']}. {_DISCLAIMER}"
+    t, mode = out["ticker"], out["data_mode"]
+    if out["score"] is None:
+        return (
+            f"Pumpwatch does not score {t} ({mode} data), so there is no pump-risk read. "
+            f"It tracks a short watchlist only. {_DISCLAIMER}"
+        )
+    lines = [
+        f"Pumpwatch ({mode} data) rates {t} {out['score']:.0f}/100: {out['verdict']}.",
+        "This is a risk signal about unusual, coordinated hype, not a prediction of the price.",
+    ]
+    if out["stale_sources"]:
+        lines.append(f"Some inputs have stopped updating ({', '.join(out['stale_sources'])}), so the score may lag.")
+    if out["top_contributors"]:
+        lines.append(
+            "Biggest drivers: "
+            + ", ".join(f"{c['featureGroup']} ({c['delta']:+.1f})" for c in out["top_contributors"])
+            + "."
+        )
+    cat = out["catalyst"]
+    if cat is None:
+        lines.append("No catalyst check is on record for the latest flag.")
+    elif cat.get("found"):
+        lines.append(f"A possible catalyst was found ({len(cat['items'])} item(s)), so the score is discounted.")
+    else:
+        lines.append("No catalyst (news that would explain the move) was found.")
+    flags = out["recent_flags"]
+    lines.append(
+        f"{len(flags)} recent flag{'s' if len(flags) != 1 else ''} on {t}."
+        if flags else f"No recent flags on {t}."
+    )
     lines.append(_DISCLAIMER)
     return "\n".join(lines)
 

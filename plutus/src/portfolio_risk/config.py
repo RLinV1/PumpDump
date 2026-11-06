@@ -34,8 +34,8 @@ DEFAULT_LOOKBACK_DAYS = 504  # ~2 years of trading days
 COLLECTION_NAME = "filings"
 
 # --- Claude ---
-# Sonnet 4.6 is much cheaper than Opus 4.8 — preferred for the agent's API calls.
-MODEL = "claude-sonnet-4-6"
+# Sonnet is much cheaper than Opus — preferred for the agent's API calls.
+MODEL = "claude-sonnet-5-5"
 MAX_TOKENS = 16000
 # Reasoning effort: low | medium | high. Lower = faster + cheaper (fewer, more
 # consolidated tool calls, less preamble). "low" keeps the advisor snappy.
@@ -65,6 +65,16 @@ def use_mock_llm() -> bool:
         return False
     # auto
     return not bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+
+
+def pumpwatch_api_url() -> str | None:
+    """Base URL of the Pumpwatch read API (``get_pump_risk``); None => the tool says it is not configured."""
+    return os.environ.get("PUMPWATCH_API_URL", "").strip().rstrip("/") or None
+
+
+def public_mode() -> bool:
+    """PLUTUS_PUBLIC=1 (the Pumpwatch service): no portfolio, paper-trading or per-user tools."""
+    return _flag("PLUTUS_PUBLIC", "0") in ("1", "true", "yes")
 
 
 def edgar_user_agent() -> str:

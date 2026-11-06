@@ -1,0 +1,29 @@
+# Pumpwatch research-assistant image: only api/assistant_service.py, no frontend, no database, no broker.
+# Build context is this directory (plutus/). Python 3.13 because pyproject caps at <3.14.
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/src:/app HF_HOME=/opt/hf-cache \
+    PLUTUS_PUBLIC=1 USE_MOCK_DATA=1 USE_MOCK_LLM=auto
+
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dependencies first (CPU-only torch is far smaller than the CUDA wheel) so source edits keep this layer.
+COPY pyproject.toml ./
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu \
+    && python -c "import tomllib;print('\n'.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))" > /tmp/req.txt \
+    && pip install -r /tmp/req.txt
+
+COPY src ./src
+COPY api ./api
+# Bake the RAG index and the embedding model into the image so the container needs no network to answer.
+RUN python -m portfolio_risk.rag.ingest \
+    && useradd --system --home /app plutus && chown -R plutus /app/data /opt/hf-cache
+USER plutus
+
+EXPOSE 8090
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=30s \
+    CMD curl -fsS http://127.0.0.1:8090/healthz >/dev/null || exit 1
+CMD ["uvicorn", "api.assistant_service:app", "--host", "0.0.0.0", "--port", "8090"]

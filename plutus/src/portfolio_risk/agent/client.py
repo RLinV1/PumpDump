@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 
 from .. import config
 from ..cache import cache_get_json, cache_set_json
+from ..tools import PORTFOLIO_TOOLS
 from .base import AgentResult
 from .prompts import SYSTEM_PROMPT
 
@@ -122,6 +124,7 @@ async def _run_claude(question: str) -> AgentResult:
     server = StdioServerParameters(
         command=sys.executable,
         args=["-m", "portfolio_risk.server.mcp_server"],
+        env=dict(os.environ),  # the SDK default drops USE_MOCK_DATA, PUMPWATCH_API_URL and friends
     )
 
     tool_calls: list[dict] = []
@@ -131,7 +134,9 @@ async def _run_claude(question: str) -> AgentResult:
         async with ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            tools = [async_mcp_tool(t, session) for t in listed.tools]
+            # The public Pumpwatch service must never expose one user's portfolio.
+            hidden = PORTFOLIO_TOOLS if config.public_mode() else frozenset()
+            tools = [async_mcp_tool(t, session) for t in listed.tools if t.name not in hidden]
 
             runner = client.beta.messages.tool_runner(
                 model=config.MODEL,
@@ -252,6 +257,7 @@ async def _run_claude_stream(question: str, q) -> None:
     server = StdioServerParameters(
         command=sys.executable,
         args=["-m", "portfolio_risk.server.mcp_server"],
+        env=dict(os.environ),  # the SDK default drops USE_MOCK_DATA, PUMPWATCH_API_URL and friends
     )
     tools_used: list[str] = []
 
@@ -259,7 +265,9 @@ async def _run_claude_stream(question: str, q) -> None:
         async with ClientSession(read, write) as session:
             await session.initialize()
             listed = await session.list_tools()
-            tools = [async_mcp_tool(t, session) for t in listed.tools]
+            # The public Pumpwatch service must never expose one user's portfolio.
+            hidden = PORTFOLIO_TOOLS if config.public_mode() else frozenset()
+            tools = [async_mcp_tool(t, session) for t in listed.tools if t.name not in hidden]
 
             runner = client.beta.messages.tool_runner(
                 model=config.MODEL,
