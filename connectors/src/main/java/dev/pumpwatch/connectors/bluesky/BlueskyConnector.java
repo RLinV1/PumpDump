@@ -14,6 +14,8 @@ import dev.pumpwatch.connectors.core.ConnectorPublishers;
 import dev.pumpwatch.connectors.core.SeenItems;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -81,6 +83,7 @@ public class BlueskyConnector implements Connector {
     @Override public String name() { return SOURCE; }
 
     @Override
+    @PostConstruct
     public synchronized void start() {
         if (running) return;
         running = true;
@@ -90,6 +93,7 @@ public class BlueskyConnector implements Connector {
     }
 
     @Override
+    @PreDestroy
     public synchronized void stop() {
         running = false;
         var t = thread;

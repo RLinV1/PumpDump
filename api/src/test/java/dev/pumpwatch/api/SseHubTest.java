@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class SseHubTest {
     static final Instant T = Instant.parse("2026-01-01T00:00:00Z");
@@ -21,6 +22,17 @@ class SseHubTest {
 
     ReadRepository repo = mock(ReadRepository.class);
     SseHub hub = new SseHub(repo, PROPS);
+
+    @Test
+    void springCreatesTheHubWithItsProductionDependencies() {
+        new ApplicationContextRunner().withUserConfiguration(SseHub.class)
+                .withBean(ReadRepository.class, () -> repo).withBean(ApiProperties.class, () -> PROPS)
+                .run(context -> {
+                    assertThat(context).hasSingleBean(SseHub.class);
+                    context.getBean(SseHub.class).subscribe("live", null);
+                    verify(repo).maxFlagId("live");
+                });
+    }
 
     static FlagView flag(long id) {
         var e = new Flag.Evidence(70, "rules-1", List.of(), 5, 2, new Flag.CatalystCheck(false, T, T, List.of()));

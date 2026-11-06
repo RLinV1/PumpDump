@@ -22,11 +22,15 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 class BlueskyConnectorTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-27T12:05:00Z"), ZoneOffset.UTC);
@@ -80,6 +84,36 @@ class BlueskyConnectorTest {
     private void await(BooleanSupplier c) throws Exception {
         for (int i = 0; i < 500 && !c.getAsBoolean(); i++) Thread.sleep(10);
         assertThat(c.getAsBoolean()).isTrue();
+    }
+
+    @Test
+    void springStartsTheFeedAndStopsItWhenTheContextCloses() throws Exception {
+        var stopped = new CountDownLatch(1);
+        publisher = new ConnectorPublisher("bluesky", new InMemoryOutbox(), (t, k, v) -> {
+            sent.add(new String[] {t, k, v});
+            return CompletableFuture.completedFuture(null);
+        }, PumpwatchKafkaProperties.defaults(), meters, CLOCK);
+        publisher.start();
+        String post = lines("jetstream-sample.jsonl").getFirst();
+        JetstreamClient socket = (uri, onMessage) -> {
+            try {
+                onMessage.accept(post);
+                new CountDownLatch(1).await();
+            } finally {
+                stopped.countDown();
+            }
+        };
+        connector = new BlueskyConnector(PROPS, List.of("GME"), publisher, seen, positions, socket, meters, CLOCK,
+                Duration.ofMillis(1), Duration.ofMillis(4));
+        try (var context = new AnnotationConfigApplicationContext()) {
+            TestPropertyValues.of("pumpwatch.sources.bluesky.enabled=true").applyTo(context);
+            context.registerBean(BlueskyConnector.class, () -> connector);
+            context.refresh();
+            await(() -> !sent.isEmpty());
+            assertThat(Json.fromJson(sent.getFirst()[2], PostRecord.class).text()).isEqualTo("Loading up on $GME today");
+        }
+        assertThat(stopped.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(positions.saved).containsKey("bluesky");
     }
 
     @Test
