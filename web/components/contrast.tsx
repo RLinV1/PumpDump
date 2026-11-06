@@ -24,10 +24,10 @@ const CASES = [
 const SCORE_Y = 100 - 8 - FLAG_LEVEL * 84;
 
 // A server component: the charts wipe in with CSS scroll-driven animation and ship no JavaScript.
-function Lanes({ catalyst }: { catalyst: boolean }) {
+function Lanes({ catalyst, compact = false }: { catalyst: boolean; compact?: boolean }) {
   const s = catalyst ? explained : HYPE;
   return (
-    <div className="border border-line bg-surface">
+    <div className="border border-line-strong bg-surface">
       <svg
         viewBox="0 0 1000 100"
         preserveAspectRatio="none"
@@ -37,14 +37,14 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
             ? "Illustrative chart: after an 8-K filing, chatter and price rise less, and the score stays below the flag level."
             : "Illustrative chart: with no filing or news, chatter and price rise sharply and the score crosses the flag level."
         }
-        className="vclip block h-36 w-full"
+        className={`vclip block w-full ${compact ? "h-24" : "h-44"}`}
       >
         {[25, 50, 75].map((y) => (
           <line key={y} x1="0" x2="1000" y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 7" vectorEffect="non-scaling-stroke" />
         ))}
         <path d={area(s.chatter)} fill="var(--text)" fillOpacity="0.1" />
-        <path d={path(s.price)} fill="none" stroke="var(--text)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        <path d={path(s.chatter)} fill="none" stroke="var(--text)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        <path d={path(s.price)} fill="none" stroke="var(--cyan)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        <path d={path(s.chatter)} fill="none" stroke="var(--cyan)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
 
       <div className="relative h-10 border-t border-line">
@@ -87,23 +87,23 @@ function Lanes({ catalyst }: { catalyst: boolean }) {
 
 export function Contrast() {
   return (
-    <section className="py-24 md:py-32">
-      <div className="mx-auto max-w-[1400px] px-4 md:px-8">
-        <h2 className={`${heading} max-w-3xl`}>Not every spike is a pump.</h2>
-        <div className="mt-12 grid gap-12 md:grid-cols-2 md:gap-16">
-          {CASES.map((c) => {
+    <section className="border-b border-line py-16 md:py-24">
+      <div className="mx-auto max-w-[1500px] px-4 md:px-8">
+        <h2 className={`${heading} max-w-4xl`}>Not every spike is a pump.</h2>
+        <div className="mt-10 grid items-start gap-10 lg:grid-cols-[7fr_5fr] lg:gap-14">
+          {CASES.map((c, i) => {
             const verdict = verdictOf(c.score);
             return (
               <article key={c.title}>
-                <Lanes catalyst={c.catalyst} />
+                <Lanes catalyst={c.catalyst} compact={i === 1} />
                 <div className="mt-5 flex items-start justify-between gap-6">
-                  <h3 className="text-xl font-semibold tracking-tight">{c.title}</h3>
-                  <span className={`shrink-0 px-2.5 py-1 font-mono text-xs font-medium uppercase tracking-wide ${verdict.style}`}>
+                  <h3 className="font-display text-3xl font-extrabold uppercase leading-none text-accent">{c.title}</h3>
+                  <span className={`shrink-0 px-2.5 py-1 font-mono text-xs font-semibold uppercase ${verdict.style}`}>
                     {verdict.label}
                   </span>
                 </div>
                 <p className="mt-2 max-w-[46ch] text-pretty leading-relaxed text-mute">{c.body}</p>
-                <dl className="mt-4 grid max-w-sm gap-1 font-mono text-xs text-mute">
+                <dl className="mt-4 grid max-w-sm gap-1 font-mono text-xs text-accent">
                   <div className="flex justify-between">
                     <dt>News or filing</dt>
                     <dd className="text-text">{c.news}</dd>

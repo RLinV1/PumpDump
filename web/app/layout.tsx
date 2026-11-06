@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
-import { SmoothScroll } from "@/components/smooth-scroll";
+import { Big_Shoulders, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const ui = Instrument_Sans({
-  variable: "--font-ui",
+// Display: a condensed, industrial face for headlines. Data and body: a monospace, so columns line up.
+const display = Big_Shoulders({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["700", "800", "900"],
+  adjustFontFallback: false,
 });
 
-const data = JetBrains_Mono({
+const data = IBM_Plex_Mono({
   variable: "--font-data",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -21,11 +24,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${ui.variable} ${data.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <SmoothScroll />
-        {children}
-      </body>
+    <html lang="en" className={`${display.variable} ${data.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

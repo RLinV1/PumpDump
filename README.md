@@ -10,21 +10,21 @@ not buy or sell advice. Sentiment describes sampled text; it does not predict re
 
 ## Screenshots
 
-All images come from a production build run with mock data (`DATA_MODE=mock`): no API keys, no backend, and every figure shown is invented for the demo.
+All images come from a production build run with mock data (`DATA_MODE=mock`): no API keys, no backend, and every figure shown is invented for the demo. The screens are labelled MOCK where they show a figure. No real market data appears in any image.
 
 ### Landing page
 
-![Landing hero: headline, GME risk score chart and the evidence behind the flag](docs/img/landing-hero.png)
+![Landing hero: uneven split with the headline on the left and a mock GME risk panel on the right](docs/img/landing-hero.png)
 
-The hero pairs a risk score chart with the evidence behind the latest flag.
+The hero splits 7 to 5: the headline on one side, a terminal panel with the risk score chart and the evidence behind the latest flag on the other.
 
-![What it reads: social posts, live trades, news and company filings](docs/img/landing-what-it-reads.png)
+![What it reads: a numbered list of the four feeds](docs/img/landing-what-it-reads.png)
 
 The four feeds Pumpwatch reads, matched to the same ticker and clock.
 
 ![How it works: social chatter and price rise together with no news or filing](docs/img/landing-pump-shape-price.png)
 
-Scroll story, step one: chatter and price climb while the news row stays empty.
+Scroll story, step one: chatter builds first while the news row stays empty.
 
 ![How it works: the flag is raised while the price is still high](docs/img/landing-pump-shape-flag.png)
 
@@ -42,19 +42,27 @@ Ticking "a filing or news story explains the move" lowers the same score to Watc
 
 Not every spike is a pump: the same chatter with an 8-K filed first scores lower.
 
-![Project status and footer disclaimer](docs/img/landing-status.png)
+![Project status table and footer disclaimer](docs/img/landing-status.png)
 
 Project status and the footer disclaimer.
 
-### Live dashboard
+### Terminal (`/live`)
 
-![Live dashboard: watchlist, GME score chart and flags](docs/img/live-watchlist-score-flags.png)
+![Terminal: command line, ticker strip, watchlist with prices and risk, score chart, flags, news, sentiment and movers](docs/img/live-watchlist-score-flags.png)
 
-Watchlist, six-hour score history for the selected stock, and recent flags.
+The terminal fills the screen: a command line, a ticker strip, numbered panels (1 watchlist, 2 score chart, 3 flags, 4 news, 5 sentiment, 6 movers) and a status line with data mode, clock and link state.
 
-![Live dashboard: stock news, sentiment panel, market movers and daily news](docs/img/live-news-sentiment-movers.png)
+![Terminal after the MOV command: the movers panel is highlighted](docs/img/live-news-sentiment-movers.png)
 
-Stock news, the Bluesky sentiment panel (collection is off in mock mode), market movers (gainers, losers, intraday swings) and daily market news.
+Typing `MOV` and pressing Enter jumps to the movers panel and highlights its title bar. News, sentiment collection (off in mock mode) and movers are in the same view.
+
+![Terminal help listing the commands](docs/img/live-command-help.png)
+
+`HELP` lists the commands: a ticker selects it, `WL GR FLAG NEWS SENT MOV` or a panel number jumps to a panel, `ADD` and `RM` edit the watchlist.
+
+![Terminal showing an unknown command error](docs/img/live-command-error.png)
+
+Unknown input shows an inline error and points to `HELP`.
 
 ### Mobile (390x844)
 
@@ -62,9 +70,25 @@ Stock news, the Bluesky sentiment panel (collection is off in mock mode), market
 
 Landing hero on mobile.
 
-![Live dashboard on a phone-sized screen](docs/img/live-mobile.png)
+![Landing feeds list on a phone-sized screen](docs/img/landing-mobile-feeds.png)
 
-Live dashboard watchlist on mobile.
+The numbered feeds list stacks to one column.
+
+![Landing detector on a phone-sized screen](docs/img/landing-mobile-detector.png)
+
+The detector keeps its verdict pinned above the sliders.
+
+![Terminal on a phone-sized screen](docs/img/live-mobile.png)
+
+The terminal becomes one stacked column and keeps the command line, the ticker strip and the panel keys.
+
+![Terminal news and sentiment panels on a phone-sized screen](docs/img/live-mobile-news.png)
+
+After `NEWS`: the news panel is highlighted below the score chart and flags.
+
+![Terminal movers panel on a phone-sized screen](docs/img/live-mobile-movers.png)
+
+After `MOV`: the movers panel is highlighted at the end of the column.
 
 
 ## Documentation
