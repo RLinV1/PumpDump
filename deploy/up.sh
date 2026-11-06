@@ -8,8 +8,12 @@ IP=$(terraform -chdir=infra output -raw url | sed 's|http://||')
 SSH="pumpwatch@$IP"
 # the marker is written last by the startup script, after Docker, the docker group and /opt/pumpwatch exist
 until ssh -o StrictHostKeyChecking=accept-new "$SSH" 'test -f /opt/pumpwatch/.vm-ready && docker info' >/dev/null 2>&1; do echo "waiting for VM..."; sleep 10; done
-# secrets travel by scp, never through Terraform state
 git archive HEAD | ssh "$SSH" 'tar -x -C /opt/pumpwatch'
-scp .env "$SSH:/opt/pumpwatch/.env"
+# Secrets travel over SSH, never through Terraform state. Alpaca keys never reach this public VM: their terms cover
+# personal use, and public redistribution is unverified (docs/data-sources.md). DEPLOY_DATA_MODE=live is for load tests.
+{ grep -vE '^(ALPACA_|DATA_MODE=)' .env; printf 'ALPACA_ENABLED=false
+ALPACA_NEWS_ENABLED=false
+DATA_MODE=%s
+' "${DEPLOY_DATA_MODE:-mock}"; } | ssh "$SSH" 'umask 077; cat > /opt/pumpwatch/.env'
 ssh "$SSH" 'cd /opt/pumpwatch && PROXY_BIND=0.0.0.0 docker compose --profile apps up -d --build'
 deploy/ready.sh "http://$IP"

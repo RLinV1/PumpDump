@@ -9,6 +9,10 @@ One Compute Engine VM runs the whole stack with Docker Compose. Caddy forwards e
 - Set a strong `POSTGRES_PASSWORD` in `.env` before the first start.
 - Set `API_RATE_LIMIT_PER_MINUTE` high (for example `100000`) before a capacity load test, and leave the default for a protection test.
 
+## Data on the public VM
+
+The VM always serves labelled mock data, and `deploy/up.sh` strips every `ALPACA_` line from `.env` before copying it. Alpaca's free plan is for personal use and public redistribution rights are unverified (`docs/data-sources.md`), so real market data stays on your own machine: set `DATA_MODE=live` and your keys in the local `.env`.
+
 ## Create
 
 ```bash
@@ -26,6 +30,8 @@ deploy/ready.sh http://<vm-ip>
 ```
 
 ## Load test
+
+Mock mode answers `/api` in the web server, so deploy with `DEPLOY_DATA_MODE=live deploy/up.sh` for a load test. This reaches the Java API with no Alpaca keys, and the VM holds only `load/seed.sql` data. Redeploy with plain `deploy/up.sh` afterwards.
 
 Run from a second machine (Cloud Shell works) so the VM link is what you measure.
 

@@ -193,7 +193,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATA_MODE: live # mock would answer /api itself and bypass the Java API
+      DATA_MODE: ${DATA_MODE:-mock} # live needs Alpaca keys; deploy/up.sh keeps the public VM on mock
       API_ORIGIN: http://api:8083
       TRUST_PROXY_HEADERS: "true" # web has no published port; Caddy is its only peer
     restart: unless-stopped
