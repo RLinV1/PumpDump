@@ -96,7 +96,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13" # plutus requires 3.13
       - run: pip install -r ml/requirements.txt
       - run: pip install ./plutus
       - run: (cd web && npm ci)
