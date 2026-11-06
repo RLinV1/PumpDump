@@ -1,0 +1,11 @@
+:80 {
+	handle /api/* {
+		# flush_interval -1 sends SSE events immediately instead of buffering
+		reverse_proxy api:8083 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -26,3 +26,5 @@ The system is meant to run on a clean Linux machine, not only on a laptop. A sho
 - New files: infrastructure code under `infra/`, a startup script, a runbook in `docs/`.
 - External systems: one AWS account. The machine, its disk and its network traffic cost money unless covered by credits; the budget alarm is the guard. The AWS emulator used for rehearsal is free for students.
 - Assumption to confirm: the account's current free allowance or credits, since AWS's offer has changed over time.
+
+> Superseded by `add-gcp-deployment` (Google Cloud instead of AWS).
