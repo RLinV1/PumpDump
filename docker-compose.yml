@@ -164,6 +164,8 @@ services:
       KAFKA_BOOTSTRAP: kafka:19092
       POSTGRES_URL: jdbc:postgresql://postgres:5432/pumpwatch
       API_PORT: "8083"
+      # Docker network only: the web container forwards the client address. Port 8083 is not public.
+      API_TRUSTED_PROXIES: '127\.0\.0\.1|::1|0:0:0:0:0:0:0:1|172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+'
     depends_on:
       kafka:
         condition: service_healthy
@@ -193,6 +195,7 @@ services:
     environment:
       DATA_MODE: live # mock would answer /api itself and bypass the Java API
       API_ORIGIN: http://api:8083
+      TRUST_PROXY_HEADERS: "true" # web has no published port; Caddy is its only peer
     restart: unless-stopped
 
   proxy:

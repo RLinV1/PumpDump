@@ -115,6 +115,14 @@ class ApiControllerTest {
     }
 
     @Test
+    void aStreamClientOverTheLimitGets503NotA500() throws Exception {
+        when(hub.subscribe(any(), any(), any())).thenThrow(new SseHub.TooManyStreams());
+        mvc.perform(get("/api/v1/flags/stream").accept("text/event-stream"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("too many open streams"));
+    }
+
+    @Test
     void streamRejectsNonNumericLastEventId() throws Exception {
         mvc.perform(get("/api/v1/flags/stream").header("Last-Event-ID", "abc")).andExpect(status().isBadRequest());
     }

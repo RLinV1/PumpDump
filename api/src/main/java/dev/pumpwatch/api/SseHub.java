@@ -21,7 +21,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Component
 public class SseHub {
     static final int BATCH = 100;
-    static final int MAX_STREAMS_PER_CLIENT = 5;
 
     private static final class Client {
         final SseEmitter emitter;
@@ -76,7 +75,7 @@ public class SseHub {
 
     private boolean full(String owner) {
         return clients.size() >= props.maxStreams()
-                || clients.stream().filter(c -> c.owner.equals(owner)).count() >= MAX_STREAMS_PER_CLIENT;
+                || clients.stream().filter(c -> c.owner.equals(owner)).count() >= props.maxStreamsPerClient();
     }
 
     int clientCount() {

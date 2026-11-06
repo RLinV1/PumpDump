@@ -14,13 +14,13 @@
 ## 3. Load testing
 
 - [x] 3.1 Add `load/api.js` (ramping read-endpoint test with thresholds)
-- [x] 3.2 Add `load/stream.js` (concurrent SSE connections, connected and dropped counts)
-- [ ] 3.3 Add `load/run.sh` that runs both through the k6 image and writes `load/results/summary.md`
-- [ ] 3.4 Run against the local stack and record a baseline
+- [x] 3.2 Add `load/stream.mjs` (real SSE clients; counts only clients receiving data, and times flag delivery)
+- [x] 3.3 Add `load/run.sh` that runs both through the k6 image and writes `load/results/summary.md`
+- [x] 3.4 Run against the local stack and record a baseline
 
 ## 4. Docs and verification
 
 - [x] 4.1 Write `docs/deploy-gcp.md` runbook: prerequisites, create, verify, load test, destroy
-- [ ] 4.2 Add website screenshots (Playwright) and a performance section to the README
+- [x] 4.2 Add website screenshots (Playwright) and a performance section to the README
 - [x] 4.3 Validate Terraform (`terraform validate`), compose config, web build and lint
 - [x] 4.4 Mark `add-ec2-smoke-deployment` as superseded

@@ -16,12 +16,19 @@ Three issues sit in files this review was told not to edit. They are listed as o
 `SseHub.subscribe` only checked the global `api.max-streams` (100). The rate limiter allows a 30 request burst and 120 per minute, and each stream lives up to 30 minutes, so one script fills all 100 slots in under a minute. Every other visitor then gets 503 on `/api/v1/flags/stream`, and the poller does one Postgres query per second per stream.
 Fix: at most 5 streams per client key (`SseHub.MAX_STREAMS_PER_CLIENT`), counted under a lock so concurrent opens cannot overshoot. Tests: `SseHubTest.oneClientCannotTakeEverySlot`.
 
-**M2. Every visitor shares one rate-limit bucket behind Caddy (fixed in the template, needs a check on the VM).**
-Caddy sends `/api/*` straight to `api:8083`. The API only trusts forwarding headers from loopback by default (`server.tomcat.remoteip.internal-proxies`), so the peer address it sees is Caddy's Docker address for everyone. All visitors then share 120 requests a minute and one stream quota, so one visitor can lock out the rest, and the per-client stream cap above would count everyone as one client.
-Fix: `.env.example` now defaults `API_TRUSTED_PROXIES` to loopback plus the Docker private range `172.16.0.0/12`. Caddy overwrites any `X-Forwarded-For` sent by an untrusted client, and Tomcat takes the right-most untrusted hop, so a caller cannot spoof it (already covered by `ProxyRateLimitTest`). Anyone who copied an older `.env` must update the line. After deploy, check `/api/v1/watchlist` from two different networks and confirm they do not share a 429.
+**M2. Every visitor shared one rate-limit bucket behind the proxy (fixed; confirm on the VM).**
+Traffic goes Caddy, then the web server, then the API. The web server replaced `X-Forwarded-For` with its socket peer, which is Caddy for everyone, so all visitors shared 120 requests a minute and the per-client stream cap would have limited the whole site to 5 streams.
+Fix: Caddy sets `X-Forwarded-For` from the real peer and ignores what the client sent. Compose sets `TRUST_PROXY_HEADERS=true` on the web container, which has no published port, so the web server keeps only the right-most entry. Compose also sets `API_TRUSTED_PROXIES` to loopback plus `172.16.0.0/12` on the API, whose port is not public. A caller cannot spoof the address (`ProxyRateLimitTest`, `web/tests/server-headers.test.mjs`).
 
-**M3. Web image does not run the hardened server (open, `web/Dockerfile`, not edited).**
-`web/Dockerfile` ends with `CMD ["node", "server.js"]` on the Next `standalone` output. The project's own `web/server.mjs` is not copied into the image, so in the container: the forwarding-header sanitising, the security headers added here, the live context routes (`/api/v1/news`, `/api/v1/market-movers`, `/api/v1/tickers/{t}/news|sentiment`) and `DATA_MODE` handling are all absent. Caddy also sends every `/api/*` request to the API, which does not serve the context routes, so they would return 404 even if the image were fixed. Security effect: the headers and the keys-stay-server-side design are only in force when `server.mjs` runs. Owner of the Dockerfile and Caddyfile should either run `server.mjs` in the image (copy it and its helpers, `node server.mjs`) and route the context paths to `web:3000` before the generic `/api/*` rule, or accept that those panels are off.
+**M4. Live flags never reached browsers through the proxy, and the first load test hid it (fixed).**
+Found by load testing with real clients, not by reading code. Caddy asked the web server for gzip, as every browser does, and Next's compression held the stream back, so clients got headers and no events. Real clients also stopped at 256 connections. k6 had reported 1,000 held connections, because it counts a stalled connection as open.
+Fix: Caddy sends `/api/v1/flags/stream` straight to the API, Next compression is off, and Caddy compresses pages. `load/stream.mjs` now counts a client only when bytes reach it.
+
+**L7. Stream clients over the limit got a 500 instead of a 503 (fixed).**
+The JSON error could not match `Accept: text/event-stream`, so the handler itself failed and logged a stack trace. Error responses now set their content type. Covered by `ApiControllerTest`.
+
+**M3. Web image did not run the hardened server (fixed in PR #69).**
+The image ran Next standalone `server.js`, which skipped `web/server.mjs`. It now runs `node server.mjs`, and Caddy sends all traffic to the web server, which answers news, movers and sentiment itself and proxies the rest of `/api` to the private API.
 
 ### Low
 

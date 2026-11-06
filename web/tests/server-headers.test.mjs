@@ -13,6 +13,15 @@ test("a caller cannot forge its address through the web proxy", () => {
   assert.equal(request.headers["x-real-ip"], undefined);
 });
 
+test("behind the trusted proxy the client address survives, and only the proxy's entry counts", () => {
+  const request = { headers: { host: "pumpwatch.example", "x-forwarded-for": "198.51.100.99, 203.0.113.7" }, socket: { remoteAddress: "172.18.0.5" } };
+  sanitizeForwardingHeaders(request, true);
+  assert.equal(request.headers["x-forwarded-for"], "203.0.113.7");
+  const direct = { headers: { host: "pumpwatch.example" }, socket: { remoteAddress: "172.18.0.5" } };
+  sanitizeForwardingHeaders(direct, true);
+  assert.equal(direct.headers["x-forwarded-for"], "172.18.0.5");
+});
+
 test("different socket clients retain distinct addresses and unrelated headers", () => {
   for (const address of ["203.0.113.7", "203.0.113.8"]) {
     const request = { headers: { host: "pumpwatch.example", accept: "text/event-stream" }, socket: { remoteAddress: address, encrypted: true } };

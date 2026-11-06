@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -98,11 +99,12 @@ public class ApiController {
             MissingServletRequestParameterException.class})
     ResponseEntity<Error> badRequest(Exception e) {
         String msg = e instanceof BadRequest ? e.getMessage() : "invalid request parameter";
-        return ResponseEntity.badRequest().body(new Error(Views.NOTICE, msg));
+        // explicit type: a stream client sends Accept: text/event-stream, which would otherwise turn this into a 500
+        return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON).body(new Error(Views.NOTICE, msg));
     }
 
     @ExceptionHandler(SseHub.TooManyStreams.class)
     ResponseEntity<Error> busy(SseHub.TooManyStreams e) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new Error(Views.NOTICE, "too many open streams"));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).contentType(MediaType.APPLICATION_JSON).body(new Error(Views.NOTICE, "too many open streams"));
     }
 }
