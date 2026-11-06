@@ -46,8 +46,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
         res.setHeader(Views.NOTICE_HEADER, Views.NOTICE);
+        res.setHeader("X-Content-Type-Options", "nosniff");
         // Tomcat resolves forwarding headers only from the configured trusted web host before this filter runs.
-        long retryAfterSeconds = take(req.getRemoteAddr());
+        long retryAfterSeconds = take(clientKey(req.getRemoteAddr()));
         if (retryAfterSeconds == 0) {
             chain.doFilter(req, res);
             return;
@@ -56,6 +57,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         res.setHeader("Retry-After", Long.toString(retryAfterSeconds));
         res.setContentType("application/json");
         res.getWriter().write(TOO_MANY);
+    }
+
+    /** One client is one IPv4 address or one IPv6 /64, so rotating addresses inside a /64 does not mint new buckets. */
+    static String clientKey(String address) {
+        if (address == null || !address.contains(":")) return address;
+        try {
+            byte[] b = java.net.InetAddress.getByName(address).getAddress(); // literal only, no DNS lookup
+            if (b.length != 16) return address;
+            return java.util.HexFormat.of().formatHex(b, 0, 8) + "::/64";
+        } catch (java.net.UnknownHostException e) {
+            return address;
+        }
     }
 
     /** 0 when a token was taken, otherwise whole seconds until one is available. */

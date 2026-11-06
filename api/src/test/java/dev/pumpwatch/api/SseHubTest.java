@@ -29,7 +29,7 @@ class SseHubTest {
                 .withBean(ReadRepository.class, () -> repo).withBean(ApiProperties.class, () -> PROPS)
                 .run(context -> {
                     assertThat(context).hasSingleBean(SseHub.class);
-                    context.getBean(SseHub.class).subscribe("live", null);
+                    context.getBean(SseHub.class).subscribe("live", null, "c");
                     verify(repo).maxFlagId("live");
                 });
     }
@@ -42,7 +42,7 @@ class SseHubTest {
     @Test
     void resumesFromLastEventIdAndAdvancesTheCursor() {
         when(repo.flagsAfter("live", 41, SseHub.BATCH)).thenReturn(List.of(flag(42), flag(43)));
-        hub.subscribe("live", 41L);
+        hub.subscribe("live", 41L, "c");
         hub.tick();
         hub.tick();
         var order = inOrder(repo);
@@ -54,17 +54,26 @@ class SseHubTest {
     @Test
     void withoutLastEventIdStartsFromNow() {
         when(repo.maxFlagId("live")).thenReturn(10L);
-        hub.subscribe("live", null);
+        hub.subscribe("live", null, "c");
         hub.tick();
         verify(repo).flagsAfter("live", 10, SseHub.BATCH);
     }
 
     @Test
     void streamsAreCapped() {
-        hub.subscribe("live", 0L);
-        hub.subscribe("live", 0L);
-        org.junit.jupiter.api.Assertions.assertThrows(SseHub.TooManyStreams.class, () -> hub.subscribe("live", 0L));
+        hub.subscribe("live", 0L, "c");
+        hub.subscribe("live", 0L, "c");
+        org.junit.jupiter.api.Assertions.assertThrows(SseHub.TooManyStreams.class, () -> hub.subscribe("live", 0L, "c"));
         assertThat(hub.clientCount()).isEqualTo(2);
+    }
+
+    @Test
+    void oneClientCannotTakeEverySlot() {
+        var wide = new SseHub(repo, new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 100));
+        for (int i = 0; i < SseHub.MAX_STREAMS_PER_CLIENT; i++) wide.subscribe("live", 0L, "greedy");
+        org.junit.jupiter.api.Assertions.assertThrows(SseHub.TooManyStreams.class, () -> wide.subscribe("live", 0L, "greedy"));
+        wide.subscribe("live", 0L, "other"); // another client still gets in
+        assertThat(wide.clientCount()).isEqualTo(SseHub.MAX_STREAMS_PER_CLIENT + 1);
     }
 
     @Test
@@ -76,7 +85,7 @@ class SseHubTest {
             public Instant instant() { return now; }
         };
         var timed = new SseHub(repo, PROPS, clock);
-        var emitter = timed.subscribe("live", 0L);
+        var emitter = timed.subscribe("live", 0L, "c");
         clock.now = T.plusSeconds(16);
         timed.tick(); // no flags, heartbeat due: the send is buffered on the not-yet-started emitter, not an error
         assertThat(timed.clientCount()).isEqualTo(1);

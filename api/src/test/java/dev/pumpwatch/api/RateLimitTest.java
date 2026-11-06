@@ -32,4 +32,17 @@ class RateLimitTest {
                 .andExpect(header().string(Views.NOTICE_HEADER, Views.NOTICE))
                 .andExpect(jsonPath("$.notice").value(Views.NOTICE));
     }
+
+    @Test
+    void ipv6AddressesInOneSlash64ShareABucket() {
+        org.assertj.core.api.Assertions.assertThat(RateLimitFilter.clientKey("2001:db8:1:2:aaaa::1"))
+                .isEqualTo(RateLimitFilter.clientKey("2001:db8:1:2:bbbb::9"))
+                .isNotEqualTo(RateLimitFilter.clientKey("2001:db8:1:3::1"));
+        org.assertj.core.api.Assertions.assertThat(RateLimitFilter.clientKey("198.51.100.7")).isEqualTo("198.51.100.7");
+    }
+
+    @Test
+    void responsesAreNotSniffable() throws Exception {
+        mvc.perform(get("/api/v1/flags")).andExpect(header().string("X-Content-Type-Options", "nosniff"));
+    }
 }

@@ -21,15 +21,18 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Component
 public class SseHub {
     static final int BATCH = 100;
+    static final int MAX_STREAMS_PER_CLIENT = 5;
 
     private static final class Client {
         final SseEmitter emitter;
         final String runId;
+        final String owner;
         long cursor;
         Instant lastSent;
 
-        Client(SseEmitter emitter, String runId, long cursor, Instant now) {
+        Client(SseEmitter emitter, String runId, String owner, long cursor, Instant now) {
             this.emitter = emitter;
+            this.owner = owner;
             this.runId = runId;
             this.cursor = cursor;
             this.lastSent = now;
@@ -54,18 +57,26 @@ public class SseHub {
         this.clock = clock;
     }
 
-    /** lastEventId null means "from now". */
-    public SseEmitter subscribe(String runId, Long lastEventId) {
-        if (clients.size() >= props.maxStreams()) throw new TooManyStreams();
+    /** lastEventId null means "from now". owner is the rate-limit client key, so one client cannot fill every slot. */
+    public SseEmitter subscribe(String runId, Long lastEventId, String owner) {
+        if (full(owner)) throw new TooManyStreams();
         var emitter = new SseEmitter(30 * 60 * 1000L); // browsers reconnect with Last-Event-ID
         long cursor = lastEventId != null ? lastEventId : repo.maxFlagId(runId);
-        var client = new Client(emitter, runId, cursor, clock.instant());
-        clients.add(client);
+        var client = new Client(emitter, runId, owner, cursor, clock.instant());
+        synchronized (clients) {
+            if (full(owner)) throw new TooManyStreams();
+            clients.add(client);
+        }
         Runnable drop = () -> clients.remove(client);
         emitter.onCompletion(drop);
         emitter.onTimeout(drop);
         emitter.onError(e -> drop.run());
         return emitter;
+    }
+
+    private boolean full(String owner) {
+        return clients.size() >= props.maxStreams()
+                || clients.stream().filter(c -> c.owner.equals(owner)).count() >= MAX_STREAMS_PER_CLIENT;
     }
 
     int clientCount() {

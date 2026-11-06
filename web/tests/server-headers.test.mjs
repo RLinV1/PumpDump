@@ -28,3 +28,11 @@ test("normalized API paths cannot bypass the mock-mode boundary", () => {
     assert.equal(routing.isApiRequest(target), true, target);
   assert.equal(routing.isApiRequest("/live"), false);
 });
+
+test("every web response carries the baseline security headers", () => {
+  const set = {};
+  routing.applySecurityHeaders({ setHeader: (name, value) => { set[name] = value; } });
+  assert.equal(set["X-Content-Type-Options"], "nosniff");
+  assert.match(set["Content-Security-Policy"], /frame-ancestors 'none'/);
+  assert.ok(set["Referrer-Policy"] && set["Permissions-Policy"]);
+});
