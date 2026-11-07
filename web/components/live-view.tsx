@@ -12,6 +12,8 @@ import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag
 import { PANELS, parseCommand, type Panel as PanelId } from "@/lib/commands";
 import { btnGhost } from "@/lib/ui";
 import { addTicker, parseWatchlist, readWatchlist, saveWatchlist, subscribeWatchlist } from "@/lib/watchlist";
+import { WorkspaceToolbar } from "@/components/workspace-toolbar";
+import { parseWorkspace, readWorkspace, revealPanel, saveWorkspace, subscribeWorkspace, type Workspace } from "@/lib/workspace";
 
 const DOWN = { title: "Risk data unavailable", body: "The latest data could not be loaded. Retry, or use the simulated detector while the feed recovers." };
 const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers", lookup: "lookup", paper: "paper", assistant: "assistant" };
@@ -152,7 +154,7 @@ function SentimentBeside({ ticker, refreshKey }: { ticker: string; refreshKey: n
     : data.modelStatus !== "ready" ? `Model ${data.modelStatus}. No sentiment has been estimated.`
     : data.total === 0 ? "No matching posts to classify in the last 24 hours."
     : `${data.positive} positive, ${data.neutral} neutral, ${data.negative} negative of ${data.total} top posts, last 24 hours.`;
-  return <p className="mb-2 text-xs text-mute" data-testid="sentiment-beside"><span className="text-accent">SENTIMENT</span> <span className="text-white">{body}</span> Financial DistilRoBERTa, context only: not part of the score and not shown to predict pumps.</p>;
+  return <p className="mb-2 text-xs text-mute" data-testid="sentiment-beside"><span className="text-accent">SENTIMENT</span> <span className="text-white">{body}</span> FinTwitBERT, with a separate possible-irony check. Context only: not part of the score and not shown to predict pumps.</p>;
 }
 
 function ChartPanel({ ticker, nonce, stale, refreshKey, quote, active }: { ticker: string; nonce: number; stale: string[]; refreshKey: number; quote?: Quote; active: boolean }) {
@@ -260,6 +262,20 @@ export function LiveView() {
   const [active, setActive] = useState<PanelId>();
   const [out, setOut] = useState<Out>();
   const [command, setCommand] = useState("");
+  const workspaceRaw = useSyncExternalStore(subscribeWorkspace, readWorkspace, () => null);
+  const [sessionWorkspace, setSessionWorkspace] = useState<Workspace>();
+  const [workspaceError, setWorkspaceError] = useState<string>();
+  const workspace = useMemo(() => sessionWorkspace ?? parseWorkspace(workspaceRaw), [sessionWorkspace, workspaceRaw]);
+  const changeWorkspace = useCallback((value: Workspace) => {
+    try {
+      saveWorkspace(value);
+      setSessionWorkspace(undefined);
+      setWorkspaceError(undefined);
+    } catch {
+      setSessionWorkspace(value);
+      setWorkspaceError("Browser storage is unavailable. Your layout works for this session; allow storage to keep it after reload.");
+    }
+  }, []);
   const history = useRef<string[]>([]);
   const cursor = useRef(-1);
   const input = useRef<HTMLInputElement>(null);
@@ -315,10 +331,14 @@ export function LiveView() {
 
   const jump = useCallback((panel: PanelId) => {
     setActive(panel);
-    const el = document.getElementById(ELEMENT[panel]);
-    el?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    el?.focus({ preventScroll: true });
-  }, []);
+    const next = revealPanel(workspace, panel);
+    if (next !== workspace) changeWorkspace(next);
+    requestAnimationFrame(() => {
+      const el = document.getElementById(ELEMENT[panel]);
+      el?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      el?.focus({ preventScroll: true });
+    });
+  }, [workspace, changeWorkspace]);
 
   const onStream = useCallback((open: boolean) => setStreamOpen(open), []);
   const connection = !w.done ? "CONNECTING" : w.failed && !w.data ? "OFFLINE" : streamOpen ? "STREAMING" : "RECONNECTING";
@@ -440,36 +460,32 @@ export function LiveView() {
         <button type="button" onClick={() => setRefreshKey((key) => key + 1)} title="Reload watchlist, quotes, selected chart, flags, news, movers and sentiment" className="ml-auto flex min-h-11 shrink-0 items-center gap-1.5 px-3 uppercase text-accent hover:bg-accent hover:text-bg lg:min-h-9"><span className="font-semibold text-yellow [button:hover_&]:text-bg">RF</span>Refresh all</button>
       </nav>
 
-      <main className="grid flex-1 gap-px bg-line p-px lg:min-h-0 lg:grid-cols-[3fr_5fr_4fr] lg:grid-rows-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)]">
-        <Watchlist w={w} q={q} ticker={ticker} onPick={(t) => { setPick(t); }} symbols={symbols} onAdd={add} onRemove={remove} active={active === "watchlist"} />
-        {ticker ? (
-          <ChartPanel key={ticker} ticker={ticker} nonce={nonce} stale={stale} refreshKey={refreshKey} quote={quote} active={active === "chart"} />
-        ) : (
-          <Panel id="score-chart" number={2} title="Score chart" active={active === "chart"} className="lg:col-start-2 lg:row-start-1">
-            <Message title="No ticker selected" body="Add a stock to your watchlist or select a market mover." />
-          </Panel>
-        )}
-        <FlagFeed onPick={(t) => { setPick(t); }} extra={extra} setExtra={setExtra} refreshKey={refreshKey} onStream={onStream} active={active === "flags"} />
-        <div className="contents">
-          <div className="min-h-0 lg:col-start-2 lg:row-start-2 [&>section]:h-full">
-            <NewsPanel key={ticker ?? "market"} ticker={ticker} refreshKey={refreshKey} active={active === "news"} />
+      <WorkspaceToolbar workspace={workspace} onChange={changeWorkspace} error={workspaceError} />
+
+      <main aria-label={`${workspace.name} workspace`} className={`workspace-grid grid flex-1 auto-rows-[minmax(300px,1fr)] gap-px overflow-y-auto bg-line p-px lg:min-h-0 ${workspace.panels.length === 1 ? "lg:grid-cols-1" : workspace.panels.length === 2 || workspace.panels.length === 4 ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+        {[...workspace.panels, ...PANELS.map((p) => p.id).filter((id) => !workspace.panels.includes(id))].map((id) => (
+          <div key={id} hidden={!workspace.panels.includes(id)} className="min-h-0 [&>section]:h-full">
+            {id === "watchlist" && <Watchlist w={w} q={q} ticker={ticker} onPick={setPick} symbols={symbols} onAdd={add} onRemove={remove} active={active === id} />}
+            {id === "chart" && (ticker ? (
+              <ChartPanel key={ticker} ticker={ticker} nonce={nonce} stale={stale} refreshKey={refreshKey} quote={quote} active={active === id} />
+            ) : (
+              <Panel id="score-chart" number={2} title="Score chart" active={active === id}>
+                <Message title="No ticker selected" body="Add a stock to your watchlist or select a market mover." />
+              </Panel>
+            ))}
+            {id === "flags" && <FlagFeed onPick={setPick} extra={extra} setExtra={setExtra} refreshKey={refreshKey} onStream={onStream} active={active === id} />}
+            {id === "news" && <NewsPanel key={ticker ?? "market"} ticker={ticker} refreshKey={refreshKey} active={active === id} />}
+            {id === "sentiment" && (ticker ? <SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} active={active === id} /> : (
+              <Panel id="stock-sentiment" number={5} title="Sentiment" active={active === id}>
+                <Message title="No ticker selected" body="Select a stock to view sentiment collection status." />
+              </Panel>
+            ))}
+            {id === "movers" && <MoversPanel state={movers} selectedTicker={ticker} active={active === id} onPick={setPick} />}
+            {id === "lookup" && <LookupPanel state={lookup.state} onRetry={(t) => void lookup.look(t)} active={active === id} />}
+            {id === "paper" && <PaperPanel paper={paper} onConfirmReset={() => void paper.reset().then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }))} active={active === id} />}
+            {id === "assistant" && <AssistantPanel state={assistant.state} onAsk={(question) => void assistant.ask(question)} active={active === id} />}
           </div>
-          {ticker ? (
-            <div className="min-h-0 lg:col-start-2 lg:row-start-3 [&>section]:h-full">
-              <SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} active={active === "sentiment"} />
-            </div>
-          ) : null}
-          <div className="min-h-0 lg:col-start-1 lg:row-start-3 [&>section]:h-full">
-            <MoversPanel state={movers} selectedTicker={ticker} active={active === "movers"} onPick={(symbol) => { setPick(symbol); }} />
-          </div>
-          <div className="min-h-0 lg:col-start-3 lg:row-start-2 [&>section]:h-full">
-            <LookupPanel state={lookup.state} onRetry={(t) => void lookup.look(t)} active={active === "lookup"} />
-          </div>
-          <div className="min-h-0 lg:col-start-3 lg:row-start-3 [&>section]:h-full">
-            <PaperPanel paper={paper} onConfirmReset={() => void paper.reset().then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }))} active={active === "paper"} />
-          </div>
-          <AssistantPanel state={assistant.state} onAsk={(question) => void assistant.ask(question)} active={active === "assistant"} />
-        </div>
+        ))}
       </main>
 
       <footer className="flex flex-wrap items-center gap-x-5 gap-y-0.5 border-t border-accent px-3 py-1 text-xs">

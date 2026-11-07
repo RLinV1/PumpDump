@@ -77,10 +77,12 @@ export function NewsPanel({ ticker, refreshKey, active }: { ticker?: string; ref
       </div>
       <Body state={state}>{(data) => <>
         <p className="px-3 py-2 text-xs text-mute">Last 24 hours, Alpaca news, checked {time(data.asOf)}</p>
+        {data.sentimentModel && <p className="px-3 pb-2 text-xs text-mute">Headline tone: {data.sentimentModel}.{data.sentimentStatus !== "ready" ? " Headline sentiment is temporarily unavailable." : " Text context only, not a price forecast."}</p>}
         {data.items.length === 0 ? <p className="px-3 pb-3 text-xs text-mute">No recent headlines{!market && ticker ? ` for ${ticker}` : ""}.</p> : <ul>
           {data.items.map((item) => <li key={item.id} className="border-t border-line px-3 py-1.5">
             <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-xs leading-snug text-cyan underline underline-offset-4 lg:min-h-0 lg:py-0.5">{item.title}</a>
             <p className="text-xs text-mute">{item.source}, <time dateTime={item.publishedAt} title={time(item.publishedAt)}>{age(item.publishedAt)}</time></p>
+            {item.sentiment && <p className="text-xs text-mute">Headline tone: <span className="text-white">{item.sentiment}</span></p>}
           </li>)}
         </ul>}
       </>}</Body>
@@ -105,8 +107,8 @@ function SentimentResults({ ticker, refreshKey, sample, controls, active }: { ti
   return <Panel id="stock-sentiment" number={5} title={`${ticker} sentiment`} tag={modeTag(state.mode)} active={active}>
     {controls}
     <Body state={state}>{(data) => <div className="space-y-2 p-3 text-xs">
-      <p className="text-xs text-mute">Financial DistilRoBERTa, pretrained, local inference. Bluesky posts.</p>
-      {!data.enabled ? <p>Sentiment collection is disabled.</p> : data.modelStatus === "loading" ? <p role="status">Loading the sentiment model. The first run downloads its weights.</p>
+      <p className="text-xs text-mute">{data.modelName ?? "FinTwitBERT"}, local financial-post sentiment. CardiffNLP checks possible irony separately. Bluesky posts.</p>
+      {!data.enabled ? <p>{state.mode === "mock" ? "Mock demo: no Bluesky posts are collected or analyzed." : "Live Bluesky sentiment collection is switched off. No posts have been analyzed."}</p> : data.modelStatus === "loading" ? <p role="status">Loading the sentiment model. The first run downloads its weights.</p>
         : data.modelStatus === "error" ? <p role="alert">The sentiment model is unavailable. No sentiment has been estimated.</p>
         : <>
           <p className="text-xs text-mute">{data.sample ? `${data.sample.sort === "top" ? "Top-ranked" : "Most recent"} matching posts, last 24 hours, checked ${time(data.asOf)}` : `${data.streamConnected ? "Bluesky connected" : "Bluesky reconnecting"}, last ${data.windowMinutes} minutes`}</p>
@@ -115,9 +117,11 @@ function SentimentResults({ ticker, refreshKey, sample, controls, active }: { ti
             {([["Positive", data.positive, "text-white"], ["Neutral", data.neutral, "text-white"], ["Negative", data.negative, "text-white"]] as const).map(([label, count, tone]) => <div key={label} className="border border-line p-2"><dt className="text-xs text-accent">{label}</dt><dd className={`text-xl ${tone}`}>{count}</dd></div>)}
           </dl>}
           {data.lastPostAt && <p className="text-xs text-mute">Last classified post {age(data.lastPostAt)}.</p>}
+          {data.irony !== undefined && <p className="text-xs text-mute">Possible irony: {data.irony} of {data.total} posts. This detector can produce false flags; tone labels have not been reversed.</p>}
           {data.sample && <a href={`https://bsky.app/search?q=${encodeURIComponent(`$${ticker}`)}&sort=${data.sample.sort}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-cyan underline underline-offset-4 lg:min-h-0">View search on Bluesky</a>}
         </>}
       <p className="border-t border-line pt-2 text-xs leading-relaxed text-mute">This model classifies financial-language tone. Risk scores use rules-v1. The pump-detection LightGBM model remains an offline training pipeline.</p>
+      <p className="text-xs leading-relaxed text-mute">Sarcasm, slang and mixed or quoted claims can be misread. A post mentioning several stocks gets one tone label, which may not describe each stock.</p>
       {data.dropped > 0 && <p className="text-xs text-mute">{data.dropped} posts skipped during processing limits.</p>}
     </div>}</Body>
   </Panel>;

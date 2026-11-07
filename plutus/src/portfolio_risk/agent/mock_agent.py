@@ -168,5 +168,8 @@ def _paper(o: dict) -> str:
     if "orders" in o:
         rows = o["orders"][:5]
         return "Your recent simulated orders:\n" + ("\n".join(f"- {r['side']} {r['qty']} {r['ticker']} at ${r['priceCents'] / 100:.2f}" for r in rows) or "none yet") + "\nSimulated only; I cannot place orders."
+    if not o.get("valuation_available", True):
+        return (f"Your simulated account holds ${o['cashCents'] / 100:,.2f} cash and {len(o['positions'])} position(s). "
+                "Current holding prices, portfolio value and unrealized P&L are unavailable. Simulated only; I cannot place orders.")
     return (f"Your simulated account holds ${o['cashCents'] / 100:,.2f} cash and {len(o['positions'])} position(s), "
             f"total ${o['totalCents'] / 100:,.2f}, P&L ${o['pnlCents'] / 100:+,.2f}. Simulated only; I cannot place orders.")

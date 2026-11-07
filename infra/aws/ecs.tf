@@ -107,7 +107,7 @@ locals {
         },
       ]
     }
-    # Research assistant. Mock data and mock agent only; no ANTHROPIC_API_KEY is ever set here.
+    # Research assistant. Mock data and mock agent only; no Gemini key is ever set here.
     # Persistence: the task filesystem is ephemeral. If paper-trading state must survive restarts, add an EFS
     # file system and mount it with the task definition `volume` block; it is not done because this stack is disposable.
     plutus = {

@@ -8,88 +8,104 @@ The dashboard brings together risk scores, stock news, gainers/losers, observed 
 swings and pretrained Bluesky sentiment. The output is a risk signal with its evidence,
 not buy or sell advice. Sentiment describes sampled text; it does not predict returns.
 
-## Screenshots
+## App walkthrough
 
-All images come from a production build run with mock data (`DATA_MODE=mock`): no API keys, no backend, and every figure shown is invented for the demo. The screens are labelled MOCK where they show a figure. No real market data appears in any image.
+The screenshots below come from the current production UI with labelled **MOCK** data.
+Stock figures and orders are synthetic. The assistant uses its rule-based mock agent.
+Live Bluesky collection is deliberately off in these screenshots; live mode uses the
+local FinTwitBERT model and a separate possible-irony check rather than invented sentiment counts.
 
-### Landing page
+### Your workspace
 
-![Landing hero: uneven split with the headline on the left and a mock GME risk panel on the right](docs/img/landing-hero.png)
+Choose a starting layout, then open **Customize workspace** to show or hide panels
+and move them up or down. Changes save in this browser, including across reloads.
+**Restore default** brings back the standard layout. Commands automatically reveal
+a hidden panel, so every feature remains reachable.
 
-The hero splits 7 to 5: the headline on one side, a terminal panel with the risk score chart and the evidence behind the latest flag on the other.
+| Layout | Panels |
+| --- | --- |
+| Default | Watchlist, risk chart, flags, movers, news and sentiment |
+| Monitor | Watchlist, risk chart and flags |
+| Research | Stock lookup, assistant, news and sentiment |
+| Trading | Watchlist, stock lookup and paper trading |
+| Custom | Your chosen panels in your chosen order |
 
-![What it reads: a numbered list of the four feeds](docs/img/landing-what-it-reads.png)
+![Current default workspace with all six monitoring panels](docs/img/workspace-default.jpg)
 
-The four feeds Pumpwatch reads, matched to the same ticker and clock.
+![Workspace editor with panel checkboxes, order controls, presets and Restore default](docs/img/workspace-customize.jpg)
 
-![How it works: social chatter and price rise together with no news or filing](docs/img/landing-pump-shape-price.png)
+### Pump-and-dump watch
 
-Scroll story, step one: chatter builds first while the news row stays empty.
+The watchlist ranks tracked stocks by risk. Selecting a ticker updates the six-hour
+score chart, news and sentiment. Flags show the triggering evidence, contributing
+feature groups and whether a catalyst was found. The risk score uses rules-v1;
+sentiment is separate context.
 
-![How it works: the flag is raised while the price is still high](docs/img/landing-pump-shape-flag.png)
+![Monitor workspace showing the selected stock, risk history and flag evidence](docs/img/workspace-monitor.jpg)
 
-Scroll story, final step: the risk score crosses the flag level and the flag is raised.
+### Stock search and personal watchlist
 
-![Interactive detector with sliders and a Pump likely verdict](docs/img/landing-detector-pump-likely.png)
+Type a ticker to select it, use **Add stock** or `ADD AAPL` to save it in this browser,
+and use `LOOK GME` or `DES GME` for the stock snapshot. Untracked stocks show
+**No risk score yet**. Lookup includes performance, moving averages, RSI, beta,
+volatility and the 52-week range.
 
-The interactive detector with hype-only inputs gives a Pump likely verdict.
+![AAPL added to the personal watchlist with an honest untracked-stock state](docs/img/workspace-watchlist.jpg)
 
-![Interactive detector with the catalyst box ticked and a Watch verdict](docs/img/landing-detector-watch.png)
+### Research: news, sentiment and market movers
 
-Ticking "a filing or news story explains the move" lowers the same score to Watch.
+The Default layout includes stock/market news and gainers, losers and intraday
+swings. Select any mover to inspect it. The Research layout pairs stock lookup with
+ASK, news and the sentiment panel. Sentiment offers top posts or recent posts from
+the last 24 hours, plus the live Bluesky stream. It analyzes Bluesky posts, not
+X/Twitter tweets. Mock mode reports that collection is off; live mode reports the
+actual classified sample and model status.
 
-![Hype only versus hype with a catalyst, side by side](docs/img/landing-hype-vs-catalyst.png)
+![Research layout with stock indicators, a pump-risk answer, news and sentiment controls](docs/img/workspace-research.jpg)
 
-Not every spike is a pump: the same chatter with an 8-K filed first scores lower.
+### Paper trading
 
-![Project status table and footer disclaimer](docs/img/landing-status.png)
+`BUY GME 10` and `SELL GME 5` create simulated orders at server-decided prices.
+The Trading layout shows cash, positions, marks, P&L and recent orders alongside
+stock lookup. `PT RESET` requires a second confirmation. No real orders are sent.
 
-Project status and the footer disclaimer.
+![Trading layout after a simulated buy, including the position and order history](docs/img/workspace-trading.jpg)
 
-### Terminal (`/live`)
+### Assistant, MCP tools and the knowledge library
 
-![Terminal: command line, ticker strip, watchlist with prices and risk, score chart, flags, news, sentiment and movers](docs/img/live-watchlist-score-flags.png)
+`ASK Is GME being pumped?` reads the same risk signals as the dashboard.
+`ASK What is a pump and dump?` retrieves the local Chroma knowledge library.
+Answers identify Gemini or the mock agent, data mode, tools and sources.
+The assistant's MCP tools can read data and your paper account; they cannot trade.
 
-The terminal fills the screen: a command line, a ticker strip, numbered panels (1 watchlist, 2 score chart, 3 flags, 4 news, 5 sentiment, 6 movers, 7 stock lookup, 8 paper trading; the screenshots below predate panels 7 and 8) and a status line with data mode, clock and link state.
+![Assistant knowledge answer with retrieved Markdown citations and tool provenance](docs/img/workspace-assistant-rag.jpg)
 
-![Terminal after the MOV command: the movers panel is highlighted](docs/img/live-news-sentiment-movers.png)
+### Keyboard commands and mobile
 
-Typing `MOV` and pressing Enter jumps to the movers panel and highlights its title bar. News, sentiment collection (off in mock mode) and movers are in the same view.
+Type `HELP` to see the commands. `/` focuses the command line; the arrow keys recall
+commands and Escape clears it. Workspace selection and customization also work on
+phones, where panels stack in the saved order.
 
-![Terminal help listing the commands](docs/img/live-command-help.png)
+![Current terminal command help, including lookup, trading and ASK](docs/img/workspace-help.jpg)
 
-`HELP` lists the commands: a ticker selects it, `WL GR FLAG NEWS SENT MOV` or a panel number jumps to a panel, `ADD` and `RM` edit the watchlist.
+<img src="docs/img/workspace-mobile.jpg" alt="Monitor workspace on a 390px phone screen with stacked panels" width="390" />
 
-![Terminal showing an unknown command error](docs/img/live-command-error.png)
+### Landing page and simulated detector
 
-Unknown input shows an inline error and points to `HELP`.
+The landing page explains the inputs and scoring flow. Its interactive detector
+lets readers compare coordinated hype with a move supported by a news catalyst.
+The detector is a labelled simulation, separate from market analysis.
 
-### Mobile (390x844)
+### Model checks and load tests
 
-![Landing page on a phone-sized screen](docs/img/landing-mobile.png)
+See [the model comparison and retained failures](docs/sentiment-evaluation-2026-11-06.md)
+and [the local performance/optimization report](docs/performance-2026-11-06.md).
+Use `SENTIMENT_ENABLED=true` in live mode for FinTwitBERT plus a separate possible-irony
+count; use `NEWS_SENTIMENT_ENABLED=true` for Financial DistilRoBERTa headline tone.
+The 46 synthetic social examples exposed sarcasm and negation errors. Neither model
+is claimed to perfectly interpret posts, and possible irony never reverses tone labels.
 
-Landing hero on mobile.
-
-![Landing feeds list on a phone-sized screen](docs/img/landing-mobile-feeds.png)
-
-The numbered feeds list stacks to one column.
-
-![Landing detector on a phone-sized screen](docs/img/landing-mobile-detector.png)
-
-The detector keeps its verdict pinned above the sliders.
-
-![Terminal on a phone-sized screen](docs/img/live-mobile.png)
-
-The terminal becomes one stacked column and keeps the command line, the ticker strip and the panel keys.
-
-![Terminal news and sentiment panels on a phone-sized screen](docs/img/live-mobile-news.png)
-
-After `NEWS`: the news panel is highlighted below the score chart and flags.
-
-![Terminal movers panel on a phone-sized screen](docs/img/live-mobile-movers.png)
-
-After `MOV`: the movers panel is highlighted at the end of the column.
-
+![Current landing page with the simulated risk panel and entry to the terminal](docs/img/landing-current.jpg)
 
 ## Documentation
 
@@ -107,7 +123,7 @@ After `MOV`: the movers panel is highlighted at the end of the column.
 
 ## Stock lookup and paper trading (Plutus)
 
-The pump watch is the product. `plutus/` is the owner's [Plutus](https://github.com/RLinV1/Plutus) project, imported with its git history and trimmed to two small features that sit beside the pump panels in the `/live` terminal. Everything else Plutus had (an AI agent, RAG, accounts, billing, portfolios, alerts, its React app and its AWS deploy files) was removed; git history keeps it.
+The pump watch is the product. `plutus/` is the owner's [Plutus](https://github.com/RLinV1/Plutus) project, imported with its git history. Stock lookup, paper trading and a read-only research assistant sit beside the pump panels in the `/live` terminal.
 
 - **Stock lookup.** `LOOK GME` (alias `DES GME`) fills panel 7 with the name, sector, price, daily move, market cap and P/E, price performance, SMAs, RSI, 52-week range, beta and volatility, from the pure numpy/pandas code in `plutus/src/portfolio_risk/risk/`.
 - **Paper trading.** `BUY GME 10`, `SELL GME 10`, `PT` and `PT RESET` (then `PT RESET CONFIRM`) drive panel 8, marked PAPER: cash, positions, P&L and order history. Whole shares, no shorting, integer cents, atomic updates.
@@ -118,13 +134,50 @@ The pump watch is the product. `plutus/` is the owner's [Plutus](https://github.
 
 > **This is simulated trading, not advice.** There is no broker, no real order and no real money, and nothing here is investment advice. Pumpwatch is a non-commercial project.
 
-![Terminal in mock mode after LOOK GME and a few paper orders: panel 7 shows the lookup, panel 8 the PAPER account, and the pump panels stay on the first screen](docs/img/live-lookup-paper-mock.png)
+![Current Trading workspace with stock lookup and the simulated account](docs/img/workspace-trading.jpg)
 
-![Panels 7 and 8 close up: lookup figures and the PAPER positions and orders](docs/img/live-lookup-paper-mock-panels.png)
+
 
 Mock mode, 1440x900. Mock prices do not move, so a mock buy then sell returns the same cash with zero P&L.
 
 Run it locally with the `apps` profile (`docker compose --profile apps up -d --build`), or without Docker: `cd plutus`, `pip install -e ".[dev]"` on Python 3.13, `USE_MOCK_DATA=1 uvicorn api.service:app --port 8090`, then start the web server with `PLUTUS_ORIGIN=http://127.0.0.1:8090`. CI lints all of `plutus/` with ruff and runs its tests on Python 3.13.
+
+## Research assistant (Gemini, MCP and RAG)
+
+Type `ASK Is GME being pumped?`, or open panel 9 with `ASK`, `AI` or `9`.
+Answers identify the answering agent (Gemini or the rule-based mock), data mode,
+tools used and retrieved sources. The assistant can read stock snapshots, price
+performance, technical indicators, news, pump signals, sentiment and your own paper
+account. Its MCP tools are read-only: it cannot place orders.
+
+Docker Compose starts the private Plutus service and connects its tools to the web
+host. Without a key it uses the mock agent. For local Gemini use, add your own
+`GEMINI_API_KEY` to the root `.env`; `USE_MOCK_LLM=auto` selects Gemini when the key
+is present. `GEMINI_MODEL` defaults to `gemini-3.6-flash` and can be overridden.
+Set `USE_MOCK_LLM=1` to force mock answers. Restart the service after configuration
+changes. Gemini failures fall back to the mock agent with an explanatory note.
+Public VM deployments remove Gemini settings and force the mock agent; AWS also
+uses mock data and the mock agent without a key.
+
+The Chroma library embeds the bundled Markdown seed documents with local ONNX
+all-MiniLM-L6-v2. Docker builds both this library and the pinned Financial
+DistilRoBERTa sentiment model ahead of time; the first build downloads their public
+weights. Social posts use FinTwitBERT plus CardiffNLP possible irony; optional news
+headline tone uses Financial DistilRoBERTa. Sentiment stays separate from the rules risk score.
+
+For a non-Docker setup on Python 3.13, install `plutus/` with `pip install -e ".[dev]"`,
+then run these commands from that directory:
+
+```bash
+python -m portfolio_risk.rag.ingest
+python -m evals.run_evals --agent mock
+USE_MOCK_DATA=1 USE_MOCK_LLM=1 PUMPWATCH_API_URL=http://127.0.0.1:3000 uvicorn api.service:app --port 8090
+```
+
+Start the web host with `PLUTUS_ORIGIN=http://127.0.0.1:8090`. The evaluation gate
+checks tool selection, numeric accuracy, groundedness and retrieval against checked-in
+thresholds. CI builds the seed library and runs this gate with the mock agent; it
+does not need Gemini credentials.
 
 ## How it works
 
@@ -145,7 +198,8 @@ Run it locally with the `apps` profile (`docker compose --profile apps up -d --b
 4. **Read and alert.** A read-only API exposes scores, timelines and flags;
    optional webhooks deliver alerts. The web app labels mock, live and simulated data.
 5. **Add context.** The Node web host separately reads Alpaca news and market movers
-   and runs a pretrained Financial DistilRoBERTa model on matching Bluesky posts.
+   and runs FinTwitBERT on matching Bluesky posts, with CardiffNLP possible irony
+   reported separately. Financial DistilRoBERTa supplies optional news-headline tone.
    The default sample searches top posts from the last 24 hours; users can choose
    most recent posts or the live stream. Positive, neutral and negative counts
    appear beside the selected stock, with the sample size and time window.
@@ -197,7 +251,7 @@ Conventional Commit messages, and changes reach `main` through a pull request.
 ## Run locally
 
 For the web app: Node 22.13+. For the backend: Docker with Compose v2, JDK 21 or newer
-and Maven 3.9+. Offline research uses Python 3.11+; CI uses Python 3.12.
+and Maven 3.9+. Offline research uses Python 3.12+; CI uses Python 3.12.
 
 ```bash
 [ -f .env ] || cp .env.example .env # preserve an existing local configuration
@@ -297,28 +351,16 @@ with real SSE clients that counts a client only if data actually reaches it.
 BASE=http://<host> VUS=100 CONNS=1000 load/run.sh   # writes load/results/summary.md
 ```
 
-Local baseline, 2026-11-05. Full compose stack (Caddy, Next.js, Spring Boot, Postgres, Kafka) on
-Docker Desktop for Windows, with the load generator on the same 16-core machine. Seeded with 50
-tickers, 18,000 score rows and 200 flags (`load/seed.sql`), rate limit raised. Not a cloud result.
+Fresh local results (November 6, 2026): 612.6 direct-API requests/s at 100 virtual
+users, successful-response p95 322.2ms, and 1,000/1,000 clients receiving a synthetic
+flag through the proxy at p95 1.755s. The API run had 29 throttled responses and no
+other errors. Capacity runs temporarily raised limits; normal limits were restored.
 
-| Test | Result |
-| --- | --- |
-| Read API, 100 virtual users, 90 s | 39,504 requests, 438.8 req/s, 0.00% errors |
-| Read API latency | p50 174 ms, p95 397 ms, p99 1,024 ms |
-| Live stream | 1,000 of 1,000 clients receiving data, 0 dropped, 0 refused |
-| Flag delivery to 1,000 clients | all delivered, p95 between 0.9 s and 1.7 s over 4 runs (API polls once a second) |
-| Default limits, 80 parallel requests | 46 rejected with 429; a forged `X-Forwarded-For` did not help; a second client stayed at 200 |
-
-Limit tests, 2026-11-06, same machine. `load/kafka.sh` and `load/pipeline.sh` use throwaway topics and a throwaway stack.
-
-| Test | Result |
-| --- | --- |
-| Live clients | 7,999 of 8,000 received a flag, p95 4.9 s. Hard stop at about 8,190 (Tomcat `max-connections`). Above the cap, the API ran out of its default heap (about 1.4 GB). |
-| Kafka produce, one broker, 256-byte records, `acks=all` | 399,000 msg/s (97 MB/s) at p95 3 ms. Peak 470,000 msg/s; p99 spikes at higher offered rates |
-| Kafka consume | 1.02 million msg/s |
-| Scoring pipeline, backlog of 300,000 ticks replaying one hour, 50 tickers | 164,508 ticks processed in about 2 minutes, up from 3,507 before folding ticks into 15 second panes (about 47x). Worst case: event time runs far faster than real time |
-
-`api.max-streams` defaults to 100 as a safety limit. Raise it with `API_MAX_STREAMS`, and keep it under the limits above.
+See [the performance and optimization report](docs/performance-2026-11-06.md) for
+hardware, raw results, commands, test conditions, the existing 15-second pane
+optimization and its latency/late-data tradeoffs. Earlier stress numbers are clearly
+separated from freshly verified results. These are local measurements, not cloud
+capacity or proof of a before/after speedup.
 
 ## Development checks
 

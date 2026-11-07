@@ -31,7 +31,7 @@ test("add, remove and explicit select take a ticker", () => {
 });
 
 test("anything else is a clear inline error", () => {
-  for (const input of ["FOO BAR", "9", "GME1", "TOOLONG", "../etc"]) {
+  for (const input of ["FOO BAR", "10", "GME1", "TOOLONG", "../etc"]) {
     const result = parseCommand(input);
     assert.equal(result.type, "error", input);
     assert.match(result.message, /UNKNOWN COMMAND/);

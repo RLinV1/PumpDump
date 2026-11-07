@@ -19,8 +19,9 @@ because a real reason for the move makes manipulation less likely. If none is fo
 what raises concern.
 
 ## Sentiment is separate context
-The terminal also shows the tone of recent Bluesky posts, classified by a pretrained model called Financial
-DistilRoBERTa. It counts posts as positive, neutral or negative. Sentiment is shown next to the verdict as context only.
+The terminal also shows the tone of recent Bluesky posts, classified by FinTwitBERT.
+It counts posts as positive, neutral or negative, with CardiffNLP possible irony reported separately.
+Financial DistilRoBERTa is used for news headlines. Sentiment is shown next to the verdict as context only.
 It is not part of the rules-v1 score, and there is no evidence that it predicts pump-and-dump events. In mock mode no
 sentiment is collected, and the app says so instead of showing numbers.
 

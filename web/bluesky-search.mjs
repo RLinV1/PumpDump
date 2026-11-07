@@ -13,7 +13,7 @@ export function createBlueskySearch({ sentiment, fetchImpl = fetch, now = Date.n
   return async function load(ticker, sort = "top") {
     if (!/^[A-Z]{1,5}$/.test(ticker) || !["top", "latest"].includes(sort)) throw new Error("Invalid sentiment search");
     const state = sentiment.snapshot(ticker);
-    const base = { ...state, windowMinutes: 1440, positive: 0, neutral: 0, negative: 0, total: 0, lastPostAt: null, dropped: 0, sample: { sort, examined: 0 } };
+    const base = { ...state, windowMinutes: 1440, positive: 0, neutral: 0, negative: 0, total: 0, irony: 0, lastPostAt: null, dropped: 0, sample: { sort, examined: 0 } };
     if (!state.enabled || state.modelStatus !== "ready") return base;
     const key = `${ticker}:${sort}`, previous = cache.get(key);
     if (previous && previous.expiresAt > now()) {
@@ -48,9 +48,11 @@ export function createBlueskySearch({ sentiment, fetchImpl = fetch, now = Date.n
               || typeof createdAt !== "string" || !Number.isFinite(created) || created < at - DAY || created > at
               || !mentionedTickers(text).has(ticker)) continue;
             seen.add(post.uri);
-            const label = await sentiment.classify(text.slice(0, 3000));
+            const result = sentiment.analyze ? await sentiment.analyze(text.slice(0, 3000)) : { label: await sentiment.classify(text.slice(0, 3000)) };
+            const label = result.label;
             if (!["positive", "neutral", "negative"].includes(label)) throw unavailable();
             data[label]++; data.total++;
+            if (result.irony === true) data.irony++;
             if (data.lastPostAt === null || created > Date.parse(data.lastPostAt)) data.lastPostAt = new Date(created).toISOString();
             if (data.total === 25) break;
           }

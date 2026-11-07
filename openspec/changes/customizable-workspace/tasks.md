@@ -1,0 +1,6 @@
+- [x] Add validated workspace presets and pure layout helpers with failing-then-passing tests.
+- [x] Add inline workspace controls, local persistence and session fallback.
+- [x] Render panels in saved DOM order; commands reveal hidden panels.
+- [x] Run full web tests, lint and production build after final edits.
+- [x] Verify desktop/mobile layout, keyboard controls and persistence in the browser.
+- [x] Update DESIGN and README with current feature screenshots.

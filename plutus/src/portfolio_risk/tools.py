@@ -21,10 +21,11 @@ READ_ONLY_TOOLS = (
     "get_sentiment", "search_knowledge", "get_paper_account", "get_paper_orders",
 )
 
-SENTIMENT_MODEL = "Financial DistilRoBERTa"
+SENTIMENT_MODEL = "FinTwitBERT"
 SENTIMENT_NOTE = (
     "Sentiment is context only. It is the tone of sampled Bluesky posts from a pretrained financial-language model. "
     "It is not part of the rules-v1 risk score, and nothing shows that it predicts pump-and-dump events."
+    " Sarcasm, slang and mixed or quoted claims can be misread; one post label may not describe each stock mentioned."
 )
 _TICKER = re.compile(r"^[A-Z]{1,5}$")
 
@@ -127,6 +128,8 @@ def explain_price_move(ticker: str, period: str = "1d") -> dict:
     def run():
         days = PERIODS[period]
         series = _prices(t, 300)
+        if period != "1d" and len(series) <= days:
+            return _err(f"insufficient price history for {period}")
         if period == "1d":
             _, change = _current(t, series)
             move = round(change * 100.0, 2)
@@ -156,7 +159,7 @@ def _pumpwatch_get(base: str, path: str, timeout: float = 4):
 
 
 def get_sentiment(ticker: str) -> dict:
-    """Financial-language tone of recent Bluesky posts about a ticker, from the pretrained Financial DistilRoBERTa model.
+    """Financial-language tone of recent Bluesky posts about a ticker, from FinTwitBERT with a separate irony check.
 
     Context only: it is not part of the Pumpwatch risk score and is not shown to predict anything.
     """
@@ -174,7 +177,7 @@ def get_sentiment(ticker: str) -> dict:
     if not d or not d.get("enabled") or d.get("modelStatus") != "ready":
         reason = "mock data has no sentiment collection" if mode == "mock" else f"model status: {(d or {}).get('modelStatus', 'unknown')}"
         return {**out, "available": False, "reason": f"Sentiment is not being collected ({reason}). No sentiment has been estimated."}
-    return {**out, "available": True, "window": "top posts, last 24 hours", "positive": d["positive"], "neutral": d["neutral"],
+    return {**out, "available": True, "window": "top posts, last 24 hours", "possible_irony": d.get("irony", 0), "irony_model": "CardiffNLP irony", "positive": d["positive"], "neutral": d["neutral"],
             "negative": d["negative"], "classified": d["total"], "searched": (d.get("sample") or {}).get("examined")}
 
 
@@ -257,7 +260,14 @@ def get_paper_account() -> dict:
     """The asker's simulated paper account: cash, positions, P&L. Read only; simulated money, no broker."""
     try:
         s = _paper_state()
-        return s if "error" in s else {k: v for k, v in s.items() if k != "orders"} | {"simulated": True, "data_mode": "mock" if config.use_mock_data() else "live"}
+        if "error" in s:
+            return s
+        out = {k: v for k, v in s.items() if k != "orders"} | {"simulated": True, "data_mode": "mock" if config.use_mock_data() else "live"}
+        out["valuation_available"] = all(p["markCents"] is not None for p in s["positions"])
+        if not out["valuation_available"]:
+            out.update(positionsValueCents=None, totalCents=None, pnlCents=None)
+            out["note"] = "Current holding prices are unavailable. Portfolio value and unrealized P&L are unavailable."
+        return out
     except (paper.PaperError, *SOFT_ERRORS) as exc:
         return _err(str(exc))
 

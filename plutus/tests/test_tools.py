@@ -6,6 +6,7 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import pandas as pd
 import pytest
 
 from evals import fixtures
@@ -62,6 +63,51 @@ def test_bad_input_becomes_an_error_dict():
     assert "error" in tools.get_ticker_news("../etc")
 
 
+def test_price_move_reports_insufficient_history(monkeypatch):
+    prices = pd.Series([100.0, 101.0], index=pd.bdate_range("2026-01-01", periods=2))
+    monkeypatch.setattr(tools, "_prices", lambda *args: prices)
+    assert "insufficient" in tools.explain_price_move("NEW", "1y")["error"].lower()
+
+
+def test_one_day_move_keeps_single_observation_fallback(monkeypatch):
+    prices = pd.Series([100.0], index=pd.bdate_range("2026-01-01", periods=1))
+    monkeypatch.setattr(tools, "_prices", lambda *args: prices)
+    result = tools.explain_price_move("NEW", "1d")
+    assert result["move_pct"] == 0.0
+
+
+def test_mock_paper_account_has_current_valuation(db, monkeypatch):
+    monkeypatch.setenv("PAPER_DB", str(db))
+    paper.place_order(db, TOKEN, "BUY", "AAPL", 1, 10000)
+    tools.set_paper_token(TOKEN)
+    try:
+        account = tools.get_paper_account()
+        assert account["valuation_available"] is True
+        assert account["positions"][0]["markCents"] is not None
+        assert account["totalCents"] is not None
+    finally:
+        tools.set_paper_token("")
+
+
+def test_live_paper_answer_does_not_claim_unmarked_pnl(db, monkeypatch):
+    from portfolio_risk.agent import mock_agent
+
+    monkeypatch.setenv("PAPER_DB", str(db))
+    paper.place_order(db, TOKEN, "BUY", "AAPL", 1, 10000)
+    monkeypatch.setenv("USE_MOCK_DATA", "0")
+    tools.set_paper_token(TOKEN)
+    try:
+        account = tools.get_paper_account()
+        assert account["valuation_available"] is False
+        assert account["totalCents"] is None and account["pnlCents"] is None
+        assert account["positions"][0]["markCents"] is None
+        assert "priceCents" not in account["positions"][0]
+        answer = mock_agent.run("Show my paper account").answer
+        assert "unavailable" in answer.lower() and "P&L $" not in answer
+    finally:
+        tools.set_paper_token("")
+
+
 def test_mock_news_is_labelled_synthetic_and_flagged_untrusted():
     out = tools.get_ticker_news("AAPL", 3)
     assert len(out["articles"]) == 3 and "not a real article" in out["articles"][0]["summary"].lower()
@@ -90,7 +136,7 @@ def test_pump_risk_untracked_and_unreachable(pumpwatch, monkeypatch):
 def test_sentiment_counts_come_from_the_model_endpoint(sentiment_ready):
     s = tools.get_sentiment("GME")
     assert (s["available"], s["positive"], s["neutral"], s["negative"], s["classified"]) == (True, 4, 2, 1, 7)
-    assert s["model"] == "Financial DistilRoBERTa"
+    assert s["model"] == "FinTwitBERT"
     risk = tools.get_pump_risk("GME")
     assert risk["score"] == 74 and risk["sentiment"]["positive"] == 4  # attached, and the score is untouched
 

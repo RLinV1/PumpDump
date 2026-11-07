@@ -71,7 +71,7 @@ def get_pump_risk(ticker: str) -> dict:
     """Pumpwatch's pump-and-dump risk read for a ticker.
 
     Use for "is X being pumped", "is the hype on X real". Returns the 0-100 rules-v1 score, a verdict (Low risk, Watch,
-    Pump likely), top contributing signal groups, recent flags, the catalyst check, and the Financial DistilRoBERTa
+    Pump likely), top contributing signal groups, recent flags, the catalyst check, and the FinTwitBERT
     sentiment as separate context. It is a risk signal, never a price prediction. ``data_mode`` says mock or live.
     """
     return tools.get_pump_risk(ticker)
@@ -80,7 +80,7 @@ def get_pump_risk(ticker: str) -> dict:
 @mcp.tool()
 def get_sentiment(ticker: str) -> dict:
     """Tone (positive, neutral, negative counts) of recent Bluesky posts about a ticker, from the pretrained
-    Financial DistilRoBERTa model. Context only: not part of the risk score and not shown to predict anything.
+    FinTwitBERT model. Context only: not part of the risk score and not shown to predict anything.
     Says plainly when sentiment is not being collected (mock data, or the model is off)."""
     return tools.get_sentiment(ticker)
 

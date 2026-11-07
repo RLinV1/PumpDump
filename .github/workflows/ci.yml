@@ -38,6 +38,16 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm run build
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/sentiment-models
+          key: text-models-${{ hashFiles('web/text-models.mjs', 'web/package-lock.json') }}
+      - run: node scripts/fetch-sentiment-model.mjs
+        env:
+          SENTIMENT_MODEL_DIR: ${{ runner.temp }}/sentiment-models
+      - run: node scripts/check-sentiment.mjs --offline
+        env:
+          SENTIMENT_MODEL_DIR: ${{ runner.temp }}/sentiment-models
 
   ml:
     runs-on: ubuntu-latest
@@ -76,6 +86,8 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check . # the whole folder, no ignore list
       - run: python -m pytest
+      - run: python -m portfolio_risk.rag.ingest
+      - run: python -m evals.run_evals --agent mock
       - run: bash ../scripts/license-gate.sh plutus
 
   # No AWS credentials: format and syntax checks only, with no backend.
