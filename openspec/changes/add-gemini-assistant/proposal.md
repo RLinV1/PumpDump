@@ -4,7 +4,7 @@ Readers need context for Pumpwatch signals alongside stock lookup and paper trad
 
 ## What changes
 
-- Add ASK and panel 9, a validated and rate-limited web endpoint, and a private Plutus assistant endpoint.
+- Add ASK and panel 9, a validated and rate-limited web endpoint, and a private Research assistant endpoint.
 - Expose read-only research tools through MCP. The assistant cannot place trades.
 - Build the seed knowledge library into the service image and gate deterministic mock evals in CI.
 - Pass local Gemini settings through Compose; strip Gemini settings and force the mock agent on public deployments.

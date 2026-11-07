@@ -22,5 +22,5 @@ data_mode = "mock"
 # Raise before a capacity load test, e.g. 100000.
 api_rate_limit_per_minute = 120
 
-enable_plutus      = false
+enable_research      = false
 enable_github_oidc = false

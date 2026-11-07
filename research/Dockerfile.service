@@ -1,9 +1,9 @@
 # Pumpwatch private service: stock lookup, paper trading and the research assistant (api/service.py).
-# Build context is this directory (plutus/). Python 3.13 because pyproject requires it.
+# Build context is this directory (research/). Python 3.13 because pyproject requires it.
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=/app/src:/app USE_MOCK_DATA=1 PLUTUS_DATA_DIR=/data \
+    PYTHONPATH=/app/src:/app USE_MOCK_DATA=1 RESEARCH_DATA_DIR=/data \
     HOME=/app RAG_DIR=/app/rag-store ANONYMIZED_TELEMETRY=False
 
 WORKDIR /app
@@ -19,8 +19,8 @@ COPY src ./src
 COPY api ./api
 COPY evals ./evals
 # /data is the named volume holding the paper-trading SQLite file and the price cache.
-RUN useradd --system --home /app plutus && mkdir /data /app/.cache /app/rag-store && chown -R plutus /data /app/.cache /app/rag-store
-USER plutus
+RUN useradd --system --home /app research && mkdir /data /app/.cache /app/rag-store && chown -R research /data /app/.cache /app/rag-store
+USER research
 # Build the knowledge library now: this downloads Chroma's ONNX embedding model once (no key) and embeds the seed files,
 # so the container starts fast and works offline. The store lives in the image, not the volume.
 # The downloaded archive is not needed once extracted (checked: queries still work with no network).

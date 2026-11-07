@@ -10,8 +10,8 @@ from pathlib import Path
 
 # --- Paths ---
 PKG_ROOT = Path(__file__).resolve().parent              # .../src/portfolio_risk
-PROJECT_ROOT = PKG_ROOT.parents[1]                      # plutus/
-DATA_DIR = Path(os.environ.get("PLUTUS_DATA_DIR", "").strip() or PROJECT_ROOT / "data")
+PROJECT_ROOT = PKG_ROOT.parents[1]                      # research/
+DATA_DIR = Path(os.environ.get("RESEARCH_DATA_DIR", "").strip() or PROJECT_ROOT / "data")
 CACHE_DIR = DATA_DIR / "cache"
 PRICE_CACHE_DIR = CACHE_DIR / "prices"
 SEED_DIR = PKG_ROOT / "rag" / "seed"                    # the bundled knowledge library (plain Markdown)

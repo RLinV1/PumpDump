@@ -27,13 +27,13 @@ const contextApi = createContextApi({
   loadRecentSentiment: createBlueskySearch({ sentiment }),
 });
 
-// PLUTUS_ORIGIN is the private lookup and paper-trading service; unset means those routes answer 503.
+// RESEARCH_ORIGIN is the private lookup and paper-trading service; unset means those routes answer 503.
 // In live mode (your own machine) paper fills use the Alpaca quote read here; mock mode lets the service price them.
-const paper = createPaperApi({ origin: process.env.PLUTUS_ORIGIN?.replace(/\/$/, ""), mode, loadQuotes });
+const paper = createPaperApi({ origin: process.env.RESEARCH_ORIGIN?.replace(/\/$/, ""), mode, loadQuotes });
 
 // The research assistant (Gemini, or the rule-based mock when there is no key) lives in the same private service.
 // This door validates and rate-limits first (2 KB JSON, 300 characters, 5 per minute per client, 30 overall).
-const assistant = createAssistantApi({ origin: process.env.PLUTUS_ORIGIN?.replace(/\/$/, "") });
+const assistant = createAssistantApi({ origin: process.env.RESEARCH_ORIGIN?.replace(/\/$/, "") });
 
 const dev = process.argv.includes("--dev");
 const port = Number(process.env.PORT ?? 3000);

@@ -245,7 +245,7 @@ def set_paper_token(token: str) -> None:
 
 
 def _paper_state() -> dict:
-    token = _token.get() or os.environ.get("PLUTUS_PAPER_TOKEN", "")
+    token = _token.get() or os.environ.get("RESEARCH_PAPER_TOKEN", "")
     if not token:
         return _err("no paper account is attached to this question")
     db = config.paper_db_path()

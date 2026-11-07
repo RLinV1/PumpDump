@@ -113,7 +113,7 @@ is claimed to perfectly interpret posts, and possible irony never reverses tone 
 | --- | --- |
 | [Tech stack](docs/tech-stack.md) | Technologies, versions, responsibilities and repository layout |
 | [Architecture](docs/architecture.md) | Service diagrams, event flow, APIs, storage and configuration |
-| [Lookup and paper trading spec](openspec/changes/add-paper-trading-lookup/design.md) | How Plutus is wired in, limits and the data policy |
+| [Lookup and paper trading spec](openspec/changes/add-paper-trading-lookup/design.md) | How Research is wired in, limits and the data policy |
 | [Web setup](web/README.md) | Mock/live modes, personal watchlists and frontend checks |
 | [Live sentiment](ml/LIVE-SENTIMENT.md) | Pretrained model, matching rules, retention and limits |
 | [Risk scorer](docs/rule-scorer.md) | Thresholds, catalyst deductions and feature contributions |
@@ -121,16 +121,16 @@ is claimed to perfectly interpret posts, and possible irony never reverses tone 
 | [Source register](docs/data-sources.md) | Source permissions and verification status |
 | [Roadmap](docs/roadmap.md) | Planned milestones; implementation checklists live in `openspec/changes/` |
 
-## Stock lookup and paper trading (Plutus)
+## Stock lookup and paper trading
 
-The pump watch is the product. `plutus/` is the owner's [Plutus](https://github.com/RLinV1/Plutus) project, imported with its git history. Stock lookup, paper trading and a read-only research assistant sit beside the pump panels in the `/live` terminal.
+The pump watch is the product. The private Python service in `research/` provides stock lookup, paper trading and a read-only research assistant beside the pump panels in the `/live` terminal.
 
-- **Stock lookup.** `LOOK GME` (alias `DES GME`) fills panel 7 with the name, sector, price, daily move, market cap and P/E, price performance, SMAs, RSI, 52-week range, beta and volatility, from the pure numpy/pandas code in `plutus/src/portfolio_risk/risk/`.
+- **Stock lookup.** `LOOK GME` (alias `DES GME`) fills panel 7 with the name, sector, price, daily move, market cap and P/E, price performance, SMAs, RSI, 52-week range, beta and volatility, from the pure numpy/pandas code in `research/src/portfolio_risk/risk/`.
 - **Paper trading.** `BUY GME 10`, `SELL GME 10`, `PT` and `PT RESET` (then `PT RESET CONFIRM`) drive panel 8, marked PAPER: cash, positions, P&L and order history. Whole shares, no shorting, integer cents, atomic updates.
-- **Anonymous.** No sign-in. Your browser makes a random account token, keeps it in localStorage and sends it in a header; the service stores only its hash, in SQLite on the `plutuspaper` volume. Clear your browser data and the account is gone.
+- **Anonymous.** No sign-in. Your browser makes a random account token, keeps it in localStorage and sends it in a header; the service stores only its hash, in SQLite on the `researchpaper` volume. Clear your browser data and the account is gone.
 - **Server-decided prices.** The browser never sends a price. Mock mode fills at the service's mock close. Live mode (your own machine only) fills at the web server's own Alpaca quote, and the order is refused if there is none. Lookups in live mode use yfinance.
-- **One origin.** The browser only calls `/api/v1/lookup` and `/api/v1/paper` on the web server, which validates, rate limits and forwards to the private `plutus` service (apps profile, no published port). Caddy is unchanged and the flag stream still bypasses Node.
-- **Public data policy.** `deploy/up.sh` keeps the VM on mock data, so every public figure is labelled MOCK. Real data stays on your machine: set `DATA_MODE=live` with Alpaca keys, and `PLUTUS_USE_MOCK_DATA=0` for yfinance lookups.
+- **One origin.** The browser only calls `/api/v1/lookup` and `/api/v1/paper` on the web server, which validates, rate limits and forwards to the private `research` service (apps profile, no published port). Caddy is unchanged and the flag stream still bypasses Node.
+- **Public data policy.** `deploy/up.sh` keeps the VM on mock data, so every public figure is labelled MOCK. Real data stays on your machine: set `DATA_MODE=live` with Alpaca keys, and `RESEARCH_USE_MOCK_DATA=0` for yfinance lookups.
 
 > **This is simulated trading, not advice.** There is no broker, no real order and no real money, and nothing here is investment advice. Pumpwatch is a non-commercial project.
 
@@ -140,7 +140,7 @@ The pump watch is the product. `plutus/` is the owner's [Plutus](https://github.
 
 Mock mode, 1440x900. Mock prices do not move, so a mock buy then sell returns the same cash with zero P&L.
 
-Run it locally with the `apps` profile (`docker compose --profile apps up -d --build`), or without Docker: `cd plutus`, `pip install -e ".[dev]"` on Python 3.13, `USE_MOCK_DATA=1 uvicorn api.service:app --port 8090`, then start the web server with `PLUTUS_ORIGIN=http://127.0.0.1:8090`. CI lints all of `plutus/` with ruff and runs its tests on Python 3.13.
+Run it locally with the `apps` profile (`docker compose --profile apps up -d --build`), or without Docker: `cd research`, `pip install -e ".[dev]"` on Python 3.13, `USE_MOCK_DATA=1 uvicorn api.service:app --port 8090`, then start the web server with `RESEARCH_ORIGIN=http://127.0.0.1:8090`. CI lints all of `research/` with ruff and runs its tests on Python 3.13.
 
 ## Research assistant (Gemini, MCP and RAG)
 
@@ -150,7 +150,7 @@ tools used and retrieved sources. The assistant can read stock snapshots, price
 performance, technical indicators, news, pump signals, sentiment and your own paper
 account. Its MCP tools are read-only: it cannot place orders.
 
-Docker Compose starts the private Plutus service and connects its tools to the web
+Docker Compose starts the private Research service and connects its tools to the web
 host. Without a key it uses the mock agent. For local Gemini use, add your own
 `GEMINI_API_KEY` to the root `.env`; `USE_MOCK_LLM=auto` selects Gemini when the key
 is present. `GEMINI_MODEL` defaults to `gemini-3.6-flash` and can be overridden.
@@ -165,7 +165,7 @@ DistilRoBERTa sentiment model ahead of time; the first build downloads their pub
 weights. Social posts use FinTwitBERT plus CardiffNLP possible irony; optional news
 headline tone uses Financial DistilRoBERTa. Sentiment stays separate from the rules risk score.
 
-For a non-Docker setup on Python 3.13, install `plutus/` with `pip install -e ".[dev]"`,
+For a non-Docker setup on Python 3.13, install `research/` with `pip install -e ".[dev]"`,
 then run these commands from that directory:
 
 ```bash
@@ -174,7 +174,7 @@ python -m evals.run_evals --agent mock
 USE_MOCK_DATA=1 USE_MOCK_LLM=1 PUMPWATCH_API_URL=http://127.0.0.1:3000 uvicorn api.service:app --port 8090
 ```
 
-Start the web host with `PLUTUS_ORIGIN=http://127.0.0.1:8090`. The evaluation gate
+Start the web host with `RESEARCH_ORIGIN=http://127.0.0.1:8090`. The evaluation gate
 checks tool selection, numeric accuracy, groundedness and retrieval against checked-in
 thresholds. CI builds the seed library and runs this gate with the mock agent; it
 does not need Gemini credentials.
@@ -251,7 +251,7 @@ Conventional Commit messages, and changes reach `main` through a pull request.
 ## Run locally
 
 For the web app: Node 22.13+. For the backend: Docker with Compose v2, JDK 21 or newer
-and Maven 3.9+. Offline research uses Python 3.12+; CI uses Python 3.12.
+and Maven 3.9+. Offline research uses Python 3.12+; the combined Python CI check uses Python 3.13.
 
 ```bash
 [ -f .env ] || cp .env.example .env # preserve an existing local configuration

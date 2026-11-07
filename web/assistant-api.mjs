@@ -1,4 +1,4 @@
-// POST /api/v1/assistant/ask: the one public door to the research assistant (Plutus). It validates, rate-limits, then
+// POST /api/v1/assistant/ask: the one public door to the research assistant (Research). It validates, rate-limits, then
 // forwards to the private service, so the service never sees an unchecked request and the Gemini key cannot be drained.
 // The assistant has read-only tools. The caller's paper-account token (if any) is passed through only so it can read that account.
 const NOTICE = "Not investment advice. Pumpwatch is a non-commercial project.";

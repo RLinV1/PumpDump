@@ -12,10 +12,10 @@ git archive HEAD | ssh "$SSH" 'tar -x -C /opt/pumpwatch'
 # Secrets travel over SSH, never through Terraform state. Alpaca keys never reach this public VM: their terms cover
 # personal use, and public redistribution is unverified (docs/data-sources.md). DEPLOY_DATA_MODE=live is for load tests.
 # Lookup, paper trading and the assistant stay on mock data; Gemini keys never reach the public VM.
-{ grep -vE '^[[:space:]]*(export[[:space:]]+)?(ALPACA_|GEMINI_|DATA_MODE[[:space:]]*=|USE_MOCK_DATA[[:space:]]*=|USE_MOCK_LLM[[:space:]]*=|PLUTUS_)' .env; printf 'ALPACA_ENABLED=false
+{ grep -vE '^[[:space:]]*(export[[:space:]]+)?(ALPACA_|GEMINI_|DATA_MODE[[:space:]]*=|USE_MOCK_DATA[[:space:]]*=|USE_MOCK_LLM[[:space:]]*=|RESEARCH_)' .env; printf 'ALPACA_ENABLED=false
 ALPACA_NEWS_ENABLED=false
 DATA_MODE=%s
-PLUTUS_USE_MOCK_DATA=1
+RESEARCH_USE_MOCK_DATA=1
 USE_MOCK_LLM=1
 ' "${DEPLOY_DATA_MODE:-mock}"; } | ssh "$SSH" 'umask 077; cat > /opt/pumpwatch/.env'
 ssh "$SSH" 'cd /opt/pumpwatch && PROXY_BIND=0.0.0.0 docker compose --profile apps up -d --build'

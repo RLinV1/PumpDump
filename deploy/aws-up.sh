@@ -30,9 +30,9 @@ done
 # Next bakes its /api rewrites at build time, so the Cloud Map name of the API goes in here.
 docker build --platform linux/amd64 --build-arg "API_ORIGIN=$(out web_api_origin)" -t "$(repo web):latest" web
 docker push "$(repo web):latest"
-if [ -n "$(repo plutus)" ]; then
-  docker build --platform linux/amd64 -f plutus/Dockerfile.service -t "$(repo plutus):latest" plutus
-  docker push "$(repo plutus):latest"
+if [ -n "$(repo research)" ]; then
+  docker build --platform linux/amd64 -f research/Dockerfile.service -t "$(repo research):latest" research
+  docker push "$(repo research):latest"
 fi
 # Kafka is mirrored into ECR so Fargate does not depend on Docker Hub pull limits.
 KTAG=$(out kafka_tag)

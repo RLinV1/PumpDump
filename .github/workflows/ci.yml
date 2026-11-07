@@ -1,13 +1,19 @@
-name: ci
+name: CI
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  java:
+  backend:
+    name: Backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,8 +25,11 @@ jobs:
           java-version: "21"
           cache: maven
       - run: mvn -B verify
+      - name: Backend dependency licenses
+        run: bash scripts/license-gate.sh maven
 
   web:
+    name: Web
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -48,50 +57,50 @@ jobs:
       - run: node scripts/check-sentiment.mjs --offline
         env:
           SENTIMENT_MODEL_DIR: ${{ runner.temp }}/sentiment-models
+      - name: Web dependency licenses
+        run: bash ../scripts/license-gate.sh npm
 
-  ml:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ml
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: ml/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
-      - run: python -m pytest
-      - run: bash ../scripts/license-gate.sh python
-
-  plutus:
+  python:
+    name: Python
     runs-on: ubuntu-latest
     env:
       USE_MOCK_DATA: "1"
-    defaults:
-      run:
-        working-directory: plutus
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13" # plutus/pyproject.toml requires 3.13
+          python-version: "3.13"
           cache: pip
-          cache-dependency-path: plutus/pyproject.toml
-      - run: pip install -e ".[dev]"
-      - run: ruff check . # the whole folder, no ignore list
-      - run: python -m pytest
-      - run: python -m portfolio_risk.rag.ingest
-      - run: python -m evals.run_evals --agent mock
-      - run: bash ../scripts/license-gate.sh plutus
+          cache-dependency-path: |
+            ml/requirements-dev.txt
+            ml/requirements.txt
+            research/pyproject.toml
+      - run: pip install -r ml/requirements-dev.txt -e "./research[dev]"
+      - name: Offline ML tests
+        run: python -m pytest
+        working-directory: ml
+      - name: Research service lint
+        run: ruff check .
+        working-directory: research
+      - name: Research service tests
+        run: python -m pytest
+        working-directory: research
+      - name: Build knowledge library
+        run: python -m portfolio_risk.rag.ingest
+        working-directory: research
+      - name: Assistant evaluation gate
+        run: python -m evals.run_evals --agent mock
+        working-directory: research
+      - name: Python dependency licenses
+        run: |
+          bash scripts/license-gate.sh python
+          bash scripts/license-gate.sh research
 
   # No AWS credentials: format and syntax checks only, with no backend.
-  terraform:
+  infrastructure:
+    name: Infrastructure
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,27 +112,3 @@ jobs:
       - run: terraform -chdir=infra/aws fmt -check -recursive
       - run: terraform -chdir=infra/aws init -backend=false -input=false
       - run: terraform -chdir=infra/aws validate
-
-  licenses:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13" # plutus requires 3.13
-      - run: pip install -r ml/requirements.txt
-      - run: pip install ./plutus
-      - run: (cd web && npm ci)
-      - run: bash scripts/license-gate.sh

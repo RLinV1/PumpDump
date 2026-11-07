@@ -82,7 +82,7 @@ async def _run_gemini(question: str, paper_token: str) -> AgentResult:
 
     # The key stays in this process: the tool subprocess gets the environment without it.
     env = {k: v for k, v in os.environ.items() if k != "GEMINI_API_KEY"}
-    env["PLUTUS_PAPER_TOKEN"] = paper_token
+    env["RESEARCH_PAPER_TOKEN"] = paper_token
     server = StdioServerParameters(command=sys.executable, args=["-m", "portfolio_risk.server.mcp_server"], env=env)
     client = genai.Client(api_key=config.gemini_api_key())
 

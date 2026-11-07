@@ -1,3 +1,4 @@
+import { listenLoopback } from "./http-server.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
@@ -6,10 +7,10 @@ import { createAssistantApi } from "../assistant-api.mjs";
 const UPSTREAM = { answer: "GME is 74/100. not investment advice.", tools_used: ["get_pump_risk"], mode: { data: "mock", llm: "mock" }, note: "",
   sources: [{ kind: "pumpwatch", title: "Pumpwatch risk score (mock data)", url: null }, { kind: "news", title: "ok", url: "https://example.com" }, { bad: true }] };
 
-async function run({ origin = "http://plutus", fetchImpl, clock = { t: 0 }, ip = "1.1.1.1" } = {}) {
+async function run({ origin = "http://research", fetchImpl, clock = { t: 0 }, ip = "1.1.1.1" } = {}) {
   const handler = createAssistantApi({ origin, fetchImpl, now: () => clock.t });
   const server = createServer((req, res) => { req.headers["x-forwarded-for"] = ip; if (!handler(req, res)) { res.writeHead(404); res.end(); } });
-  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  await listenLoopback(server);
   const url = `http://127.0.0.1:${server.address().port}`;
   const post = async (body, headers = { "Content-Type": "application/json" }, path = "/api/v1/assistant/ask") => {
     const res = await fetch(url + path, { method: "POST", headers, body: typeof body === "string" ? body : JSON.stringify(body) });
@@ -25,7 +26,7 @@ test("forwards a valid question and maps the answer, dropping malformed sources"
   const r = await s.post({ question: "  Is GME being pumped?  " });
   s.close();
   assert.equal(r.status, 200);
-  assert.deepEqual(calls, [{ u: "http://plutus/assistant/ask", body: { question: "Is GME being pumped?" } }]);
+  assert.deepEqual(calls, [{ u: "http://research/assistant/ask", body: { question: "Is GME being pumped?" } }]);
   assert.equal(r.headers.get("x-pumpwatch-data-mode"), "mock");
   assert.match(r.body.notice, /Not investment advice/);
   assert.deepEqual(r.body.data.toolsUsed, ["get_pump_risk"]);
@@ -79,10 +80,10 @@ test("rate limits per client, then recovers after the window", async () => {
 
 test("a global cap stops many clients together", async () => {
   const clock = { t: 0 };
-  const handler = createAssistantApi({ origin: "http://plutus", fetchImpl: okFetch(), now: () => clock.t });
+  const handler = createAssistantApi({ origin: "http://research", fetchImpl: okFetch(), now: () => clock.t });
   let ip = 0;
   const server = createServer((req, res) => { req.headers["x-forwarded-for"] = `10.0.0.${ip++}`; handler(req, res); });
-  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  await listenLoopback(server);
   const url = `http://127.0.0.1:${server.address().port}/api/v1/assistant/ask`;
   const codes = [];
   for (let i = 0; i < 32; i++) codes.push((await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: '{"question":"q"}' })).status);
@@ -93,7 +94,7 @@ test("a global cap stops many clients together", async () => {
 });
 
 test("503 when not configured or the service is down, 429 and 502 pass through safely", async () => {
-  let s = await run({ origin: undefined });
+  let s = await run({ origin: "" });
   assert.equal((await s.post({ question: "q" })).status, 503);
   s.close();
   s = await run({ fetchImpl: async () => { throw new Error("ECONNREFUSED secret-host"); } });

@@ -73,7 +73,7 @@ The public deployment SHALL show only mock data, and every figure SHALL be label
 
 #### Scenario: Deploy
 - **WHEN** `deploy/up.sh` writes the VM `.env`
-- **THEN** it contains no `ALPACA_` line and sets `PLUTUS_USE_MOCK_DATA=1`
+- **THEN** it contains no `ALPACA_` line and sets `RESEARCH_USE_MOCK_DATA=1`
 
 ### Requirement: Not investment advice
 The panels and routes SHALL state that trading is simulated, with no broker and no real orders, and is not investment advice.
