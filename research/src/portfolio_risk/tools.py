@@ -237,7 +237,7 @@ def search_knowledge(query: str, ticker: str = "", k: int = 4) -> dict:
 
 
 # --- Paper trading, read only. The account token is bound to the request by the service, never chosen by the model. ---
-_token: contextvars.ContextVar[str] = contextvars.ContextVar("paper_token", default="")
+_token: contextvars.ContextVar[str | None] = contextvars.ContextVar("paper_token", default=None)
 
 
 def set_paper_token(token: str) -> None:
@@ -245,7 +245,9 @@ def set_paper_token(token: str) -> None:
 
 
 def _paper_state() -> dict:
-    token = _token.get() or os.environ.get("RESEARCH_PAPER_TOKEN", "")
+    token = _token.get()
+    if token is None:  # Standalone MCP may use the environment; an explicit empty HTTP token must stay anonymous.
+        token = os.environ.get("RESEARCH_PAPER_TOKEN", "")
     if not token:
         return _err("no paper account is attached to this question")
     db = config.paper_db_path()

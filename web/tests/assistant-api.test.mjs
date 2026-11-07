@@ -1,6 +1,7 @@
 import { listenLoopback } from "./http-server.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
+import { EventEmitter } from "node:events";
 import { test } from "node:test";
 import { createAssistantApi } from "../assistant-api.mjs";
 
@@ -91,6 +92,31 @@ test("a global cap stops many clients together", async () => {
   server.close();
   assert.equal(codes.filter((c) => c === 200).length, 30);
   assert.equal(codes.filter((c) => c === 429).length, 2);
+});
+
+test("globally rejected new clients do not grow the rate-limit registry", async () => {
+  const originalSet = Map.prototype.set;
+  let largestRegistry = 0;
+  Map.prototype.set = function (key, value) {
+    if (typeof key === "string" && key.startsWith("limit-test-")) largestRegistry = Math.max(largestRegistry, this.size + Number(!this.has(key)));
+    return originalSet.call(this, key, value);
+  };
+  try {
+    const handler = createAssistantApi({ origin: "http://research", fetchImpl: okFetch(), now: () => 0 });
+    for (let i = 0; i < 5100; i++) {
+      await new Promise((resolve) => {
+        const req = new EventEmitter();
+        Object.assign(req, { url: "/api/v1/assistant/ask", method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `limit-test-${i}` } });
+        const res = { setHeader() {}, writeHead(status) { this.status = status; }, end() { resolve(); } };
+        handler(req, res);
+        req.emit("data", Buffer.from('{"question":"q"}'));
+        req.emit("end");
+      });
+    }
+    assert.ok(largestRegistry <= 5000, `retained ${largestRegistry} client entries`);
+  } finally {
+    Map.prototype.set = originalSet;
+  }
 });
 
 test("503 when not configured or the service is down, 429 and 502 pass through safely", async () => {

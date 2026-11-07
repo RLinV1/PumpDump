@@ -180,10 +180,13 @@ def test_route_limits_and_validation(http):
     assert http.post("/assistant/ask", json={"question": "What is a P/E ratio?"}).status_code == 429
 
 
-def test_route_binds_the_paper_token_to_the_paper_tools(http):
+def test_route_binds_the_paper_token_to_the_paper_tools(http, monkeypatch):
+    monkeypatch.setenv("RESEARCH_PAPER_TOKEN", TOKEN)
     r = http.post("/assistant/ask", json={"question": "What is my paper account worth?"}, headers={"X-Paper-Token": TOKEN}).json()
     assert r["tools_used"] == ["get_paper_account"] and "100,000.00" in r["answer"]
     r = http.post("/assistant/ask", json={"question": "What is my paper account worth?"}).json()
+    assert "no paper account" in r["answer"]
+    r = http.post("/assistant/ask", json={"question": "Show my paper orders"}, headers={"X-Paper-Token": "invalid"}).json()
     assert "no paper account" in r["answer"]
 
 

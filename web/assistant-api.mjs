@@ -17,7 +17,7 @@ export function createAssistantApi({ origin, fetchImpl = fetch, now = Date.now }
     const t = now();
     all = all.filter((x) => t - x < WINDOW_MS);
     const mine = (hits.get(client) ?? []).filter((x) => t - x < WINDOW_MS);
-    if (mine.length >= PER_CLIENT || all.length >= ALL_CLIENTS) { hits.set(client, mine); return false; }
+    if (mine.length >= PER_CLIENT || all.length >= ALL_CLIENTS) return false;
     if (hits.size >= MAX_TRACKED) for (const [k, v] of hits) if (!v.some((x) => t - x < WINDOW_MS)) hits.delete(k);
     mine.push(t); all.push(t); hits.set(client, mine);
     return true;

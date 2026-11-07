@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -155,3 +156,10 @@ def test_paper_tools_read_only(db, monkeypatch):
 def test_no_tool_can_trade():
     assert all(n.startswith(("get_", "explain_", "compare_", "search_")) for n in tools.READ_ONLY_TOOLS)
     assert not [n for n in dir(tools) if n.startswith(("place_", "buy_", "sell_", "reset_"))]
+
+
+def test_standalone_paper_tools_use_environment_token(db, monkeypatch):
+    monkeypatch.setenv("PAPER_DB", str(db))
+    monkeypatch.setenv("RESEARCH_PAPER_TOKEN", TOKEN)
+    account = contextvars.Context().run(tools.get_paper_account)
+    assert account["cashCents"] == paper.START_CASH_CENTS
