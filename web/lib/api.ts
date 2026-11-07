@@ -236,17 +236,19 @@ export type PaperAccount = {
 
 const TOKEN_KEY = "pumpwatch.paper.token";
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{32,64}$/;
+let sessionPaperToken: string | undefined;
 
 // An anonymous account is just a random token this browser keeps. Lose it and the account is gone; there is no sign-in.
 export function paperToken(): string {
   try {
     const saved = localStorage.getItem(TOKEN_KEY);
-    if (saved && TOKEN_SHAPE.test(saved)) return saved;
+    if (saved && TOKEN_SHAPE.test(saved)) return (sessionPaperToken = saved);
   } catch { /* storage blocked: fall through to a token for this page view */ }
+  if (sessionPaperToken) return sessionPaperToken;
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   try { localStorage.setItem(TOKEN_KEY, token); } catch { /* the account then lasts until this page closes */ }
-  return token;
+  return (sessionPaperToken = token);
 }
 
 const isMode = (m: unknown): m is DataMode => m === "mock" || m === "live";

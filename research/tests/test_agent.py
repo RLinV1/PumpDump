@@ -19,6 +19,7 @@ from evals.run_evals import groundedness
 from portfolio_risk import config, tools
 from portfolio_risk.agent import client as agent_client
 from portfolio_risk.agent import mock_agent
+from portfolio_risk.agent.base import AgentResult
 
 TOKEN = "t" * 40
 
@@ -172,12 +173,26 @@ def test_route_answers_with_notice_sources_and_llm_label(http):
     assert body["sources"][0]["kind"] == "pumpwatch"
 
 
-def test_route_limits_and_validation(http):
+def test_route_limits_and_validation(http, monkeypatch):
+    clock = SimpleNamespace(t=0.0)
+    calls = []
+    # Control only the service limiter clock; do not freeze worker/async deadlines.
+    monkeypatch.setattr(service, "time", SimpleNamespace(monotonic=lambda: clock.t))
+
+    def answer(question, token):
+        calls.append(question)
+        return AgentResult(answer="Rate-limit fixture")
+
+    monkeypatch.setattr(service, "run_agent", answer)
     assert http.post("/assistant/ask", json={"question": "x" * 301}).status_code == 422
     assert http.post("/assistant/ask", json={"question": ""}).status_code == 422
     for _ in range(service.GLOBAL_PER_MINUTE):
         assert http.post("/assistant/ask", json={"question": "What is a P/E ratio?"}).status_code == 200
     assert http.post("/assistant/ask", json={"question": "What is a P/E ratio?"}).status_code == 429
+    assert len(calls) == service.GLOBAL_PER_MINUTE
+    clock.t = 60.01
+    assert http.post("/assistant/ask", json={"question": "What is a P/E ratio?"}).status_code == 200
+    assert len(calls) == service.GLOBAL_PER_MINUTE + 1
 
 
 def test_route_binds_the_paper_token_to_the_paper_tools(http, monkeypatch):

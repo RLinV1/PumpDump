@@ -33,3 +33,18 @@ test("inference errors preserve the headlines and report unavailable sentiment",
     assert.ok(!JSON.stringify(result).includes("private"));
   }
 });
+
+
+test("a transient failure retries the same snapshot and then caches success", async () => {
+  let loads = 0;
+  const load = createNewsSentimentLoader({ loadNews: async () => news, enabled: true, loadClassifier: async () => {
+    loads++;
+    return async () => { if (loads === 1) throw new Error("transient failure"); return [{ label: "positive" }]; };
+  } });
+  assert.equal((await load("GME")).sentimentStatus, "error");
+  const [a, b] = await Promise.all([load("GME"), load("GME")]);
+  assert.equal(a.sentimentStatus, "ready");
+  assert.equal(b.items[0].sentiment, "positive");
+  await load("GME");
+  assert.equal(loads, 2);
+});

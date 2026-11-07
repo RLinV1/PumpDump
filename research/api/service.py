@@ -180,10 +180,10 @@ def _sources(calls: list[dict], data_mode: str) -> list[dict]:
         elif name == "get_pump_risk":
             add("pumpwatch", f"Pumpwatch rules-v1 risk score ({res.get('data_mode', 'live')} data)")
             if (res.get("sentiment") or {}).get("available"):
-                add("sentiment", "Financial DistilRoBERTa sentiment (context only)")
+                add("sentiment", "FinTwitBERT sentiment (context only)")
         elif name == "get_sentiment":
             if res.get("available"):
-                add("sentiment", "Financial DistilRoBERTa sentiment (context only)")
+                add("sentiment", "FinTwitBERT sentiment (context only)")
         elif name.startswith("get_paper"):
             add("paper", "Your simulated paper account")
         elif "articles" in res:

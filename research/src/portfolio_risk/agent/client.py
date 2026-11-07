@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import multiprocessing
 import os
 import sys
+import time
 from collections.abc import Awaitable, Callable
 
 from .. import config, tools
@@ -21,20 +23,68 @@ from .base import AgentResult
 from .prompts import SYSTEM_PROMPT
 
 
-def run_agent(question: str, paper_token: str = "") -> AgentResult:
-    """Synchronous entry point. ``paper_token`` binds the asker's paper account to the read-only paper tools."""
-    tools.set_paper_token(paper_token)
-    if config.use_mock_llm():
-        from . import mock_agent
-
-        return mock_agent.run(question)
+def _mock_worker(connection, question: str, paper_token: str, run) -> None:
+    """Keep blocking providers in a process whose entire lifetime the request owns."""
     try:
-        return asyncio.run(asyncio.wait_for(_run_gemini(question, paper_token), config.ASSISTANT_TIMEOUT_SEC))
-    except Exception as exc:  # noqa: BLE001  (any Gemini or MCP failure falls back; the type name is the only detail kept)
-        print(f"gemini agent failed: {type(exc).__name__}", file=sys.stderr)
-        from . import mock_agent
+        tools.set_paper_token(paper_token)
+        connection.send((True, run(question)))
+    except Exception:  # noqa: BLE001 (provider messages may contain secrets)
+        connection.send((False, None))
+    finally:
+        connection.close()
 
-        result = mock_agent.run(question)
+
+def _remaining(deadline: float) -> float:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("Assistant request timed out")
+    return remaining
+
+
+def _run_mock(question: str, paper_token: str, deadline: float) -> AgentResult:
+    from . import mock_agent
+
+    _remaining(deadline)
+    # Spawn works on Windows and avoids forking a multithreaded web server on Linux.
+    context = multiprocessing.get_context("spawn")
+    receive, send = context.Pipe(duplex=False)
+    worker = context.Process(target=_mock_worker, args=(send, question, paper_token, mock_agent.run), daemon=True)
+    try:
+        worker.start()
+        send.close()
+        if not receive.poll(_remaining(deadline)):
+            raise TimeoutError("Assistant request timed out")
+        try:
+            ok, result = receive.recv()
+        except EOFError:
+            raise RuntimeError("Assistant worker failed") from None
+        if not ok:
+            raise RuntimeError("Assistant worker failed")
+        return result
+    finally:
+        receive.close()
+        send.close()
+        if worker.pid is not None:
+            # Unlike a timed-out thread, terminating this process stops its provider work.
+            if worker.is_alive():
+                worker.terminate()
+            worker.join(timeout=0.5)
+            if worker.is_alive():
+                worker.kill()
+                worker.join()
+            worker.close()
+
+
+def run_agent(question: str, paper_token: str = "") -> AgentResult:
+    """One deadline covers Gemini, mock tools, and fallback, including process startup."""
+    deadline = time.monotonic() + config.ASSISTANT_TIMEOUT_SEC
+    if config.use_mock_llm():
+        return _run_mock(question, paper_token, deadline)
+    try:
+        return asyncio.run(asyncio.wait_for(_run_gemini(question, paper_token), _remaining(deadline)))
+    except Exception as exc:  # noqa: BLE001 (only the failure type is logged)
+        print(f"gemini agent failed: {type(exc).__name__}", file=sys.stderr)
+        result = _run_mock(question, paper_token, deadline)
         result.note = "Gemini was unavailable, so the rule-based mock agent answered."
         return result
 

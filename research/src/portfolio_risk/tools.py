@@ -185,7 +185,8 @@ def get_pump_risk(ticker: str) -> dict:
     """Pumpwatch's pump-and-dump risk read for one ticker, with sentiment as separate context.
 
     Returns {ticker, tracked, score, verdict, top_contributors, recent_flags, catalyst, data_mode, sentiment}. The score is
-    the rules-v1 output; ``sentiment`` never feeds it. Neither is a price prediction.
+    the current watchlist rules-v1 output only; ``sentiment`` never feeds it. Current contributors and catalyst are
+    unavailable. Historical evidence belongs only to timestamped ``recent_flags``. Neither is a price prediction.
     """
     t = _clean(ticker)
     if not t:
@@ -205,8 +206,7 @@ def get_pump_risk(ticker: str) -> dict:
          "catalyst": f["evidence"].get("catalyst")}
         for f in [f for f in flags or [] if f.get("ticker") == t][:5]
     ]
-    latest = recent[0] if recent else None
-    score = row["score"] if row else (latest["score"] if latest else None)
+    score = row["score"] if row else None
     sentiment = get_sentiment(t)
     return {
         "ticker": t, "tracked": row is not None, "score": score,
@@ -214,8 +214,8 @@ def get_pump_risk(ticker: str) -> dict:
         "model_version": row.get("modelVersion") if row else None,
         "window_end": row.get("windowEnd") if row else None,
         "stale_sources": row.get("staleSources", []) if row else [],
-        "top_contributors": latest["top_contributors"] if latest else [],
-        "recent_flags": recent, "catalyst": latest["catalyst"] if latest else None,
+        "top_contributors": [],
+        "recent_flags": recent, "catalyst": None,
         "data_mode": mode or "live", "source": "Pumpwatch API", "sentiment": sentiment,
     }
 

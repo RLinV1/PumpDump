@@ -56,3 +56,7 @@ An initial replay integration run timed out. The unchanged test passed in isolat
 No real Gemini request was made without the owner's key; the Gemini loop is exercised with fake clients and mock fallback. No cloud resources were provisioned or public model images published. Cardiff irony weight redistribution terms still need verification before publishing images containing those weights. The Vercel route migration remains a separate follow-up PR, as required by the handoff.
 
 The no-mistakes CLI is not installed on this machine; these are the repository's direct checks and recorded browser/inference runs, not a claimed execution of that external gate. GitHub CI remains the final PR check.
+
+## November 7 review follow-up
+
+All 19 original CodeRabbit findings are covered in the [review ledger and verification report](code-review-2026-11-07.md). The follow-up passed 125 web tests and 141 research tests, full lint/build, container smoke tests, offline model inference and the stricter mock evaluation gate. These supplement the November 6 measurements above; no new capacity benchmark is claimed.

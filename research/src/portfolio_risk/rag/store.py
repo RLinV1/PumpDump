@@ -27,15 +27,20 @@ def get_client():
 
 def collection_exists() -> bool:
     try:
-        return any(getattr(c, "name", c) == config.COLLECTION_NAME for c in get_client().list_collections())
+        collection = get_collection()
+        meta = collection.metadata or {}
+        return meta.get("complete") is True and collection.count() == meta.get("chunks", -1) > 0
     except Exception:  # noqa: BLE001  (a missing or unreadable store means "not built yet")
         return False
 
 
-def get_collection(create: bool = False):
+def get_collection(create: bool = False, *, name: str | None = None):
     from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
     client, ef = get_client(), DefaultEmbeddingFunction()
+    if name is None:
+        pointer = config.RAG_DIR / "active_collection"
+        name = pointer.read_text(encoding="utf-8").strip() if pointer.exists() else config.COLLECTION_NAME
     if create:
-        return client.get_or_create_collection(name=config.COLLECTION_NAME, embedding_function=ef, metadata={"hnsw:space": "cosine"})
-    return client.get_collection(name=config.COLLECTION_NAME, embedding_function=ef)
+        return client.get_or_create_collection(name=name, embedding_function=ef, metadata={"hnsw:space": "cosine"})
+    return client.get_collection(name=name, embedding_function=ef)

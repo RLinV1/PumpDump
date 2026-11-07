@@ -45,7 +45,7 @@ export function handleSummary(data) {
   const out = {
     target: BASE, vus: VUS, rate_limit: RATE_LIMIT, date: new Date().toISOString(),
     requests: m.http_reqs.values.count, rps: +m.http_reqs.values.rate.toFixed(1),
-    p50_ms: +d.med.toFixed(1), p95_ms: +d["p(95)"].toFixed(1), p99_ms: +d["p(99)"].toFixed(1),
+    p50_ms: +d.med.toFixed(1), p95_ms: +d["p(95)"].toFixed(1), p99_ms: Number.isFinite(d["p(99)"]) ? +d["p(99)"].toFixed(1) : null,
     error_rate: +(m.errors?.values.rate ?? 0).toFixed(4),
     rate_limited: m.rate_limited?.values.count ?? 0,
   };

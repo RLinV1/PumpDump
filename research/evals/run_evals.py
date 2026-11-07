@@ -9,7 +9,7 @@ Scores (each 0 to 1):
 - numeric_accuracy:  a number within tolerance of the truth appears in the answer. Truth comes from ``lookup()`` (the risk
                      engine) or from the fake Pumpwatch API in ``fixtures.py``, not from the tool under test.
 - groundedness:      every ``[file.md]`` the answer cites was really retrieved, knowledge answers cite one, and every
-                     percent, dollar or decimal figure in the answer appears in the tool results it called. Deterministic
+                     percent, dollar or decimal figure matches the evidence field and unit in its tool results. Deterministic
                      on purpose: no LLM judge, so the score does not depend on the model grading itself.
 - retrieval_hit_at_3 (also @1, @5, MRR): the expected knowledge file is in the top k for each query in retrieval.jsonl.
 The score file is written to ``evals/results/latest.json``.
@@ -42,7 +42,7 @@ from . import fixtures
 
 _NUM = re.compile(r"-?\d[\d,]*\.?\d*")
 _CITE = re.compile(r"\[([^\[\]]+\.md)\]")
-_FACT = re.compile(r"[+-]?\$?\d[\d,]*\.\d+%?|[+-]?\$?\d[\d,]*%|\$\d[\d,]*")  # figures that carry a claim: decimals, percents, dollars
+_FACT = re.compile(r"[+-]?(?:\$[+-]?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+%?|%))")
 
 
 def numbers(text: str) -> list[float]:
@@ -64,16 +64,97 @@ def truth_of(spec: dict) -> float:
     return float(node)
 
 
+# Field names carry units; only explicit *Cents fields can be converted to dollars.
+_FIELDS = {
+    "price": ("price", "money"), "mark": ("price", "money"), "marketcap": ("marketcap", "money"),
+    "cash": ("cash", "money"), "total": ("total", "money"), "pnl": ("pnl", "money"),
+    "positionsvalue": ("total", "money"), "sma50": ("sma50", "money"), "sma200": ("sma200", "money"),
+    "low52w": ("range", "money"), "high52w": ("range", "money"),
+    "score": ("score", "number"), "beta": ("beta", "number"), "rsi": ("rsi", "number"),
+    "peratio": ("pe", "number"), "delta": ("delta", "number"),
+    "changepct": ("change", "percent"), "returnpct": ("change", "percent"),
+    "return1ypct": ("change", "percent"), "movepct": ("change", "percent"),
+    "volatilitypct": ("volatility", "percent"),
+    "positivepct": ("positive", "percent"), "neutralpct": ("neutral", "percent"),
+    "negativepct": ("negative", "percent"),
+}
+_LABEL = re.compile(
+    r"positive|neutral|negative|volatility|beta|score|rsi|p/e|cash|total|p&l|market cap|"
+    r"50-day (?:moving )?average|200-day (?:moving )?average|52-week range|"
+    r"price|traded|return(?:ed)?|move(?:d)?|change|up|down", re.IGNORECASE,
+)
+_LABEL_FIELDS = {
+    "p/e": "pe", "p&l": "pnl", "market cap": "marketcap", "traded": "price",
+    "returned": "change", "return": "change", "moved": "change", "move": "change", "up": "change", "down": "change",
+    "50-day average": "sma50", "50-day moving average": "sma50",
+    "200-day average": "sma200", "200-day moving average": "sma200", "52-week range": "range",
+}
+
+
+def retrieved_sources(calls: list[dict]) -> set[str]:
+    return {r.get("source") for c in calls if c["name"] == "search_knowledge"
+            for r in (c.get("output") or {}).get("results", [])}
+
+
+def _claim_field(answer: str, match: re.Match, previous_end: int) -> tuple[str, str]:
+    figure = match.group()
+    unit = "percent" if figure.endswith("%") else "money" if "$" in figure else "number"
+    between = answer[previous_end:match.start()]
+    labels = list(_LABEL.finditer(between))
+    if not labels and re.fullmatch(r"\s*(?:to|and)\s*", between, re.IGNORECASE):
+        labels = list(_LABEL.finditer(answer[:match.start()]))
+    # Sentiment and cash labels commonly follow their value ("74% positive", "$10 cash").
+    after = re.match(r"\s*(positive|neutral|negative|cash)\b", answer[match.end():], re.IGNORECASE)
+    label = after.group(1).lower() if after else labels[-1].group().lower() if labels else ""
+    field = _LABEL_FIELDS.get(label, label)
+    if not field:
+        field = {"money": "price", "percent": "change"}.get(unit, "unknown")
+    return field, unit
+
+
 def groundedness(answer: str, calls: list[dict]) -> dict:
-    """Deterministic grounding check of an answer against the tool calls it made."""
-    evidence = json.dumps([c.get("output") for c in calls], default=str)
-    sources = {r.get("source") for c in calls if c["name"] == "search_knowledge" for r in (c.get("output") or {}).get("results", [])}
+    """Check citations and field/unit-specific figures, without a model grading itself."""
+    sources = retrieved_sources(calls)
     cited = set(_CITE.findall(answer))
     fabricated = sorted(c for c in cited if c not in sources)
     uncited = bool(sources) and not cited
-    have = numbers(evidence)
-    have += [n / 100 for n in have]  # cents shown as dollars
-    unsupported = [f for f in _FACT.findall(answer) if not any(abs(n - v) <= 0.0101 for v in have for n in numbers(f))]
+    evidence: dict[tuple[str, str], list[float]] = {}
+    texts = []
+
+    def collect(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                field = re.sub(r"[^a-z0-9]", "", key.lower())
+                cents = field.endswith("cents")
+                kind = _FIELDS.get(field.removesuffix("cents"))
+                if kind and isinstance(value, (int, float)) and not isinstance(value, bool):
+                    evidence.setdefault(kind, []).append(value / 100 if cents else value)
+                elif key in ("text", "title") and isinstance(value, str):
+                    texts.append(value)
+                collect(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect(value)
+
+    for call in calls:
+        collect(call.get("output"))
+    # Retrieved prose supports only figures with the same field and written unit.
+    for text in texts:
+        previous = 0
+        for match in _FACT.finditer(text):
+            evidence.setdefault(_claim_field(text, match, previous), []).extend(numbers(match.group()))
+            previous = match.end()
+    unsupported = []
+    previous = 0
+    for match in _FACT.finditer(answer):
+        field, unit = _claim_field(answer, match, previous)
+        have = evidence.get((field, unit), [])
+        # Technical averages/ranges are commonly written without a dollar sign.
+        if unit == "number" and field in ("sma50", "sma200", "range"):
+            have = evidence.get((field, "money"), [])
+        if not any(abs(n - value) <= 0.0101 for value in have for n in numbers(match.group())):
+            unsupported.append(match.group())
+        previous = match.end()
     return {"ok": not fabricated and not uncited and not unsupported, "fabricated_citations": fabricated,
             "uncited": uncited, "unsupported_figures": unsupported}
 
@@ -89,13 +170,15 @@ def score_question(q: dict, token: str) -> dict:
     if q.get("must_say"):
         tool_ok = tool_ok and q["must_say"].lower() in answer.lower()
     if q.get("expected_source"):  # a knowledge question must be answered from the right file
-        tool_ok = tool_ok and q["expected_source"] in answer
+        tool_ok = tool_ok and q["expected_source"] in retrieved_sources(result.tool_calls) & set(_CITE.findall(answer))
     row = {"id": q["id"], "question": q["question"], "tools": names, "tool_ok": tool_ok, "llm": result.llm, "answer": answer}
     if q.get("truth"):
         truth = truth_of(q["truth"])
         row |= {"truth": truth, "numeric_ok": any(abs(n - truth) <= q["tolerance"] for n in numbers(answer))}
-    if result.tool_calls:
-        row["grounded"] = groundedness(answer, result.tool_calls)
+    row["grounded"] = groundedness(answer, result.tool_calls)
+    if q.get("expected_tool") and not result.tool_calls:
+        row["grounded"]["ok"] = False
+        row["grounded"]["missing_evidence"] = True
     return row
 
 

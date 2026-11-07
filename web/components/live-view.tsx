@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useApi } from "@/lib/use-api";
+import { sentimentSummary } from "@/lib/sentiment-summary";
 import { LiveChart } from "@/components/live-chart";
 import { MoversPanel, NewsPanel, SentimentPanel } from "@/components/market-context";
 import { AssistantPanel, useAssistant } from "@/components/assistant-panel";
@@ -149,11 +150,7 @@ function Watchlist({ w, q, ticker, onPick, symbols, onAdd, onRemove, active }: {
 // The sentiment model's read of the selected ticker, shown beside the verdict as context. It is not an input to the score.
 function SentimentBeside({ ticker, refreshKey }: { ticker: string; refreshKey: number }) {
   const { data, done, failed } = useApi<Sentiment>(`/api/v1/tickers/${ticker}/sentiment?sample=top`, 60000, 0, undefined, refreshKey);
-  const body = !done ? "Checking..." : !data ? (failed ? "Sentiment unavailable right now." : "Sentiment unavailable.")
-    : !data.enabled ? "Not collected (the model is off, as in mock mode). No sentiment has been estimated."
-    : data.modelStatus !== "ready" ? `Model ${data.modelStatus}. No sentiment has been estimated.`
-    : data.total === 0 ? "No matching posts to classify in the last 24 hours."
-    : `${data.positive} positive, ${data.neutral} neutral, ${data.negative} negative of ${data.total} top posts, last 24 hours.`;
+  const body = sentimentSummary(data, done, failed);
   return <p className="mb-2 text-xs text-mute" data-testid="sentiment-beside"><span className="text-accent">SENTIMENT</span> <span className="text-white">{body}</span> FinTwitBERT, with a separate possible-irony check. Context only: not part of the score and not shown to predict pumps.</p>;
 }
 

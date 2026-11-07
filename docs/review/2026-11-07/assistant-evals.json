@@ -1,0 +1,354 @@
+{
+  "when": "2026-11-07T18:04:11+00:00",
+  "agent": "mock",
+  "data": "mock",
+  "gemini_model": null,
+  "questions": 19,
+  "scores": {
+    "tool_selection": 1.0,
+    "numeric_accuracy": 1.0,
+    "groundedness": 1.0,
+    "retrieval_hit_at_3": 1.0
+  },
+  "thresholds": {
+    "tool_selection": 0.9,
+    "numeric_accuracy": 0.9,
+    "groundedness": 0.9,
+    "retrieval_hit_at_3": 0.8
+  },
+  "passed": true,
+  "retrieval": {
+    "queries": 14,
+    "hit_at_1": 1.0,
+    "hit_at_3": 1.0,
+    "hit_at_5": 1.0,
+    "mrr": 1.0,
+    "misses": []
+  },
+  "rows": [
+    {
+      "id": "snapshot_msft_change",
+      "question": "What is Microsoft doing today?",
+      "tools": [
+        "get_stock_snapshot"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Microsoft Corporation (MSFT) is in the Technology sector. It last traded at $97.82, -1.81% on the day. [mock data]",
+      "truth": -1.81,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "perf_nvda_1y",
+      "question": "How has Nvidia performed over the past year?",
+      "tools": [
+        "get_price_performance"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "NVDA returned -25.59% over 1y and moves in a bumpy way. [mock data]",
+      "truth": -25.59,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "perf_aapl_6mo",
+      "question": "How has Apple done over the last 6 months?",
+      "tools": [
+        "get_price_performance"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "AAPL returned -5.55% over 6mo and moves in a average way. [mock data]",
+      "truth": -5.55,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "tech_aapl_sma200",
+      "question": "Is Apple above its 200-day moving average?",
+      "tools": [
+        "get_technical_indicators"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "AAPL is $98.06. 50-day average 105.48, 200-day average 108.55 (price is below it), RSI 36.0, 52-week range 98.06 to 132.93.",
+      "truth": 108.55,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "risk_tsla_beta",
+      "question": "Is Tesla a risky stock?",
+      "tools": [
+        "explain_stock_risk"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "TSLA has annualized volatility of 55.57%, so it moves in a bumpy way. Its beta is 1.4, which is more sensitive than the market.",
+      "truth": 1.4,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "compare_aapl_msft",
+      "question": "Compare Apple and Microsoft for me.",
+      "tools": [
+        "compare_stocks"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Side by side:\n- AAPL: $98.06, -1.91% today, volatility 27.82%, beta 1.13\n- MSFT: $97.82, -1.81% today, volatility 25.86%, beta 1.03",
+      "truth": 98.06,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "move_aapl_6mo",
+      "question": "Why did Apple move over the last 6 months?",
+      "tools": [
+        "explain_price_move"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "AAPL moved -5.55% (down) over 6mo, 2021-09-02 to 2022-02-25. Recent headlines that may be related, not confirmed causes: Apple Inc. reports quarterly earnings; Analysts weigh in on Apple Inc.'s outlook; Apple Inc. announces a new product line.",
+      "truth": -5.55,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "news_nvda",
+      "question": "What is the latest news on Nvidia?",
+      "tools": [
+        "get_ticker_news"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Recent headlines for NVDA (third-party text, not verified):\n- NVIDIA Corporation reports quarterly earnings (Synthetic Newswire)\n- Analysts weigh in on NVIDIA Corporation's outlook (Mock Markets)\n- NVIDIA Corporation announces a new product line (Demo Daily)\n- What investors should know about NVIDIA Corporation (Offline Observer)\n- NVIDIA Corporation shares move with sector trends (Sample Street Journal)",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "pump_gme",
+      "question": "Is GME being pumped?",
+      "tools": [
+        "get_pump_risk"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Pumpwatch rules-v1 scores GME 74 of 100: Pump likely (window ending 2026-01-01T00:00:00Z). Current signal breakdown unavailable; current catalyst evidence unavailable. Historical flag at 2026-01-01T00:00:00Z, score 74 of 100: social (+30), market (+24); no catalyst recorded. This is a risk signal about possible coordinated hype, not a price prediction. [mock data]\nSentiment context: Sentiment is not being collected (mock data has no sentiment collection). No sentiment has been estimated. Sentiment is context only. It is the tone of sampled Bluesky posts from a pretrained financial-language model. It is not part of the rules-v1 risk score, and nothing shows that it predicts pump-and-dump events. Sarcasm, slang and mixed or quoted claims can be misread; one post label may not describe each stock mentioned.",
+      "truth": 74.0,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "pump_amc_hype",
+      "question": "Is the hype on AMC real?",
+      "tools": [
+        "get_pump_risk"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Pumpwatch rules-v1 scores AMC 66 of 100: Pump likely (window ending 2026-01-01T00:00:00Z). Current signal breakdown unavailable; current catalyst evidence unavailable. Historical flag at 2026-01-01T00:00:00Z, score 66 of 100: social (+25), market (+24); no catalyst recorded. This is a risk signal about possible coordinated hype, not a price prediction. [mock data]\nSentiment context: Sentiment is not being collected (mock data has no sentiment collection). No sentiment has been estimated. Sentiment is context only. It is the tone of sampled Bluesky posts from a pretrained financial-language model. It is not part of the rules-v1 risk score, and nothing shows that it predicts pump-and-dump events. Sarcasm, slang and mixed or quoted claims can be misread; one post label may not describe each stock mentioned.",
+      "truth": 66.0,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "pump_sndl",
+      "question": "Is SNDL a pump and dump?",
+      "tools": [
+        "get_pump_risk"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Pumpwatch rules-v1 scores SNDL 32 of 100: Low risk (window ending 2026-01-01T00:00:00Z). Current signal breakdown unavailable; current catalyst evidence unavailable. This is a risk signal about possible coordinated hype, not a price prediction. [mock data]\nSentiment context: Sentiment is not being collected (mock data has no sentiment collection). No sentiment has been estimated. Sentiment is context only. It is the tone of sampled Bluesky posts from a pretrained financial-language model. It is not part of the rules-v1 risk score, and nothing shows that it predicts pump-and-dump events. Sarcasm, slang and mixed or quoted claims can be misread; one post label may not describe each stock mentioned.",
+      "truth": 32.0,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "sentiment_gme",
+      "question": "What is the Bluesky sentiment on GME?",
+      "tools": [
+        "get_sentiment"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Sentiment is not being collected (mock data has no sentiment collection). No sentiment has been estimated. Sentiment is context only. It is the tone of sampled Bluesky posts from a pretrained financial-language model. It is not part of the rules-v1 risk score, and nothing shows that it predicts pump-and-dump events. Sarcasm, slang and mixed or quoted claims can be misread; one post label may not describe each stock mentioned.",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "knowledge_pump",
+      "question": "What is a pump and dump?",
+      "tools": [
+        "search_knowledge"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Pump-and-dump schemes (plain English) What is a pump and dump? A pump and dump is a scheme where people push a thinly traded stock higher with hype, then sell their own shares to the buyers the hype attracted. The price rises fast on loud promotion, and collapses when the promoters sell. Late buyers are left holding shares that lost most of their value. [GENERAL_pump_and_dump.md]",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "knowledge_pe",
+      "question": "What is a P/E ratio?",
+      "tools": [
+        "search_knowledge"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Stock investing basics (plain English) What is the P/E ratio? P/E stands for price-to-earnings. It compares the share price to how much profit the company earns per share in a year. A P/E of 25 roughly means investors are paying $25 for every $1 of yearly earnings. A higher P/E often means investors expect strong future growth; a lower P/E can mean the company is cheaper or that people are less optimistic. P/E is most useful when comparing similar companies. [GENERAL_investing_basics.md] [GENERAL_technical_indicators.md]",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "knowledge_sma",
+      "question": "What is a 200-day moving average?",
+      "tools": [
+        "search_knowledge"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Common chart metrics explained (plain English) Moving averages (the 50-day and 200-day) A moving average smooths out the daily noise to show the underlying trend. The **200-day moving average** is just the average closing price over the last 200 trading days; the **50-day moving average** is the average over the last 50 days. How people read them: - When the price is **above** its 200-day average, many investors describe the stock as being in a long-term **uptrend**. - When the price is **below** its 200-day average, they call it a long-term **downtrend**. - The 50-day average reacts faster th [GENERAL_technical_indicators.md]",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "knowledge_score",
+      "question": "How do I read the Pumpwatch risk score?",
+      "tools": [
+        "search_knowledge"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Reading the Pumpwatch risk score (plain English) The verdicts A score of 65 or more is labelled Pump likely, 35 to 64 is Watch, and below 35 is Low risk. The label says how risky the ticker looks, not which way the price will go. It is a risk signal about possible coordinated hype, never a price prediction. [GENERAL_reading_pumpwatch.md]",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "knowledge_beginner",
+      "question": "Explain what I should watch out for as a beginner investor.",
+      "tools": [
+        "search_knowledge"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "What to watch out for as a beginner (plain English) This is general, educational guidance \u2014 not investment advice, and not a recommendation to buy or sell anything. [GENERAL_what_to_watch_out_for.md] [GENERAL_investing_basics.md]",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "paper_account",
+      "question": "What is my paper account worth?",
+      "tools": [
+        "get_paper_account"
+      ],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "Your simulated account holds $100,000.00 cash and 0 position(s), total $100,000.00, P&L $+0.00. Simulated only; I cannot place orders.",
+      "truth": 100000.0,
+      "numeric_ok": true,
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    },
+    {
+      "id": "refuse_trade",
+      "question": "Buy 100 shares of GME for me",
+      "tools": [],
+      "tool_ok": true,
+      "llm": "mock",
+      "answer": "I cannot place orders or trade: I only read data. Use the BUY and SELL commands in the paper-trading panel for simulated orders.",
+      "grounded": {
+        "ok": true,
+        "fabricated_citations": [],
+        "uncited": false,
+        "unsupported_figures": []
+      }
+    }
+  ]
+}

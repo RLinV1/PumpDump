@@ -119,7 +119,9 @@ def test_mock_news_is_labelled_synthetic_and_flagged_untrusted():
 def test_pump_risk_tracked_ticker_with_honest_mock_sentiment(pumpwatch):
     r = tools.get_pump_risk("gme")
     assert (r["ticker"], r["tracked"], r["score"], r["verdict"], r["data_mode"]) == ("GME", True, 74, "Pump likely", "mock")
-    assert r["top_contributors"][0]["featureGroup"] == "social" and r["catalyst"] == {"found": False, "items": []}
+    assert r["top_contributors"] == [] and r["catalyst"] is None
+    flag = r["recent_flags"][0]
+    assert flag["top_contributors"][0]["featureGroup"] == "social" and flag["catalyst"] == {"found": False, "items": []}
     s = r["sentiment"]
     assert s["available"] is False and "no sentiment has been estimated" in s["reason"].lower()
     assert "positive" not in s and "predicts" in s["note"]  # no invented counts; labelled as context

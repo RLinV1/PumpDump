@@ -28,7 +28,7 @@ export function createNewsSentimentLoader({ loadNews, enabled = false, loadClass
         return { ...data, sentimentModel: NEWS_MODEL.name, sentimentStatus: "error" };
       }
     })().then((result) => {
-      cache.set(key, result);
+      if (result.sentimentStatus === "ready") cache.set(key, result);
       if (cache.size > 31) cache.delete(cache.keys().next().value);
       return result;
     }).finally(() => pending.delete(key));
