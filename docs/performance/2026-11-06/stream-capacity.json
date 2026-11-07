@@ -1,0 +1,14 @@
+{
+  "target": "http://127.0.0.1",
+  "conns": 1000,
+  "hold_s": 20,
+  "date": "2026-11-06T18:51:52.502Z",
+  "open": 1000,
+  "receiving": 1000,
+  "dropped": 0,
+  "refused": 0,
+  "flag_delivered": 1000,
+  "flag_p50_ms": 1315,
+  "flag_p95_ms": 1755,
+  "flag_max_ms": 1798
+}

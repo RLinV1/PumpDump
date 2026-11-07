@@ -37,6 +37,20 @@ test("disabled service never loads a model or opens a stream", async () => {
   service.stop();
 });
 
+test("stream irony stays separate from tone and is removed with its post", async () => {
+  const { service } = make({ classify: async () => [{ label: "positive", irony: true }] });
+  await service.start();
+  service.ingest(event());
+  await settle(() => service.snapshot("GME").total === 1);
+  assert.equal(service.snapshot("GME").positive, 1);
+  assert.equal(service.snapshot("GME").negative, 0);
+  assert.equal(service.snapshot("GME").irony, 1);
+  service.ingest(deleted());
+  assert.equal(service.snapshot("GME").irony, 0);
+  assert.equal(service.snapshot("GME").total, 0);
+  service.stop();
+});
+
 test("search and live posts share one serial classifier", async () => {
   const pending = [];
   let active = 0, maxActive = 0;

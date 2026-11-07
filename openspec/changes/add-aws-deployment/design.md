@@ -17,7 +17,7 @@ Same stack as `add-gcp-deployment`: Kafka, Postgres, four Spring Boot services, 
 
 **Fargate in public subnets, no NAT Gateway.** A NAT Gateway costs about as much as the rest of the small stack. Tasks get public IPs only to pull images and write logs; security groups admit only the ALB and peers. RDS and MSK stay in private subnets with no internet route. Trade-off: tasks have public addresses; the security groups are the control.
 
-**Cloud Map for discovery.** `web` needs `api`, apps need Kafka, and Plutus needs `web`, without an internal load balancer. The web image bakes the API origin at build time, so the namespace name is fixed by the `name` variable.
+**Cloud Map for discovery.** `web` needs `api`, apps need Kafka, and Research needs `web`, without an internal load balancer. The web image bakes the API origin at build time, so the namespace name is fixed by the `name` variable.
 
 **RDS PostgreSQL 17, generated password in Secrets Manager.** Managed Postgres is the standard employer-recognised choice and matches `postgres:17` in compose. `random_password` puts the value in state, which is documented; RDS-managed passwords would avoid that but rotate weekly and break long-lived connection pools.
 

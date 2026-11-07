@@ -43,13 +43,15 @@ export type Quote = { ticker: string; price: number; changePct: number; prevClos
 export type Quotes = { asOf: string; feed: string; quotes: Quote[] };
 export type StockNews = {
   asOf: string; ticker: string | null;
-  items: { id: string; title: string; url: string; source: string; publishedAt: string; symbols: string[] }[];
+  items: { id: string; title: string; url: string; source: string; publishedAt: string; symbols: string[]; sentiment?: "positive" | "negative" | "neutral" }[];
+  sentimentModel?: string; sentimentStatus?: "ready" | "error" | "busy";
 };
 export type Sentiment = {
   ticker: string; enabled: boolean; model: string; modelStatus: "disabled" | "loading" | "ready" | "error";
   streamConnected: boolean; asOf: string; windowMinutes: number;
   positive: number; negative: number; neutral: number; total: number; lastPostAt: string | null; dropped: number;
   sample?: { sort: "top" | "latest"; examined: number };
+  modelName?: string; ironyModel?: string; irony?: number;
 };
 
 export type DataMode = "mock" | "live";
@@ -128,7 +130,9 @@ function validNews(data: StockNews, ticker: string | null): boolean {
   return !!data && data.ticker === ticker && validDate(data.asOf) && Array.isArray(data.items)
     && data.items.every((i) => i && typeof i.id === "string" && typeof i.title === "string" && i.title.length > 0
       && typeof i.url === "string" && safeLink(i.url) && typeof i.source === "string" && validDate(i.publishedAt)
-      && strings(i.symbols));
+      && strings(i.symbols) && (i.sentiment === undefined || ["positive", "negative", "neutral"].includes(i.sentiment)))
+    && (data.sentimentModel === undefined || typeof data.sentimentModel === "string")
+    && (data.sentimentStatus === undefined || ["ready", "error", "busy"].includes(data.sentimentStatus));
 }
 
 function validSentiment(data: Sentiment, ticker: string): boolean {
@@ -137,6 +141,8 @@ function validSentiment(data: Sentiment, ticker: string): boolean {
     && validDate(data.asOf) && Number.isFinite(data.windowMinutes) && data.windowMinutes > 0
     && [data.positive, data.negative, data.neutral, data.total, data.dropped].every(validCount)
     && data.total === data.positive + data.negative + data.neutral && (data.lastPostAt === null || validDate(data.lastPostAt))
+      && (data.modelName === undefined || typeof data.modelName === "string") && (data.ironyModel === undefined || typeof data.ironyModel === "string")
+      && (data.irony === undefined || (validCount(data.irony) && data.irony <= data.total))
     && (data.sample === undefined || (!!data.sample && ["top", "latest"].includes(data.sample.sort)
       && validCount(data.sample.examined) && data.sample.examined <= 50 && data.total <= Math.min(25, data.sample.examined) && data.windowMinutes === 1440));
 }
@@ -268,3 +274,23 @@ export const placePaperOrder = (side: "BUY" | "SELL", ticker: string, qty: numbe
   send<PaperAccount>("/api/v1/paper/orders", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ side, ticker, qty }) }, signal, validAccount);
 export const resetPaperAccount = (signal?: AbortSignal) =>
   send<PaperAccount>("/api/v1/paper/reset", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) }, signal, validAccount);
+
+export type AssistantSource = { kind: string; title: string; url: string | null };
+export type AssistantAnswer = { answer: string; toolsUsed: string[]; sources: AssistantSource[]; llm: "mock" | "gemini"; note: string; dataMode: DataMode };
+
+// The research assistant. Errors carry the server's own short message, which never includes provider details.
+export async function askAssistant(question: string, signal: AbortSignal): Promise<{ notice: string; data: AssistantAnswer }> {
+  const res = await fetch(`${API_URL}/api/v1/assistant/ask`, {
+    method: "POST", headers: { "Content-Type": "application/json", ...mine() }, body: JSON.stringify({ question }),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(50_000)]), cache: "no-store",
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(typeof body?.error === "string" ? body.error : `The assistant is unavailable (${res.status}).`);
+  const d = body?.data;
+  const ok = typeof body?.notice === "string" && d && typeof d.answer === "string" && strings(d.toolsUsed)
+    && Array.isArray(d.sources) && d.sources.every((s: AssistantSource) => s && typeof s.kind === "string" && typeof s.title === "string")
+    && (d.dataMode === "mock" || d.dataMode === "live") && (d.llm === "mock" || d.llm === "gemini") && typeof d.note === "string";
+  if (!ok) throw new Error("The assistant sent an unreadable answer.");
+  d.sources = d.sources.map((s: AssistantSource) => ({ ...s, url: s.url && safeLink(s.url) ? s.url : null }));
+  return body;
+}

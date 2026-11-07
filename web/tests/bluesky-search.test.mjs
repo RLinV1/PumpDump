@@ -6,6 +6,17 @@ const NOW = Date.parse("2026-10-30T18:00:00Z");
 const post = (id, text, at = NOW - 60000) => ({ uri: `at://did:plc:private/app.bsky.feed.post/${id}`, record: { text, createdAt: new Date(at).toISOString() }, author: { handle: "PRIVATE_AUTHOR" } });
 const snapshot = (ticker) => ({ ticker, enabled: true, model: "pretrained", modelStatus: "ready", streamConnected: true, asOf: new Date(NOW).toISOString(), windowMinutes: 60, positive: 8, negative: 0, neutral: 0, total: 8, lastPostAt: null, dropped: 0 });
 
+test("possible irony is a separate count and never reverses the sentiment", async () => {
+  const load = createBlueskySearch({ now: () => NOW,
+    sentiment: { snapshot, analyze: async () => ({ label: "positive", irony: true }) },
+    fetchImpl: async () => Response.json({ posts: [post("one", "$GME amazing earnings, yeah right.")] }) });
+  const result = await load("GME", "top");
+  assert.equal(result.positive, 1);
+  assert.equal(result.negative, 0);
+  assert.equal(result.irony, 1);
+  assert.equal(result.total, 1);
+});
+
 test("top-post sentiment searches 24 hours and classifies relevant unique posts only", async () => {
   const texts = [], urls = [];
   const load = createBlueskySearch({ now: () => NOW, sentiment: { snapshot, classify: async (text) => { texts.push(text); return text.includes("loss") ? "negative" : "positive"; } }, fetchImpl: async (url) => {

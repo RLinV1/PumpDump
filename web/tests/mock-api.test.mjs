@@ -1,3 +1,4 @@
+import { listenLoopback } from "./http-server.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { after, before, test } from "node:test";
@@ -8,7 +9,7 @@ let base;
 const now = Date.parse("2026-10-28T18:00:00Z");
 before(async () => {
   server = createServer((request, response) => serveMockApi(request, response, now));
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await listenLoopback(server);
   base = `http://127.0.0.1:${server.address().port}`;
 });
 after(async () => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); });

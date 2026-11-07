@@ -157,6 +157,18 @@ test("a response cannot label an explicitly mock body as live", async () => {
   await assert.rejects(api.get("/api/v1/watchlist"), /data mode/);
 });
 
+test("the public sentiment contract rejects impossible irony totals and unsafe headline labels", async () => {
+  const data = { ticker: "GME", enabled: true, model: "FinTwitBERT", modelStatus: "ready", streamConnected: true,
+    asOf: "2026-11-06T12:00:00Z", windowMinutes: 60, positive: 1, negative: 0, neutral: 0, total: 1, lastPostAt: null, dropped: 0, irony: 2 };
+  globalThis.fetch = async () => Response.json({ notice: api.NOTICE, data });
+  await assert.rejects(api.get("/api/v1/tickers/GME/sentiment"), /Invalid API data/);
+  globalThis.fetch = async () => Response.json({ notice: api.NOTICE, data: { ...data, irony: 1 } });
+  assert.equal((await api.get("/api/v1/tickers/GME/sentiment")).data.irony, 1);
+  globalThis.fetch = async () => Response.json({ notice: api.NOTICE, data: { ticker: "GME", asOf: data.asOf,
+    items: [{ id: "1", title: "Synthetic headline", url: "https://example.com", source: "synthetic", publishedAt: data.asOf, symbols: ["GME"], sentiment: "guaranteed profit" }] } });
+  await assert.rejects(api.get("/api/v1/tickers/GME/news"), /Invalid API data/);
+});
+
 test("a caller cancellation signal does not disable the request deadline", async () => {
   const controller = new AbortController();
   let timer;

@@ -1,27 +1,25 @@
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { mentionedTickers } from "./ticker-mentions.mjs";
+import { SOCIAL_MODEL, IRONY_MODEL, loadSocialClassifier } from "./text-models.mjs";
 
-const MODEL = "Xenova/distilroberta-finetuned-financial-news-sentiment-analysis";
-const REVISION = "e6953e30167c7fc3d1ad62f3df31617dd712fbc1";
+const MODEL = SOCIAL_MODEL.id;
 const WINDOW = 3600000;
 const LABELS = new Set(["positive", "negative", "neutral"]);
 
-async function loadClassifier(cacheDir) {
-  const { pipeline, env } = await import("@huggingface/transformers");
-  env.cacheDir = cacheDir;
-  const classifier = await pipeline("text-classification", MODEL, {
-    revision: REVISION, dtype: "q8", device: "cpu",
-    session_options: { intraOpNumThreads: 1, interOpNumThreads: 1 },
-  });
-  return (text) => classifier(text, { truncation: true, max_length: 256 });
+// SENTIMENT_MODEL_DIR lets the Docker image keep the weights it downloaded at build time (see scripts/fetch-sentiment-model.mjs).
+export const MODEL_CACHE_DIR = process.env.SENTIMENT_MODEL_DIR || fileURLToPath(new URL("../.playwright-mcp/sentiment-model-cache/", import.meta.url));
+export const MODEL_NAME = "FinTwitBERT";
+
+export async function loadClassifier(cacheDir = MODEL_CACHE_DIR) {
+  return loadSocialClassifier(cacheDir);
 }
 
 // Public posts are classified locally. Only hashed record ids and per-ticker labels survive inference in memory.
 export function createBlueskySentiment({
   watchlist = [], enabled = false, classify: injectedClassifier,
   webSocketFactory = (url) => new WebSocket(url), now = Date.now,
-  cacheDir = fileURLToPath(new URL("../.playwright-mcp/sentiment-model-cache/", import.meta.url)),
+  cacheDir = MODEL_CACHE_DIR,
   maxQueue = 64, maxSamples = 10000, inferenceTimeoutMs = 10000,
   reconnectDelayMs = 1000,
 } = {}) {
@@ -60,7 +58,7 @@ export function createBlueskySentiment({
     return [...mentionedTickers(text)].filter((ticker) => tickers.has(ticker) || selectedTickers.has(ticker));
   }
 
-  async function classify(text) {
+  async function analyze(text) {
     if (!enabled || !running || modelStatus !== "ready" || typeof text !== "string" || !text.length || queuedInference >= maxQueue)
       throw new Error("Sentiment classifier unavailable");
     queuedInference++;
@@ -77,7 +75,7 @@ export function createBlueskySentiment({
         const result = Array.isArray(prediction) ? prediction[0] : prediction;
         const label = typeof result === "string" ? result.toLowerCase() : result?.label?.toLowerCase();
         if (!LABELS.has(label)) throw new Error("Invalid sentiment prediction");
-        return label;
+        return { label, irony: result?.irony === true };
       } catch (error) {
         if (running && epoch === generation) modelStatus = "error";
         throw error;
@@ -86,6 +84,8 @@ export function createBlueskySentiment({
     inference = task.catch(() => {});
     return task;
   }
+
+  async function classify(text) { return (await analyze(text)).label; }
 
   async function drain() {
     if (busy || !running || modelStatus !== "ready") return;
@@ -96,10 +96,13 @@ export function createBlueskySentiment({
         const item = queue.shift();
         if (records.get(item.id) !== item.record || item.record.at < now() - WINDOW) continue;
         try {
-          const work = classify(item.text);
+          const work = analyze(item.text);
           item.text = "";
-          const label = await work;
-          if (running && epoch === generation && records.get(item.id) === item.record) item.record.label = label;
+          const result = await work;
+          if (running && epoch === generation && records.get(item.id) === item.record) {
+            item.record.label = result.label;
+            item.record.irony = result.irony;
+          }
           prune();
         } catch {
           if (running && epoch === generation) {
@@ -234,18 +237,20 @@ export function createBlueskySentiment({
       if (selectedTickers.size > 64) selectedTickers.delete(selectedTickers.keys().next().value);
     }
     const counts = { positive: 0, negative: 0, neutral: 0 };
+    let irony = 0;
     let last = null;
     for (const record of records.values()) if (record.label && record.tickers.includes(ticker)) {
       counts[record.label]++;
+      if (record.irony) irony++;
       last = Math.max(last ?? record.at, record.at);
     }
     return {
-      ticker, enabled, model: MODEL, modelStatus, streamConnected: connected,
+      ticker, enabled, model: MODEL, modelName: MODEL_NAME, ironyModel: IRONY_MODEL.name, irony, modelStatus, streamConnected: connected,
       asOf: new Date(now()).toISOString(), windowMinutes: 60, ...counts,
       total: counts.positive + counts.negative + counts.neutral,
       lastPostAt: last === null ? null : new Date(last).toISOString(), dropped,
     };
   }
 
-  return { start, stop, snapshot, ingest, classify };
+  return { start, stop, snapshot, ingest, classify, analyze };
 }

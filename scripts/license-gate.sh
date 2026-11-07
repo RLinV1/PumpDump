@@ -5,7 +5,8 @@ cd "$(dirname "$0")/.."
 BAD='NC|Non[- ]?Commercial|Share[- ]?Alike|CC-BY-NC|CC-BY-SA|GPL|AGPL|SSPL|BUSL|BSL|UNKNOWN|UNLICENSED|Custom'
 ALLOW=$(grep -v '^\s*#' scripts/license-allow.txt | sed 's/\s*#.*//; s/\s*$//' | grep -v '^$' || true)
 fail=0
-only="${1:-all}"  # all | python (ml) | plutus
+only="${1:-all}"  # all | npm | maven | python (ml) | research
+case "$only" in all|npm|maven|python|research) ;; *) echo "usage: $0 [all|npm|maven|python|research]" >&2; exit 2 ;; esac
 
 # prints "name<TAB>license" lines on stdin; flags bad ones not on the allow-list
 flag() {
@@ -19,7 +20,7 @@ flag() {
 }
 
 echo "== npm (web) =="
-if [ "$only" != all ]; then echo "skipped"
+if [ "$only" != all ] && [ "$only" != npm ]; then echo "skipped"
 elif [ -d web/node_modules ]; then
   (cd web && npx --yes license-checker@25.0.1 --production --json) > "${TMPDIR:-/tmp}/npm-lic.json" || { echo "license-checker failed"; exit 2; }
   flag < <(node -e '
@@ -33,7 +34,7 @@ else
 fi
 
 echo "== maven =="
-if [ "$only" != all ]; then echo "skipped"
+if [ "$only" != all ] && [ "$only" != maven ]; then echo "skipped"
 elif [ -f pom.xml ]; then
   mvn -B -q org.codehaus.mojo:license-maven-plugin:2.4.0:aggregate-add-third-party \
     -Dlicense.outputDirectory=target/license -Dlicense.excludedScopes=test,provided -Dlicense.failOnMissing=false || { echo "maven license plugin failed"; exit 2; }
@@ -50,7 +51,7 @@ else
 fi
 
 echo "== python (ml) =="
-if [ "$only" = plutus ]; then echo "skipped"
+if [ "$only" != all ] && [ "$only" != python ]; then echo "skipped"
 elif [ -f ml/requirements.txt ]; then
   # reads license metadata of the installed packages named in ml/requirements.txt (pip install -r it first)
   PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
@@ -74,17 +75,17 @@ else
   echo "ml/requirements.txt missing: skipping python license scan"
 fi
 
-echo "== python (plutus, with transitive dependencies) =="
-if [ "$only" = python ]; then echo "skipped"
-elif [ -f plutus/pyproject.toml ]; then
-  # walks plutus/pyproject.toml dependencies and everything they pull in (pip install ./plutus first)
+echo "== python (research, with transitive dependencies) =="
+if [ "$only" != all ] && [ "$only" != research ]; then echo "skipped"
+elif [ -f research/pyproject.toml ]; then
+  # walks research/pyproject.toml dependencies and everything they pull in (pip install ./research first)
   PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
   flag < <("$PY" - <<'PY'
 import re, tomllib
 from importlib.metadata import metadata, requires, PackageNotFoundError
 from packaging.requirements import Requirement
 norm = lambda n: re.sub(r"[-_.]+", "-", n).lower()
-todo = [norm(re.split(r"[\[=<>~ ;]", d, maxsplit=1)[0]) for d in tomllib.load(open("plutus/pyproject.toml", "rb"))["project"]["dependencies"]]
+todo = [norm(re.split(r"[\[=<>~ ;]", d, maxsplit=1)[0]) for d in tomllib.load(open("research/pyproject.toml", "rb"))["project"]["dependencies"]]
 seen = set()
 while todo:
     name = todo.pop()
@@ -105,7 +106,7 @@ while todo:
 PY
   )
 else
-  echo "plutus/pyproject.toml missing: skipping"
+  echo "research/pyproject.toml missing: skipping"
 fi
 
 [ $fail -eq 0 ] && echo "license gate: OK" || echo "license gate: FAILED"

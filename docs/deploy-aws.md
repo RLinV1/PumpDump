@@ -9,7 +9,7 @@ The stack runs on ECS Fargate behind an Application Load Balancer, with RDS Post
 | Piece | Choice |
 | --- | --- |
 | Network | VPC, 2 AZs, public subnets (ALB and tasks) and private subnets (RDS, MSK). No NAT Gateway: tasks get public IPs to pull images, and their security groups accept traffic only from the ALB or each other. |
-| Services (ECS Fargate) | `web`, `api`, `pipeline` (1 task each), `kafka` (unless MSK is on). `connectors` and `replay` exist at **0 tasks**: with mock data and no Alpaca keys every source is off, so connectors would idle, and replay only re-plays events that connectors recorded. Raise `connectors_desired_count` / `replay_desired_count` to switch them on. `plutus` only with `enable_plutus = true`. |
+| Services (ECS Fargate) | `web`, `api`, `pipeline` (1 task each), `kafka` (unless MSK is on). `connectors` and `replay` exist at **0 tasks**: with mock data and no Alpaca keys every source is off, so connectors would idle, and replay only re-plays events that connectors recorded. Raise `connectors_desired_count` / `replay_desired_count` to switch them on. `research` only with `enable_research = true`. |
 | Discovery | Cloud Map namespace `pumpwatch.local`: `web` reaches `api.pumpwatch.local:8083`, apps reach `kafka.pumpwatch.local:19092`. |
 | Load balancer | `/api/v1/flags/stream` goes straight to `api` (through the web server it broke SSE); everything else goes to `web`. Idle timeout 120 s against the API's 15 s heartbeat. Health checks: `/` for web, `/actuator/health` for api. HTTP on the ALB name, or HTTPS with an ACM certificate when `domain_name` and `route53_zone_id` are set. |
 | Database | RDS PostgreSQL 17, `db.t4g.micro`, encrypted, private, 1-day backups, no deletion protection, no final snapshot. |
@@ -77,9 +77,9 @@ Then check the console for leftovers (ECS, load balancers, RDS, MSK, public IPs)
 
 `.github/workflows/aws-deploy.yml` runs only when you start it from the Actions tab (`workflow_dispatch`, and you must type `deploy`). It never runs on push, and the normal `ci.yml` has no AWS steps beyond `terraform fmt` and `validate` with no credentials. To use it: set `enable_github_oidc = true`, apply, then set repository variables `AWS_DEPLOY_ROLE_ARN`, `AWS_REGION`, `WEB_API_ORIGIN` from the Terraform outputs. The role trusts only `repo:RLinV1/PumpDump:ref:refs/heads/main` (`github_oidc_subjects`) and can push to the ECR repositories and update the ECS services, nothing more.
 
-## Plutus
+## Research
 
-`enable_plutus = true` adds the research assistant on mock data and the mock agent (no `ANTHROPIC_API_KEY`), registered in Cloud Map and wired to `web` through `PLUTUS_ORIGIN`. Its storage is ephemeral: if its paper-trading state must survive restarts, add an EFS file system and a `volume` mount to its task definition. Not done, because the stack is disposable. The image is built from `plutus/Dockerfile.service`.
+`enable_research = true` adds the research assistant on mock data and the mock agent (no `ANTHROPIC_API_KEY`), registered in Cloud Map and wired to `web` through `RESEARCH_ORIGIN`. Its storage is ephemeral: if its paper-trading state must survive restarts, add an EFS file system and a `volume` mount to its task definition. Not done, because the stack is disposable. The image is built from `research/Dockerfile.service`.
 
 ## Cost estimate
 
@@ -98,8 +98,8 @@ Then check the console for leftovers (ECS, load balancers, RDS, MSK, public IPs)
 | CloudWatch (logs, dashboard, alarms), Secrets Manager, ECR | 5 | 5 |
 | **Total** | **about 144** | **about 173** |
 
-That is roughly 0.20 USD an hour without MSK and 0.24 with it, so a four-hour test costs about a dollar; leave it running for a week and it costs about 33 to 40. The default 25 USD budget alarm trips after about five days. Optional extras: `connectors` or `replay` at one task add about 18 each; `plutus` about 36. Data transfer out, NAT (none used) and load-test traffic are not included.
+That is roughly 0.20 USD an hour without MSK and 0.24 with it, so a four-hour test costs about a dollar; leave it running for a week and it costs about 33 to 40. The default 25 USD budget alarm trips after about five days. Optional extras: `connectors` or `replay` at one task add about 18 each; `research` about 36. Data transfer out, NAT (none used) and load-test traffic are not included.
 
 ## Not done
 
-Not run: `terraform plan` and `apply` (no AWS credentials were used), so nothing has been deployed or verified against AWS. `tflint`, `checkov` and `actionlint` were not installed. Remote state, WAF, private subnets for tasks with a NAT Gateway, and EFS for Plutus are follow-ups.
+Not run: `terraform plan` and `apply` (no AWS credentials were used), so nothing has been deployed or verified against AWS. `tflint`, `checkov` and `actionlint` were not installed. Remote state, WAF, private subnets for tasks with a NAT Gateway, and EFS for Research are follow-ups.

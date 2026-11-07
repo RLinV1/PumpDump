@@ -105,7 +105,7 @@ variable "replay_desired_count" {
   description = "0: replay records and re-plays Kafka events, and nothing is ingested on mock data."
 }
 
-variable "enable_plutus" {
+variable "enable_research" {
   type        = bool
   default     = false
   description = "Run the research assistant (mock data, mock agent, no keys). Its filesystem is ephemeral."

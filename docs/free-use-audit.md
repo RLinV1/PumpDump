@@ -38,6 +38,8 @@ Everything can run at no cost for a non-commercial portfolio project, but four t
 | ProsusAI/finbert | CC BY-NC-SA 4.0 (verified on the model page) | Do not use. Non-commercial and share-alike, so it is not free to use in general. |
 | sentence-transformers/all-MiniLM-L6-v2 | Apache-2.0 (verified on the model page) | Use for embeddings. |
 | LightGBM, scikit-learn, ONNX Runtime | MIT, BSD, MIT | Use. Standard licenses, not re-verified in this audit. |
+| FinTwitBERT-sentiment and kingsman34 ONNX conversion | MIT in both repository model metadata, checked 2026-11-06 | Pinned local financial-post inference; conversion provenance recorded in the sentiment evaluation report. |
+| CardiffNLP irony and Xenova ONNX conversion | No license declared in the inspected Hugging Face model metadata, checked 2026-11-06 | Local evaluation/inference requested by the owner. Verify the weight redistribution terms before publishing container images containing these assets; no public image is published by this work. |
 | Claude or other paid model APIs | Paid | Not used in the project, to stay free. |
 
 ## Infrastructure

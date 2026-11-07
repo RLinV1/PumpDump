@@ -140,7 +140,7 @@ These Node services can operate while the Java risk backend is unavailable:
 | Daily news | Makes a separate market-wide news query |
 | Gainers/losers | Validates and ranks Alpaca SIP screener results |
 | Intraday swings | Screens configured symbols, movers and active stocks; ranks `(daily high - daily low) / previous close × 100` using the configured snapshot feed |
-| Sentiment | Searches recent top/latest posts or filters Jetstream, then classifies matching text with local pretrained Financial DistilRoBERTa |
+| Sentiment | Searches recent top/latest posts or filters Jetstream, then classifies matching text with local FinTwitBERT and a separate CardiffNLP possible-irony check; Financial DistilRoBERTa classifies optional news-headline tone |
 
 Intraday range is an observed volatility proxy over screened candidates, not a
 learned forecast or exhaustive market-wide volatility ranking. Provider reads are

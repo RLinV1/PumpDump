@@ -1,3 +1,4 @@
+import { listenLoopback } from "./http-server.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
@@ -15,10 +16,10 @@ const fakeService = (calls = [], overrides = {}) => async (u, init) => {
   return Response.json({ ...ACCOUNT, ...(u.includes("/lookup/") ? { ticker: "GME" } : {}) });
 };
 
-async function run({ origin = "http://plutus", fetchImpl, clock = { t: 0 }, ip = "1.1.1.1", mode = "mock", loadQuotes } = {}) {
+async function run({ origin = "http://research", fetchImpl, clock = { t: 0 }, ip = "1.1.1.1", mode = "mock", loadQuotes } = {}) {
   const handler = createPaperApi({ origin, fetchImpl, mode, loadQuotes, now: () => clock.t });
   const server = createServer((req, res) => { req.headers["x-forwarded-for"] = ip; if (!handler(req, res)) { res.writeHead(404); res.end(); } });
-  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  await listenLoopback(server);
   const url = `http://127.0.0.1:${server.address().port}`;
   const call = async (path, { method = "GET", body, headers = {}, token = TOKEN, raw } = {}) => {
     const h = { ...(token ? { "X-Paper-Token": token } : {}), ...(body !== undefined || raw ? { "Content-Type": "application/json" } : {}), ...headers };
@@ -35,7 +36,7 @@ test("a valid order is forwarded with the token and no client price", async () =
   const r = await s.call(...order({ side: "BUY", ticker: "GME", qty: 5, price: 0.01 }));
   s.close();
   assert.equal(r.status, 200);
-  assert.deepEqual(calls, [{ u: "http://plutus/paper/orders", method: "POST", token: TOKEN, body: { side: "BUY", ticker: "GME", qty: 5 } }]);
+  assert.deepEqual(calls, [{ u: "http://research/paper/orders", method: "POST", token: TOKEN, body: { side: "BUY", ticker: "GME", qty: 5 } }]);
   assert.equal(r.headers.get("x-pumpwatch-data-mode"), "mock");
   assert.match(r.body.notice, /Not investment advice/);
 });
@@ -79,7 +80,7 @@ test("account reads need no price from the browser; reset needs confirm: true", 
   assert.equal((await s.call("/api/v1/paper/reset", { method: "POST", body: { confirm: "yes" } })).status, 400);
   assert.equal((await s.call("/api/v1/paper/reset", { method: "POST", body: { confirm: true } })).status, 200);
   s.close();
-  assert.deepEqual(calls.map((c) => c.u), ["http://plutus/paper/account", "http://plutus/paper/reset"]);
+  assert.deepEqual(calls.map((c) => c.u), ["http://research/paper/account", "http://research/paper/reset"]);
 });
 
 test("lookup validates the ticker and forwards it", async () => {
@@ -90,7 +91,7 @@ test("lookup validates the ticker and forwards it", async () => {
   assert.equal((await s.call("/api/v1/lookup/GME", { token: null })).status, 200);
   assert.equal((await s.call("/api/v1/lookup/GME", { method: "POST", token: null })).status, 405);
   s.close();
-  assert.deepEqual(calls.map((c) => c.u), ["http://plutus/lookup/GME"]);
+  assert.deepEqual(calls.map((c) => c.u), ["http://research/lookup/GME"]);
 });
 
 test("writes are rate limited per client, then recover after the window", async () => {
@@ -108,10 +109,10 @@ test("writes are rate limited per client, then recover after the window", async 
 
 test("a global write cap stops many clients together", async () => {
   const clock = { t: 0 };
-  const handler = createPaperApi({ origin: "http://plutus", fetchImpl: fakeService(), now: () => clock.t });
+  const handler = createPaperApi({ origin: "http://research", fetchImpl: fakeService(), now: () => clock.t });
   let ip = 0;
   const server = createServer((req, res) => { req.headers["x-forwarded-for"] = `10.0.${ip >> 8}.${ip++ & 255}`; handler(req, res); });
-  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  await listenLoopback(server);
   const url = `http://127.0.0.1:${server.address().port}/api/v1/paper/orders`;
   const codes = [];
   for (let i = 0; i < 302; i++) codes.push((await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "X-Paper-Token": TOKEN }, body: '{"side":"BUY","ticker":"GME","qty":1}' })).status);
@@ -140,7 +141,7 @@ test("live mode fills at this server's own Alpaca quote and refuses without one"
 });
 
 test("503 when not configured or down; upstream details never leak", async () => {
-  let s = await run({ origin: undefined });
+  let s = await run({ origin: "" });
   assert.equal((await s.call("/api/v1/paper/account")).status, 503);
   s.close();
   s = await run({ fetchImpl: async () => { throw new Error("ECONNREFUSED secret-host"); } });
