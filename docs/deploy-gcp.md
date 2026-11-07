@@ -11,7 +11,7 @@ One Compute Engine VM runs the whole stack with Docker Compose. Caddy forwards e
 
 ## Data on the public VM
 
-The VM always serves labelled mock data, and `deploy/up.sh` strips every `ALPACA_` line from `.env` before copying it. Alpaca's free plan is for personal use and public redistribution rights are unverified (`docs/data-sources.md`), so real market data stays on your own machine: set `DATA_MODE=live` and your keys in the local `.env`. Stock lookup and paper trading (Plutus) follow the same rule: `deploy/up.sh` pins them to mock data, so the VM never shows real prices, and every figure is labelled MOCK. Paper accounts are anonymous tokens in a SQLite file on the `plutuspaper` volume.
+The VM always serves labelled mock data, and `deploy/up.sh` strips every `ALPACA_` line from `.env` before copying it. Alpaca's free plan is for personal use and public redistribution rights are unverified (`docs/data-sources.md`), so real market data stays on your own machine: set `DATA_MODE=live` and your keys in the local `.env`. Stock lookup and paper trading (Research) follow the same rule: `deploy/up.sh` pins them to mock data, so the VM never shows real prices, and every figure is labelled MOCK. Paper accounts are anonymous tokens in a SQLite file on the `researchpaper` volume.
 
 ## Create
 

@@ -1,4 +1,4 @@
-// Public doors to the private lookup and paper-trading service (plutus/api/service.py):
+// Public doors to the private lookup and paper-trading service (research/api/service.py):
 //   GET  /api/v1/lookup/:ticker     one ticker's snapshot, performance, indicators and risk
 //   GET  /api/v1/paper/account      cash, positions, P&L and order history for the caller's token
 //   POST /api/v1/paper/orders       { side, ticker, qty }  simulated market order

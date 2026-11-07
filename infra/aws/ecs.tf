@@ -28,7 +28,7 @@ locals {
           DATA_MODE           = var.data_mode
           API_ORIGIN          = "http://api.${local.ns}:8083"
           TRUST_PROXY_HEADERS = "true" # the ALB is web's only peer and appends the real client as the right-most X-Forwarded-For entry
-        }, var.enable_plutus ? { PLUTUS_ORIGIN = "http://plutus.${local.ns}:8090" } : {})
+        }, var.enable_research ? { RESEARCH_ORIGIN = "http://research.${local.ns}:8090" } : {})
       }]
     }
     api = {
@@ -107,17 +107,17 @@ locals {
         },
       ]
     }
-    # Research assistant. Mock data and mock agent only; no ANTHROPIC_API_KEY is ever set here.
+    # Research assistant. Mock data and mock agent only; no Gemini key is ever set here.
     # Persistence: the task filesystem is ephemeral. If paper-trading state must survive restarts, add an EFS
     # file system and mount it with the task definition `volume` block; it is not done because this stack is disposable.
-    plutus = {
-      enabled = var.enable_plutus, cpu = 1024, memory = 2048, desired = 1, min_healthy = 100, discover = true, lb = null
+    research = {
+      enabled = var.enable_research, cpu = 1024, memory = 2048, desired = 1, min_healthy = 100, discover = true, lb = null
       containers = [{
-        name   = "plutus", image = lookup(local.image, "plutus", ""), port = 8090
+        name   = "research", image = lookup(local.image, "research", ""), port = 8090
         health = "curl -fsS http://127.0.0.1:8090/healthz >/dev/null || exit 1"
         env = {
           PUMPWATCH_API_URL = "http://web.${local.ns}:3000"
-          PLUTUS_PUBLIC     = "1"
+          RESEARCH_PUBLIC   = "1"
           USE_MOCK_DATA     = "1"
           USE_MOCK_LLM      = "1"
         }

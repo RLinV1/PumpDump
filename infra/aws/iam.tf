@@ -1,5 +1,5 @@
 locals {
-  images    = concat(["api", "web", "pipeline", "connectors", "replay", "kafka"], var.enable_plutus ? ["plutus"] : [])
+  images    = concat(["api", "web", "pipeline", "connectors", "replay", "kafka"], var.enable_research ? ["research"] : [])
   kafka_tag = "3.9.1" # mirrored from Docker Hub into ECR by deploy/aws-up.sh, so Fargate never hits Docker Hub rate limits
 }
 

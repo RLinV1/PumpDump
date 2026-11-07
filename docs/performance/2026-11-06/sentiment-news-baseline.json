@@ -1,0 +1,454 @@
+{
+  "date": "2026-11-06T18:48:29.689Z",
+  "input": "synthetic financial posts",
+  "model": "Financial DistilRoBERTa (pinned repository revision)",
+  "limitation": "Small developer-authored set with intended overall tone labels. Not real-world accuracy; sarcasm and mixed/multiple-ticker tone require human interpretation.",
+  "correct": 37,
+  "total": 46,
+  "categories": {
+    "clear": {
+      "correct": 11,
+      "total": 12
+    },
+    "negation": {
+      "correct": 8,
+      "total": 8
+    },
+    "sarcasm": {
+      "correct": 1,
+      "total": 6
+    },
+    "mixed": {
+      "correct": 5,
+      "total": 6
+    },
+    "slang": {
+      "correct": 5,
+      "total": 6
+    },
+    "quoted-claim": {
+      "correct": 3,
+      "total": 4
+    },
+    "multiple-tickers": {
+      "correct": 4,
+      "total": 4
+    }
+  },
+  "rows": [
+    {
+      "id": "clear-01",
+      "category": "clear",
+      "expected": "positive",
+      "text": "$TEST reported record profits and raised its full-year guidance.",
+      "actual": "positive",
+      "score": 0.999664843082428,
+      "correct": true
+    },
+    {
+      "id": "clear-02",
+      "category": "clear",
+      "expected": "negative",
+      "text": "$TEST reported a large quarterly loss and cut its full-year guidance.",
+      "actual": "negative",
+      "score": 0.9983435273170471,
+      "correct": true
+    },
+    {
+      "id": "clear-03",
+      "category": "clear",
+      "expected": "neutral",
+      "text": "$TEST will publish its quarterly report on Thursday.",
+      "actual": "neutral",
+      "score": 0.9998770952224731,
+      "correct": true
+    },
+    {
+      "id": "clear-04",
+      "category": "clear",
+      "expected": "positive",
+      "text": "$TEST earnings beat forecasts and revenue grew 30 percent.",
+      "actual": "positive",
+      "score": 0.9996979832649231,
+      "correct": true
+    },
+    {
+      "id": "clear-05",
+      "category": "clear",
+      "expected": "negative",
+      "text": "$TEST filed for bankruptcy after defaulting on its debt.",
+      "actual": "neutral",
+      "score": 0.9998186230659485,
+      "correct": false
+    },
+    {
+      "id": "clear-06",
+      "category": "clear",
+      "expected": "neutral",
+      "text": "$TEST holds its annual shareholder meeting next Tuesday.",
+      "actual": "neutral",
+      "score": 0.9998640418052673,
+      "correct": true
+    },
+    {
+      "id": "clear-07",
+      "category": "clear",
+      "expected": "positive",
+      "text": "$TEST increased its dividend following strong cash flow and rising profits.",
+      "actual": "positive",
+      "score": 0.9997061491012573,
+      "correct": true
+    },
+    {
+      "id": "clear-08",
+      "category": "clear",
+      "expected": "negative",
+      "text": "$TEST shares plunged after an unexpected earnings loss.",
+      "actual": "negative",
+      "score": 0.9977735280990601,
+      "correct": true
+    },
+    {
+      "id": "clear-09",
+      "category": "clear",
+      "expected": "neutral",
+      "text": "$TEST is listed on the exchange under the ticker TEST.",
+      "actual": "neutral",
+      "score": 0.9998725652694702,
+      "correct": true
+    },
+    {
+      "id": "clear-10",
+      "category": "clear",
+      "expected": "positive",
+      "text": "$TEST won a major contract and expects higher revenue next year.",
+      "actual": "positive",
+      "score": 0.9996933341026306,
+      "correct": true
+    },
+    {
+      "id": "clear-11",
+      "category": "clear",
+      "expected": "negative",
+      "text": "$TEST issued a profit warning as sales declined sharply.",
+      "actual": "negative",
+      "score": 0.9988098740577698,
+      "correct": true
+    },
+    {
+      "id": "clear-12",
+      "category": "clear",
+      "expected": "neutral",
+      "text": "$TEST appointed a new head of investor relations.",
+      "actual": "neutral",
+      "score": 0.9998666644096375,
+      "correct": true
+    },
+    {
+      "id": "negation-01",
+      "category": "negation",
+      "expected": "negative",
+      "text": "$TEST did not beat earnings expectations; profits fell sharply.",
+      "actual": "negative",
+      "score": 0.9988270401954651,
+      "correct": true
+    },
+    {
+      "id": "negation-02",
+      "category": "negation",
+      "expected": "positive",
+      "text": "$TEST is not losing money anymore; it returned to a healthy profit.",
+      "actual": "positive",
+      "score": 0.9995120763778687,
+      "correct": true
+    },
+    {
+      "id": "negation-03",
+      "category": "negation",
+      "expected": "neutral",
+      "text": "$TEST has not announced its quarterly results yet.",
+      "actual": "neutral",
+      "score": 0.9998660087585449,
+      "correct": true
+    },
+    {
+      "id": "negation-04",
+      "category": "negation",
+      "expected": "negative",
+      "text": "Do not confuse higher revenue with good results: $TEST losses doubled.",
+      "actual": "negative",
+      "score": 0.7951151728630066,
+      "correct": true
+    },
+    {
+      "id": "negation-05",
+      "category": "negation",
+      "expected": "positive",
+      "text": "$TEST avoided the expected loss and posted record earnings instead.",
+      "actual": "positive",
+      "score": 0.9992702603340149,
+      "correct": true
+    },
+    {
+      "id": "negation-06",
+      "category": "negation",
+      "expected": "negative",
+      "text": "$TEST is not profitable, not growing, and not meeting its debt payments.",
+      "actual": "negative",
+      "score": 0.990125834941864,
+      "correct": true
+    },
+    {
+      "id": "negation-07",
+      "category": "negation",
+      "expected": "positive",
+      "text": "No dividend cut for $TEST: the board increased the payout by 20 percent.",
+      "actual": "positive",
+      "score": 0.7725127935409546,
+      "correct": true
+    },
+    {
+      "id": "negation-08",
+      "category": "negation",
+      "expected": "neutral",
+      "text": "No change to the date of $TEST annual shareholder meeting.",
+      "actual": "neutral",
+      "score": 0.9998787045478821,
+      "correct": true
+    },
+    {
+      "id": "sarcasm-01",
+      "category": "sarcasm",
+      "expected": "negative",
+      "text": "Great job $TEST, another quarter of losses. Truly amazing management.",
+      "actual": "positive",
+      "score": 0.9011929631233215,
+      "correct": false
+    },
+    {
+      "id": "sarcasm-02",
+      "category": "sarcasm",
+      "expected": "negative",
+      "text": "Love watching $TEST destroy half my investment. Best stock ever. /s",
+      "actual": "neutral",
+      "score": 0.9989209771156311,
+      "correct": false
+    },
+    {
+      "id": "sarcasm-03",
+      "category": "sarcasm",
+      "expected": "negative",
+      "text": "$TEST missed every target again. What a stunning success story. Yeah right.",
+      "actual": "positive",
+      "score": 0.9989339709281921,
+      "correct": false
+    },
+    {
+      "id": "sarcasm-04",
+      "category": "sarcasm",
+      "expected": "positive",
+      "text": "Oh no, $TEST beat earnings and raised guidance again. How will I survive all these gains? /s",
+      "actual": "positive",
+      "score": 0.9996167421340942,
+      "correct": true
+    },
+    {
+      "id": "sarcasm-05",
+      "category": "sarcasm",
+      "expected": "negative",
+      "text": "$TEST bankruptcy filing? Bullish, obviously. Nothing says success like defaulting. /s",
+      "actual": "positive",
+      "score": 0.9233361482620239,
+      "correct": false
+    },
+    {
+      "id": "sarcasm-06",
+      "category": "sarcasm",
+      "expected": "negative",
+      "text": "Fantastic $TEST results: revenue down, debt up, CEO gets a bonus. Sure, fantastic.",
+      "actual": "positive",
+      "score": 0.9994699358940125,
+      "correct": false
+    },
+    {
+      "id": "mixed-01",
+      "category": "mixed",
+      "expected": "negative",
+      "text": "$TEST revenue rose 2 percent, but losses tripled and the company warned of insolvency.",
+      "actual": "positive",
+      "score": 0.9982183575630188,
+      "correct": false
+    },
+    {
+      "id": "mixed-02",
+      "category": "mixed",
+      "expected": "positive",
+      "text": "Despite a small currency charge, $TEST doubled operating profit and raised guidance.",
+      "actual": "positive",
+      "score": 0.9996932744979858,
+      "correct": true
+    },
+    {
+      "id": "mixed-03",
+      "category": "mixed",
+      "expected": "negative",
+      "text": "$TEST beat last quarter's sales but slashed next year's profit forecast by half.",
+      "actual": "negative",
+      "score": 0.9986595511436462,
+      "correct": true
+    },
+    {
+      "id": "mixed-04",
+      "category": "mixed",
+      "expected": "positive",
+      "text": "$TEST shares dipped this morning even though earnings beat forecasts and the dividend increased.",
+      "actual": "positive",
+      "score": 0.9996861219406128,
+      "correct": true
+    },
+    {
+      "id": "mixed-05",
+      "category": "mixed",
+      "expected": "negative",
+      "text": "Record revenue for $TEST cannot offset the massive fraud loss and debt default.",
+      "actual": "negative",
+      "score": 0.9769715666770935,
+      "correct": true
+    },
+    {
+      "id": "mixed-06",
+      "category": "mixed",
+      "expected": "positive",
+      "text": "$TEST closed one failing store while overall margins, cash flow and earnings all improved.",
+      "actual": "positive",
+      "score": 0.9996474385261536,
+      "correct": true
+    },
+    {
+      "id": "slang-01",
+      "category": "slang",
+      "expected": "positive",
+      "text": "$TEST absolutely crushed earnings. Revenue mooning, profits up big.",
+      "actual": "positive",
+      "score": 0.9996255040168762,
+      "correct": true
+    },
+    {
+      "id": "slang-02",
+      "category": "slang",
+      "expected": "negative",
+      "text": "$TEST bags are getting heavy. Earnings tanked and guidance is cooked.",
+      "actual": "neutral",
+      "score": 0.9989921450614929,
+      "correct": false
+    },
+    {
+      "id": "slang-03",
+      "category": "slang",
+      "expected": "negative",
+      "text": "$TEST down bad. Another dilution, another loss. I'm wrecked.",
+      "actual": "negative",
+      "score": 0.9916273951530457,
+      "correct": true
+    },
+    {
+      "id": "slang-04",
+      "category": "slang",
+      "expected": "positive",
+      "text": "$TEST bears in shambles after record profits and a huge dividend hike.",
+      "actual": "positive",
+      "score": 0.9987868666648865,
+      "correct": true
+    },
+    {
+      "id": "slang-05",
+      "category": "slang",
+      "expected": "neutral",
+      "text": "Anyone got the date for $TEST earnings? Just checking the calendar.",
+      "actual": "neutral",
+      "score": 0.9998841285705566,
+      "correct": true
+    },
+    {
+      "id": "slang-06",
+      "category": "slang",
+      "expected": "negative",
+      "text": "$TEST to the moon? Nah. Sales collapsed and there is no cash left.",
+      "actual": "negative",
+      "score": 0.9959799647331238,
+      "correct": true
+    },
+    {
+      "id": "quoted-01",
+      "category": "quoted-claim",
+      "expected": "negative",
+      "text": "A promoter calls $TEST a 'guaranteed winner', but audited accounts show huge losses and defaulted debt.",
+      "actual": "negative",
+      "score": 0.9967559576034546,
+      "correct": true
+    },
+    {
+      "id": "quoted-02",
+      "category": "quoted-claim",
+      "expected": "positive",
+      "text": "Rumors said $TEST was 'finished'. Actual results show record profits and higher guidance.",
+      "actual": "positive",
+      "score": 0.999635636806488,
+      "correct": true
+    },
+    {
+      "id": "quoted-03",
+      "category": "quoted-claim",
+      "expected": "neutral",
+      "text": "$TEST investor relations published the transcript titled 'Quarterly Results Conference Call'.",
+      "actual": "neutral",
+      "score": 0.9998906254768372,
+      "correct": true
+    },
+    {
+      "id": "quoted-04",
+      "category": "quoted-claim",
+      "expected": "negative",
+      "text": "Ignore the 'buy buy buy' spam about $TEST. The company has just filed for bankruptcy.",
+      "actual": "neutral",
+      "score": 0.9998741149902344,
+      "correct": false
+    },
+    {
+      "id": "multi-01",
+      "category": "multiple-tickers",
+      "expected": "negative",
+      "text": "$TEST and $OTHER both reported deep losses and cut their dividends.",
+      "actual": "negative",
+      "score": 0.9984230995178223,
+      "correct": true
+    },
+    {
+      "id": "multi-02",
+      "category": "multiple-tickers",
+      "expected": "positive",
+      "text": "$TEST and $OTHER both beat earnings forecasts and raised their outlooks.",
+      "actual": "positive",
+      "score": 0.9996470212936401,
+      "correct": true
+    },
+    {
+      "id": "multi-03",
+      "category": "multiple-tickers",
+      "expected": "neutral",
+      "text": "$TEST reports on Tuesday; $OTHER reports on Wednesday.",
+      "actual": "neutral",
+      "score": 0.9998763799667358,
+      "correct": true
+    },
+    {
+      "id": "multi-04",
+      "category": "multiple-tickers",
+      "expected": "negative",
+      "text": "$OTHER made a small profit, but $TEST reported catastrophic losses and is entering bankruptcy.",
+      "actual": "negative",
+      "score": 0.9871935248374939,
+      "correct": true
+    }
+  ]
+}

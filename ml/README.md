@@ -1,6 +1,6 @@
 # ml
 
-Offline training side of Pumpwatch (the streaming side is Java). Python 3.11+.
+Offline training side of Pumpwatch (the streaming side is Java). Python 3.12+ (required by the pinned NumPy version).
 
 ```
 pip install -r requirements-dev.txt

@@ -1,0 +1,19 @@
+{"id": "snapshot_msft_change", "question": "What is Microsoft doing today?", "expected_tool": "get_stock_snapshot", "truth": {"lookup": "MSFT", "path": "changePct"}, "tolerance": 0.01}
+{"id": "perf_nvda_1y", "question": "How has Nvidia performed over the past year?", "expected_tool": "get_price_performance", "truth": {"lookup": "NVDA", "path": "performance.1y"}, "tolerance": 0.01}
+{"id": "perf_aapl_6mo", "question": "How has Apple done over the last 6 months?", "expected_tool": "get_price_performance", "truth": {"lookup": "AAPL", "path": "performance.6mo"}, "tolerance": 0.01}
+{"id": "tech_aapl_sma200", "question": "Is Apple above its 200-day moving average?", "expected_tool": "get_technical_indicators", "truth": {"lookup": "AAPL", "path": "indicators.sma200"}, "tolerance": 0.01}
+{"id": "risk_tsla_beta", "question": "Is Tesla a risky stock?", "expected_tool": "explain_stock_risk", "truth": {"lookup": "TSLA", "path": "risk.beta"}, "tolerance": 0.01}
+{"id": "compare_aapl_msft", "question": "Compare Apple and Microsoft for me.", "expected_tool": "compare_stocks", "truth": {"lookup": "AAPL", "path": "price"}, "tolerance": 0.01}
+{"id": "move_aapl_6mo", "question": "Why did Apple move over the last 6 months?", "expected_tool": "explain_price_move", "truth": {"lookup": "AAPL", "path": "performance.6mo"}, "tolerance": 0.01}
+{"id": "news_nvda", "question": "What is the latest news on Nvidia?", "expected_tool": "get_ticker_news"}
+{"id": "pump_gme", "question": "Is GME being pumped?", "expected_tool": "get_pump_risk", "truth": {"value": 74}, "tolerance": 0.5}
+{"id": "pump_amc_hype", "question": "Is the hype on AMC real?", "expected_tool": "get_pump_risk", "truth": {"value": 66}, "tolerance": 0.5}
+{"id": "pump_sndl", "question": "Is SNDL a pump and dump?", "expected_tool": "get_pump_risk", "truth": {"value": 32}, "tolerance": 0.5}
+{"id": "sentiment_gme", "question": "What is the Bluesky sentiment on GME?", "expected_tool": "get_sentiment", "must_say": "not being collected"}
+{"id": "knowledge_pump", "question": "What is a pump and dump?", "expected_tool": "search_knowledge", "expected_source": "GENERAL_pump_and_dump.md"}
+{"id": "knowledge_pe", "question": "What is a P/E ratio?", "expected_tool": "search_knowledge", "expected_source": "GENERAL_investing_basics.md"}
+{"id": "knowledge_sma", "question": "What is a 200-day moving average?", "expected_tool": "search_knowledge", "expected_source": "GENERAL_technical_indicators.md"}
+{"id": "knowledge_score", "question": "How do I read the Pumpwatch risk score?", "expected_tool": "search_knowledge", "expected_source": "GENERAL_reading_pumpwatch.md"}
+{"id": "knowledge_beginner", "question": "Explain what I should watch out for as a beginner investor.", "expected_tool": "search_knowledge", "expected_source": "GENERAL_what_to_watch_out_for.md"}
+{"id": "paper_account", "question": "What is my paper account worth?", "expected_tool": "get_paper_account", "truth": {"value": 100000}, "tolerance": 0.5}
+{"id": "refuse_trade", "question": "Buy 100 shares of GME for me", "expected_tool": null, "must_say": "cannot place orders"}

@@ -9,6 +9,7 @@ const RATE_LIMIT = __ENV.RATE_LIMIT || "unknown (set RATE_LIMIT to the API_RATE_
 const limited = new Counter("rate_limited"); // 429s are the limiter working, not failures
 
 export const options = {
+  summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
   scenarios: {
     ramp: {
       executor: "ramping-vus",
@@ -44,7 +45,7 @@ export function handleSummary(data) {
   const out = {
     target: BASE, vus: VUS, rate_limit: RATE_LIMIT, date: new Date().toISOString(),
     requests: m.http_reqs.values.count, rps: +m.http_reqs.values.rate.toFixed(1),
-    p50_ms: +d.med.toFixed(1), p95_ms: +d["p(95)"].toFixed(1), p99_ms: +(d["p(99)"] ?? d.max).toFixed(1),
+    p50_ms: +d.med.toFixed(1), p95_ms: +d["p(95)"].toFixed(1), p99_ms: Number.isFinite(d["p(99)"]) ? +d["p(99)"].toFixed(1) : null,
     error_rate: +(m.errors?.values.rate ?? 0).toFixed(4),
     rate_limited: m.rate_limited?.values.count ?? 0,
   };

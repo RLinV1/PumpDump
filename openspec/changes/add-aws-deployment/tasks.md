@@ -3,7 +3,7 @@
 - [x] 1.1 Network: VPC, 2 public and 2 private subnets, security groups, no NAT Gateway
 - [x] 1.2 ECR repositories, execution and task roles with resource-scoped policies
 - [x] 1.3 RDS PostgreSQL 17 and Secrets Manager password
-- [x] 1.4 ECS cluster, Cloud Map, services (web, api, pipeline, kafka; connectors and replay at 0; optional plutus), autoscaling
+- [x] 1.4 ECS cluster, Cloud Map, services (web, api, pipeline, kafka; connectors and replay at 0; optional research), autoscaling
 - [x] 1.5 ALB with stream rule, optional HTTPS and ACM
 - [x] 1.6 Optional MSK, topic creation in both Kafka modes
 - [x] 1.7 CloudWatch logs, dashboard, alarms, SNS, Budgets

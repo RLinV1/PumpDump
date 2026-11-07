@@ -42,7 +42,8 @@ Verdicts: "Pump likely" is amber reverse video, "Watch" is a yellow outline, "Lo
 - **Inputs:** 1px outline on black, labels above, never placeholder-only.
 
 ## 5. Layout Principles
-- Terminal grid (lg and up): columns 3fr / 5fr / 4fr, three equal rows. Watchlist and movers on the left, chart and news in the middle, flags on the right. The right column's lower two rows hold panel 7 Stock lookup and panel 8 Paper trading (tagged PAPER), so the pump panels 1 to 6 stay the default view. Below lg every panel stacks in numbered order.
+- Terminal workspace: Default shows the six monitoring panels in a three-column grid; Monitor shows watchlist, chart and flags; Research shows lookup, assistant, news and sentiment in two columns; Trading shows watchlist, lookup and paper trading. One or two panels use one or two columns. Below lg the chosen panels stack in the user's order. Panel rows are at least 300px and the workspace scrolls when needed.
+- Workspace controls: an always-visible preset bar and an inline Customize workspace disclosure. Checkboxes show/hide panels; labelled Up/Down buttons reorder them; Restore default resets the layout. Selection and order save in this browser. Commands reveal hidden panels and preserve their state. DOM and visual order match.
 - Landing: 1500px container, 16px gutters on mobile and 32px from md. Hero is 7fr / 5fr. Sections vary on purpose: a sticky heading beside a numbered list, a pinned scroll story, a 5fr / 7fr detector, an unequal 7fr / 5fr comparison and a ruled status table.
 - Section padding is varied (about 40px to 112px), not one rhythm.
 - No grid of identical cards anywhere.
