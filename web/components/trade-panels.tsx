@@ -107,12 +107,15 @@ export function usePaper() {
   const [state, setState] = useState<PaperState>({ status: "loading" });
   const [confirmReset, setConfirmReset] = useState(false);
   const busy = useRef(false); // a double submit is dropped here and made safe again on the server
+  const generation = useRef(0);
   const refresh = useCallback(async () => {
+    if (busy.current) return;
+    const mine = ++generation.current;
     try {
       const { data } = await getPaperAccount();
-      setState({ status: "done", account: data });
+      if (mine === generation.current) setState({ status: "done", account: data });
     } catch (error) {
-      setState((old) => (old.status === "done" ? old : { status: "error", message: error instanceof Error ? error.message : "Paper account unavailable." }));
+      if (mine === generation.current) setState((old) => (old.status === "done" ? old : { status: "error", message: error instanceof Error ? error.message : "Paper account unavailable." }));
     }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -121,6 +124,7 @@ export function usePaper() {
     busy.current = true;
     try {
       const { data } = await placePaperOrder(side, ticker, qty);
+      ++generation.current; // An older account read must not erase this mutation's result.
       setState({ status: "done", account: data });
       const f = data.fill;
       return { ok: true, text: f ? `PAPER ${f.side} ${f.qty} ${f.ticker} @ ${usd(f.priceCents)} (${modeLabel(data.dataMode)}). SIMULATED.` : "ORDER FILLED. SIMULATED." };
@@ -129,14 +133,17 @@ export function usePaper() {
     } finally { busy.current = false; }
   }, []);
   const reset = useCallback(async (): Promise<PaperResult> => {
+    if (busy.current) return { ok: false, text: "AN ORDER IS ALREADY IN FLIGHT." };
+    busy.current = true;
     setConfirmReset(false);
     try {
       const { data } = await resetPaperAccount();
+      ++generation.current;
       setState({ status: "done", account: data });
       return { ok: true, text: "PAPER ACCOUNT RESET TO THE STARTING CASH." };
     } catch (error) {
       return { ok: false, text: (error instanceof Error ? error.message : "Reset failed.").toUpperCase() };
-    }
+    } finally { busy.current = false; }
   }, []);
   return { state, refresh, trade, reset, confirmReset, askReset: () => setConfirmReset(true), cancelReset: () => setConfirmReset(false) };
 }

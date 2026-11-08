@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import sys
 import time
 
@@ -62,24 +63,30 @@ def _read_cache(ticker: str) -> pd.Series | None:
         return None
     try:
         df = pd.read_parquet(path)
-        return df["adj_close"]
+        series = df["adj_close"]
+        series.attrs.update(df.attrs)
+        return series
     except SOFT_ERRORS as exc:
         log.warning("Failed to read cache for %s: %s", ticker, exc)
         return None
 
 
-def _write_cache(ticker: str, series: pd.Series) -> None:
+def _write_cache(ticker: str, series: pd.Series, lookback_days: int) -> None:
     config.ensure_dirs()
-    pd.DataFrame({"adj_close": series}).to_parquet(_cache_path(ticker))
+    df = pd.DataFrame({"adj_close": series})
+    df.attrs["lookback_days"] = lookback_days
+    df.to_parquet(_cache_path(ticker))
 
 
 def _download_yf(tickers: list[str], period_days: int) -> pd.DataFrame:
-    """Fetch adjusted close from yfinance with retry/backoff. stderr-only logs."""
+    """Fetch a trading-day lookback from yfinance with retry/backoff. stderr-only logs."""
     import yfinance as yf  # imported lazily so mock mode needs no yfinance
 
     # Very large lookbacks mean "all available history" — yfinance only accepts
     # the literal "max" for that, not an arbitrary day count.
-    period = "max" if period_days >= 3000 else f"{max(period_days + 10, 30)}d"
+    # Provider periods are calendar days; cover weekends/holidays plus a small buffer.
+    calendar_days = math.ceil(period_days * 365.25 / config.TRADING_DAYS) + 14
+    period = "max" if period_days >= 3000 else f"{max(calendar_days, 30)}d"
     last_exc: Exception | None = None
     for attempt in range(3):
         try:
@@ -130,7 +137,7 @@ def get_prices(
         series = None if force_refresh else _read_cache(t)
         fresh = (
             series is not None
-            and len(series) >= lookback_days * 0.5
+            and (len(series) >= lookback_days or series.attrs.get("lookback_days", 0) >= lookback_days)
             and _days_old(series.index.max()) <= _MAX_PRICE_AGE_DAYS
         )
         if fresh:
@@ -144,7 +151,7 @@ def get_prices(
             if t in fetched.columns:
                 s = fetched[t].dropna()
                 cached[t] = s
-                _write_cache(t, s)
+                _write_cache(t, s, lookback_days)
             else:
                 log.warning("No data returned for %s; dropping.", t)
 
@@ -261,10 +268,6 @@ def _download_info_yf(ticker: str) -> dict:
 
     raw = yf.Ticker(ticker).info or {}
     description = _short_desc((raw.get("longBusinessSummary") or "").strip())
-    if not description:
-        # yfinance .info frequently comes back partial; for well-known tickers
-        # fall back to the curated blurb instead of "No description available."
-        description = mock_data.curated_description(ticker) or ""
     # Current yfinance reports dividendYield in PERCENT (AAPL ~0.37 == 0.37%).
     # Convert to a fraction; refuse implausible values rather than display them.
     dy = _opt_float(raw.get("dividendYield"))
@@ -310,8 +313,8 @@ def get_company_info(
 
     Mock mode returns deterministic synthetic profiles. Live mode reads a JSON
     cache and hits yfinance only for tickers missing from cache (or on
-    force_refresh), falling back to a synthetic profile if a live lookup fails so
-    a single bad ticker never crashes the caller.
+    force_refresh). Failed live lookups return unavailable metadata without
+    caching it, so the next request can retry.
     """
     tickers = [t.upper() for t in tickers]
     if not tickers:
@@ -322,7 +325,7 @@ def get_company_info(
 
     out: dict[str, dict] = {}
     for t in tickers:
-        rkey = f"info:v2:{t}"
+        rkey = f"info:v3:{t}"
         if not force_refresh:
             hit = cache.cache_get_json(rkey)
             if hit is not None:
@@ -345,8 +348,10 @@ def get_company_info(
                     raise DataUnavailableError("yfinance returned an empty profile")
                 _write_info_cache(t, info)
             except SOFT_ERRORS as exc:
-                log.warning("Live info lookup failed for %s: %s; using synthetic.", t, exc)
-                info = mock_data.generate_company_info(t)
+                log.warning("Live info lookup failed for %s: %s; metadata unavailable.", t, exc)
+                out[t] = {"ticker": t, "name": t, "sector": "Unknown", "description": "No description available.",
+                          "market_cap": None, "pe_ratio": None}
+                continue
         clean = {k: v for k, v in info.items() if k != "_cached_at"}
         cache.cache_set_json(rkey, clean, _MAX_INFO_AGE_DAYS * 86400)
         out[t] = clean

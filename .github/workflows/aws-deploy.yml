@@ -19,20 +19,20 @@ concurrency: aws-deploy
 jobs:
   deploy:
     if: inputs.confirm == 'deploy'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write # lets the job ask GitHub for an OIDC token; no long-lived AWS keys are stored
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@v2.1.7
       - name: Build and push
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}

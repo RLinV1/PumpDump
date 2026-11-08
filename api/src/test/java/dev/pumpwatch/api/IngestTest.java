@@ -1,10 +1,12 @@
 package dev.pumpwatch.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,6 +21,7 @@ import java.util.List;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataAccessResourceFailureException;
 
 class IngestTest {
     static final Instant T = Instant.parse("2026-01-01T00:00:00Z");
@@ -63,6 +66,33 @@ class IngestTest {
         verify(repo).saveFlag(eq("live"), eq("flags"), eq(0), eq(3L), saved.capture());
         String stored = Json.toJson(saved.getValue().evidence());
         assertThat(stored).doesNotContain("RAW POST").doesNotContain("someone").doesNotContain("authorId");
+    }
+
+    @Test
+    void nullPayloadsAreSkippedAndTheBatchContinues() {
+        ingest.onRecords(List.of(
+                new ConsumerRecord<>("scores", 0, 1L, "GME", "null"),
+                new ConsumerRecord<>("flags", 0, 2L, "GME", "null"),
+                new ConsumerRecord<>("flags", 0, 3L, "GME", null),
+                new ConsumerRecord<>("flags", 0, 4L, "GME", Json.toJson(flag()))));
+        verify(repo).saveFlag(eq("live"), eq("flags"), eq(0), eq(4L), any());
+        verify(repo, never()).saveScore(any(), any(), anyInt(), anyLong(), any());
+    }
+
+    @Test
+    void nullRunHeaderIsAbsent() {
+        var r = new ConsumerRecord<>("replay.run-9.flags", 0, 7L, "GME", Json.toJson(flag()));
+        r.headers().add(Headers.RUN_ID, null);
+        ingest.handle(r);
+        verify(repo).saveFlag(eq("run-9"), eq("replay.run-9.flags"), eq(0), eq(7L), any());
+    }
+
+    @Test
+    void databaseFailuresStillPropagateForRetry() {
+        doThrow(new DataAccessResourceFailureException("database unavailable"))
+                .when(repo).saveFlag(any(), any(), anyInt(), anyLong(), any());
+        assertThatThrownBy(() -> ingest.handle(new ConsumerRecord<>("flags", 0, 8L, "GME", Json.toJson(flag()))))
+                .isInstanceOf(DataAccessResourceFailureException.class);
     }
 
     @Test

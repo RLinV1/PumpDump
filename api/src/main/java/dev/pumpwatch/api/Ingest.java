@@ -57,6 +57,6 @@ public class Ingest {
 
     private static String header(ConsumerRecord<?, ?> r, String name) {
         Header h = r.headers().lastHeader(name);
-        return h == null ? null : new String(h.value(), StandardCharsets.UTF_8);
+        return h == null || h.value() == null ? null : new String(h.value(), StandardCharsets.UTF_8);
     }
 }
