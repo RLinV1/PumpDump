@@ -11,6 +11,8 @@ Metadata only: ticker, dates, source URLs, a short note. No price data, no artic
 - Controls are the same ticker as a news-mover row, in a quiet fortnight away from its event. Each window was checked against the company's filing list on SEC EDGAR (data.sec.gov submissions): no 8-K, 10-K, 10-Q, S-1, prospectus or deal filing in the window. Press-only news is not covered by that check.
 - Survivorship: every pump here was caught. The model flags pump-like behavior; it does not prove manipulation.
 
+What the classes mean, how rows were sourced, and why each owner decision was made: [DECISIONS.md](DECISIONS.md).
+
 Commands, from `ml/`:
 
     python -m pumpml.labels validate

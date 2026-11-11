@@ -6,7 +6,7 @@ Episodes: 127. Minimum per class for real-label training: 20.
 | --- | --- | --- | --- |
 | pump | 62 | 22 | 40 |
 | news_mover | 25 | 20 | 5 |
-| hype_no_manipulation | 20 | 2 | 18 |
+| hype_no_manipulation | 20 | 4 | 16 |
 | control | 20 | 20 | 0 |
 
 ## By year of window start

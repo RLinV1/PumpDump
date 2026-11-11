@@ -140,10 +140,15 @@ def outcomes(rows: list[dict]) -> dict[str, dict]:
 
 def review(rows: list[dict], dec: dict | None = None) -> str:
     dec = dec or {}
+    used = {n for r in rows for n in (r.get("policy") or "").split() if n != "one_off"}
+    one_ids = [r["id"] for r in rows if "one_off" in (r.get("policy") or "").split()]
+    done = all(dec.get("policies", {}).get(n) is not None for n in used) and all(dec.get("rows", {}).get(i) is not None for i in one_ids)
     out = ["# Owner review: policy decisions", "",
-           "Uncertain rows are grouped by reason. Answer each policy with true or false in `decisions.json` "
-           "(`null` = undecided, rows excluded from training). A row is used only when every policy covering it is true. "
-           "The row's `policy` column says which ones.", ""]
+           (f"All decisions are answered (owner review {dec.get('answered_on')}). Answers are in `decisions.json`; they are shown under each policy below."
+            if done else
+            "Uncertain rows are grouped by reason. Answer each policy with true or false in `decisions.json` "
+            "(`null` = undecided, rows excluded from training)."),
+           "A row is used only when every policy covering it is true. The row's `policy` column says which ones.", ""]
     for name, q in POLICIES.items():
         cov = [r for r in rows if name in (r.get("policy") or "").split()]
         if name == "one_off" or not cov:
@@ -159,6 +164,10 @@ def review(rows: list[dict], dec: dict | None = None) -> str:
     out += ["", "## Gate status by outcome", "", "| outcome | " + " | ".join(CLASSES) + " | gate |", "| --- |" + " --- |" * (len(CLASSES) + 1)]
     for name, o in outcomes(rows).items():
         out.append(f"| {name} | " + " | ".join(str(o["counts"][c]) for c in CLASSES) + " | " + ("pass" if not o["short"] else "fail: " + ", ".join(o["short"])) + " |")
+    c = outcome_counts(rows, dec)
+    short = [k for k, n in c.items() if n < MIN_PER_CLASS]
+    out.append("| **current decisions** | " + " | ".join(str(c[k]) for k in CLASSES) + " | " + ("pass" if not short else "fail: " + ", ".join(short)) + " |")
+    out += ["", "Why each answer: see [DECISIONS.md](DECISIONS.md)."]
     return "\n".join(out) + "\n"
 
 

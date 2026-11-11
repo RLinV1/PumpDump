@@ -25,7 +25,7 @@
 - [x] 4.2 Collect pump episodes from public enforcement records, each with a source URL
 - [x] 4.3 Collect negatives: news-backed movers, hype without manipulation, matched controls
 - [x] 4.4 Add the dataset report (counts per class and period) and the minimum-count gate
-  - Owner: 63 of 127 rows are `uncertain`. They are grouped into 6 policy questions and 3 one-off rows in `data/labels/REVIEW.md`; answer in `data/labels/decisions.json` (all `null` now, so uncertain rows are excluded).
+  - Owner reviewed the labels on 2026-11-11: all 6 policy questions and the one-off rows are answered in `data/labels/decisions.json` (reasons in `data/labels/DECISIONS.md`). Resulting set: pump 28, news_mover 20, hype 20, control 20; the minimum-count gate passes.
 
 ## 5. Training and evaluation (`ml/`)
 

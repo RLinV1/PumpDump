@@ -1,15 +1,14 @@
 {
+  "answered_on": "2026-11-11",
   "policies": {
-    "suspension_windows": null,
-    "long_windows": null,
-    "order_date_ends": null,
-    "approx_dates": null,
-    "hype_unenforced": null,
-    "news_mover_caveats": null
+    "suspension_windows": false,
+    "long_windows": true,
+    "order_date_ends": true,
+    "approx_dates": false,
+    "hype_unenforced": true,
+    "news_mover_caveats": false
   },
   "rows": {
-    "P008": null,
-    "H004": null,
-    "H015": null
+    "P008": false
   }
 }

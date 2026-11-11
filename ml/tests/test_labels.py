@@ -99,3 +99,9 @@ def test_committed_decisions_valid_and_outcomes():
     assert labels.validate_decisions(rows, labels.load_decisions()) == []
     o = labels.outcomes(rows)
     assert o["all yes"]["short"] == [] and o["all no"]["short"] == ["hype_no_manipulation"]
+
+
+def test_owner_decisions_leave_every_class_at_minimum():
+    c = labels.outcome_counts(labels.load(), labels.load_decisions())
+    assert c == {"pump": 28, "news_mover": 20, "hype_no_manipulation": 20, "control": 20}
+    labels.gate(c)
