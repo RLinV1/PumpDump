@@ -86,7 +86,7 @@ public class RuleScorer implements Scorer {
     public Score score(Features f) {
         double total = Math.max(0.0, Math.min(100.0, points(f)));
         return new Score(SchemaVersions.SCORE, f.eventTime(), Instant.now(), f.ticker(), f.windowEnd(), total, version,
-                f.staleSources());
+                f.staleSources(), null);
     }
 
     private double points(Features f) {

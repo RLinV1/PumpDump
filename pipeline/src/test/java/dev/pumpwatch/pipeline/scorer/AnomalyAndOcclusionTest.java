@@ -94,7 +94,7 @@ class AnomalyAndOcclusionTest {
             @Override public Score score(Features x) {
                 seen.putAll(x.values());
                 return new Score(1, x.eventTime(), x.eventTime(), x.ticker(), x.windowEnd(),
-                        x.values().getOrDefault("volumeRatio", 0.0) * 10, "probe", null);
+                        x.values().getOrDefault("volumeRatio", 0.0) * 10, "probe", null, null);
             }
         };
         Map<String, Double> v = Map.of("volumeRatio", 4.0, "minutesSinceCatalyst", 5.0, "mentions", 9.0);

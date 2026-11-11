@@ -28,10 +28,11 @@ public class ReadRepository {
     public void saveScore(String runId, String topic, int partition, long offset, Score s) {
         jdbc.update("""
                 INSERT INTO api_scores (run_id, topic, kafka_partition, kafka_offset, ticker, window_end, score,
-                                        model_version, stale_sources, ingest_time)
-                VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
+                                        model_version, stale_sources, ingest_time, swing)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
                 runId, topic, partition, offset, s.ticker(), Timestamp.from(s.windowEnd()), s.score(),
-                s.modelVersion(), String.join(",", new TreeSet<>(s.staleSources())), Timestamp.from(s.ingestTime()));
+                s.modelVersion(), String.join(",", new TreeSet<>(s.staleSources())), Timestamp.from(s.ingestTime()),
+                s.swing() == null ? null : Json.toJson(s.swing()));
     }
 
     public void saveFlag(String runId, String topic, int partition, long offset, Flag f) {
