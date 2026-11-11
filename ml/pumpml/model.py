@@ -72,7 +72,24 @@ def train(df: pd.DataFrame, out_dir: Path) -> dict:
         "cv_pr_auc": cv_pr_auc(tr),
     }
     (out_dir / "model.json").write_text(json.dumps(info, indent=2))
+    export_onnx(booster, iso, cal, out_dir)
     return info
+
+
+def export_onnx(booster, iso, sample: pd.DataFrame, out_dir: Path) -> None:
+    """model.onnx = the booster (raw probability). Isotonic is NOT in the graph: it stays as the piecewise-linear
+    table in model.json (calibration.x/y) and the JVM applies it with linear interpolation and clipping, like
+    sklearn. reference.json = one input and the expected calibrated score (0-100) for the startup self-check."""
+    from onnxmltools import convert_lightgbm
+    from onnxmltools.convert.common.data_types import FloatTensorType
+
+    onnx_model = convert_lightgbm(booster, initial_types=[("input", FloatTensorType([None, len(FEATURES)]))],
+                                  zipmap=False, target_opset=15)
+    (out_dir / "model.onnx").write_bytes(onnx_model.SerializeToString())
+    s = score(booster, iso, sample)
+    row = sample.iloc[[int(np.argmin(np.abs(s - 50)))]]  # mid-range, so calibration interpolation is exercised
+    ref = {"features": {f: float(row[f].iloc[0]) for f in FEATURES}, "expected_score": float(score(booster, iso, row)[0])}
+    (out_dir / "reference.json").write_text(json.dumps(ref, indent=2))
 
 
 def load(model_dir: Path):
