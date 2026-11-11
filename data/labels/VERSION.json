@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "date": "2026-11-11",
+  "file": "episodes.csv",
+  "changelog": [
+    {"version": "0.1.0", "date": "2026-11-11", "reason": "First collection: pump episodes from SEC and DOJ pages, news-mover and hype negatives, matched controls. Uncertain rows await owner review (REVIEW.md)."}
+  ],
+  "rule": "Changing an episode's class needs a new version and a changelog entry with the reason."
+}

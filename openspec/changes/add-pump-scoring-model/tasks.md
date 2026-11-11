@@ -21,10 +21,11 @@
 
 ## 4. Labeled dataset
 
-- [ ] 4.1 Define the label schema, the validator and the version file under `data/labels/`
-- [ ] 4.2 Collect pump episodes from public enforcement records, each with a source URL
-- [ ] 4.3 Collect negatives: news-backed movers, hype without manipulation, matched controls
-- [ ] 4.4 Add the dataset report (counts per class and period) and the minimum-count gate
+- [x] 4.1 Define the label schema, the validator and the version file under `data/labels/`
+- [x] 4.2 Collect pump episodes from public enforcement records, each with a source URL
+- [x] 4.3 Collect negatives: news-backed movers, hype without manipulation, matched controls
+- [x] 4.4 Add the dataset report (counts per class and period) and the minimum-count gate
+  - Owner: 63 of 127 rows are `uncertain` and await review in `data/labels/REVIEW.md` (keep or drop).
 
 ## 5. Training and evaluation (`ml/`)
 
