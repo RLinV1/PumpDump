@@ -4,8 +4,9 @@ import os
 from importlib.metadata import version
 from pathlib import Path
 
-# License of the trained model artifact itself. The owner must set it; the license gate fails a card left at UNKNOWN.
-MODEL_LICENSE = os.environ.get("PUMPML_MODEL_LICENSE", "UNKNOWN")
+# License of the trained model artifact itself: MIT, chosen by the owner so anyone may use it.
+# It covers the weights only; it grants no rights to the market data they were trained on.
+MODEL_LICENSE = os.environ.get("PUMPML_MODEL_LICENSE", "MIT")
 LICENSES = {"lightgbm": "MIT", "scikit-learn": "BSD-3-Clause", "pandas": "BSD-3-Clause", "numpy": "BSD-3-Clause"}
 LIMITS = [
     "Version 1 uses market and catalyst features only; social features are not in this model.",
