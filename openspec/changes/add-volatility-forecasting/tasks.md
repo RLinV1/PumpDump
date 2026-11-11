@@ -18,6 +18,6 @@
 
 ## 4. Surfaces
 
-- [ ] 4.1 Return the forecast from the score endpoint and the live stream
-- [ ] 4.2 Show expected swing and regime in the web evidence panel, replacing the placeholder rolling figure
-- [ ] 4.3 Add the "size of move, not direction" notice next to the figure
+- [x] 4.1 Return the forecast from the score endpoint and the live stream
+- [x] 4.2 Show expected swing and regime in the web evidence panel, replacing the placeholder rolling figure
+- [x] 4.3 Add the "size of move, not direction" notice next to the figure
