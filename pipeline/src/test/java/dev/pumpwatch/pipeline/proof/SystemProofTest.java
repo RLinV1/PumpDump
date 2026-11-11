@@ -28,8 +28,12 @@ class SystemProofTest {
     record Out(List<Flag> flags, List<Score> scores) {}
 
     static Out replay(List<Ev> day) {
+        return replay(day, new RuleScorer());
+    }
+
+    static Out replay(List<Ev> day, dev.pumpwatch.pipeline.scorer.Scorer scorer) {
         StreamsBuilder b = new StreamsBuilder();
-        PipelineApplication.build(b, PROPS, new RuleScorer(), List.of(5));
+        PipelineApplication.build(b, PROPS, scorer, List.of(5));
         java.util.Properties cfg = new java.util.Properties();
         cfg.put(StreamsConfig.APPLICATION_ID_CONFIG, "proof-" + java.util.UUID.randomUUID()); // own state dir
         cfg.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");

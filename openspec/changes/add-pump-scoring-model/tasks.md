@@ -21,10 +21,11 @@
 
 ## 4. Labeled dataset
 
-- [ ] 4.1 Define the label schema, the validator and the version file under `data/labels/`
-- [ ] 4.2 Collect pump episodes from public enforcement records, each with a source URL
-- [ ] 4.3 Collect negatives: news-backed movers, hype without manipulation, matched controls
-- [ ] 4.4 Add the dataset report (counts per class and period) and the minimum-count gate
+- [x] 4.1 Define the label schema, the validator and the version file under `data/labels/`
+- [x] 4.2 Collect pump episodes from public enforcement records, each with a source URL
+- [x] 4.3 Collect negatives: news-backed movers, hype without manipulation, matched controls
+- [x] 4.4 Add the dataset report (counts per class and period) and the minimum-count gate
+  - Owner reviewed the labels on 2026-11-11: all 6 policy questions and the one-off rows are answered in `data/labels/decisions.json` (reasons in `data/labels/DECISIONS.md`). Resulting set: pump 28, news_mover 20, hype 20, control 20; the minimum-count gate passes.
 
 ## 5. Training and evaluation (`ml/`)
 
@@ -42,6 +43,6 @@
 - [x] 6.1 Export the model and calibration to ONNX with a stored reference input and expected score
 - [x] 6.2 Implement `OnnxScorer` with ONNX Runtime and the startup self-check
 - [x] 6.3 Fall back to `RuleScorer` on a missing or failing model and test both paths
-- [ ] 6.4 Run the replay of the recorded test day through the model scorer and compare with rules
+- [x] 6.4 Run the replay of the recorded test day through the model scorer and compare with rules (done on the synthetic day with the fixture model: `ModelVsRulesReplayTest`, report in `docs/model-vs-rules-synthetic-day.md`; repeat on a real recorded market day with the same test by pointing it at a recording and a real model via `-Dpumpwatch.modelDir`)
   - Owner: train and promote a model locally (`python -m pumpml train --data <csv> --version <v>`, then `evaluate`, from `ml/`).
   - Owner: replay the recorded day with `PIPELINE_MODEL_DIR=ml/models/<v>` set (needs `model.onnx`, `model.json`, `reference.json`) and compare with a rules-only run.
