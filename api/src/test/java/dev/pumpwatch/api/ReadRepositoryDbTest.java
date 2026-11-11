@@ -46,7 +46,7 @@ class ReadRepositoryDbTest {
     }
 
     static Score score(String ticker, Instant at, double score) {
-        return new Score(SchemaVersions.SCORE, at, at, ticker, at, score, "rules-1", Set.of("news"));
+        return new Score(SchemaVersions.SCORE, at, at, ticker, at, score, "rules-1", Set.of("news"), null);
     }
 
     @Test
@@ -94,5 +94,21 @@ class ReadRepositoryDbTest {
         String json = Json.toJson(repo.recentFlags("live", 50).stream()
                 .filter(f -> f.ticker().equals("IBM")).toList()).toLowerCase();
         assertThat(json).doesNotContain("author").doesNotContain("\"text\"");
+    }
+
+    @Test
+    void swingRoundTripsToScoresAndFlagsAndIsNullWhenAbsent() {
+        var sw = new dev.pumpwatch.common.Swing(1.5, 4.0, dev.pumpwatch.common.Swing.Regime.EXTREME);
+        repo.saveScore("live", "scores", 0, 20, new Score(SchemaVersions.SCORE, T, T, "SWG", T, 10, "rules-1", Set.of(), sw));
+        repo.saveScore("live", "scores", 0, 21, score("NOSW", T, 10));
+        repo.saveFlag("live", "flags", 0, 20, flag("SWG", T.plusSeconds(30), 70));
+        repo.saveFlag("live", "flags", 0, 21, flag("NOSW", T.plusSeconds(30), 70));
+
+        var scores = repo.latestScores("live");
+        assertThat(scores.stream().filter(s -> s.ticker().equals("SWG")).findFirst().get().swing()).isEqualTo(sw);
+        assertThat(scores.stream().filter(s -> s.ticker().equals("NOSW")).findFirst().get().swing()).isNull();
+        var flags = repo.recentFlags("live", 50);
+        assertThat(flags.stream().filter(f -> f.ticker().equals("SWG")).findFirst().get().swing()).isEqualTo(sw);
+        assertThat(flags.stream().filter(f -> f.ticker().equals("NOSW")).findFirst().get().swing()).isNull();
     }
 }

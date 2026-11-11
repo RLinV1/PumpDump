@@ -1,6 +1,6 @@
 package dev.pumpwatch.pipeline.features;
 
-import dev.pumpwatch.pipeline.extractor.SimHash;
+import dev.pumpwatch.common.SimHash;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

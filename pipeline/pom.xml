@@ -34,6 +34,12 @@
       <artifactId>kafka-streams</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.microsoft.onnxruntime</groupId>
+      <artifactId>onnxruntime</artifactId>
+      <!-- 1.22+ native libs crash/fail to init on a current Windows VC runtime (checked 1.22.0, 1.31.1); raise when fixed -->
+      <version>1.20.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>

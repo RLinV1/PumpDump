@@ -1,9 +1,13 @@
 """Model card: data, size, metrics, limits, licenses, date. Written beside the model only when it is promoted."""
 import datetime
+import os
 from importlib.metadata import version
 from pathlib import Path
 
-LICENSES = {"lightgbm": "MIT", "scikit-learn": "BSD-3-Clause", "pandas": "BSD-3-Clause", "numpy": "BSD-3-Clause"}
+# License of the trained model artifact itself: MIT, chosen by the owner so anyone may use it.
+# It covers the weights only; it grants no rights to the market data they were trained on.
+MODEL_LICENSE = os.environ.get("PUMPML_MODEL_LICENSE", "MIT")
+LICENSES = {"lightgbm": "MIT", "onnxmltools": "Apache-2.0", "onnxruntime": "MIT", "scikit-learn": "BSD-3-Clause", "pandas": "BSD-3-Clause", "numpy": "BSD-3-Clause"}
 LIMITS = [
     "Version 1 uses market and catalyst features only; social features are not in this model.",
     "Positives come from caught cases (survivorship): the score means pump-like behavior, not proof of manipulation.",
@@ -40,7 +44,7 @@ def write_card(model_dir: Path, info: dict, report: dict, df, train) -> Path:
         "| --- | --- | --- | --- | --- |", row("model"), row("rules"), row("volume"),
         "", "Values show the estimate with a 95% bootstrap interval over episodes.",
         "", "## Known limits", *[f"- {x}" for x in LIMITS],
-        "", "## Licenses", *[f"- {n} {version(n)}: {lic}" for n, lic in LICENSES.items()],
+        "", "## Licenses", f"- model {model_dir.name}: {MODEL_LICENSE}", *[f"- {n} {version(n)}: {lic}" for n, lic in LICENSES.items()],
     ]
     p = model_dir / "model-card.md"
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -81,7 +81,7 @@ def test_evaluate_reports_and_promotes_with_card(df, trained):
     # news-backed movers fool the rules; the model should beat them on the fixture
     assert r["gate"]["promoted"], r["gate"]
     card = (trained / "model-card.md").read_text()
-    for field in ("## Data", "Model size", "## Metrics", "## Known limits", "## Licenses", "Date:", "Level"):
+    for field in ("## Data", "Model size", "## Metrics", "## Known limits", "## Licenses", "- model ", "Date:", "Level"):
         assert field in card
 
 
@@ -101,3 +101,18 @@ def test_rule_table_matches_docs():
 
 def test_features_cover_catalyst_group():
     assert set(CATALYST) <= set(FEATURES)
+
+
+def test_onnx_export_matches_python_model(trained, df):
+    import onnxruntime as ort
+    booster, iso, info = M.load(trained)
+    ref = json.loads((trained / "reference.json").read_text())
+    sess = ort.InferenceSession(str(trained / "model.onnx"))
+    x = np.array([[ref["features"][f] for f in info["features"]]], dtype=np.float32)
+    p = float(sess.run(["probabilities"], {"input": x})[0][0, 1])
+    cal = info["calibration"]
+    onnx_score = 100 * float(np.interp(p, cal["x"], cal["y"]))  # what the JVM does
+    assert abs(onnx_score - ref["expected_score"]) < 1e-5
+    assert 0 < ref["expected_score"] < 100
+    got = sess.run(["probabilities"], {"input": df[info["features"]].to_numpy(np.float32)})[0][:, 1]
+    assert np.abs(got - booster.predict(df[info["features"]])).max() < 1e-5

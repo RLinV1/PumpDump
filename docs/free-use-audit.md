@@ -18,6 +18,10 @@ Everything can run at no cost for a non-commercial portfolio project, but four t
 | Fonts (Instrument Sans, JetBrains Mono) | SIL Open Font License | Self-hosted by Next. Free. Not re-verified in this audit. |
 | Vanta, three.js | MIT | Removed from the project. |
 
+### Production license list (`scripts/license-gate.sh npm`, run 2026-11-10)
+
+59 packages (production dependencies of `web/`, resolved from the lockfile): 31 MIT, 12 BSD-3-Clause, 8 Apache-2.0, 3 ISC, 1 0BSD, 1 (MIT OR CC0-1.0), 1 CC-BY-4.0 (caniuse-lite), 1 Apache-2.0 AND LGPL-3.0-or-later (sharp-libvips, optional, see above), 1 GSAP standard license (allow-listed in `scripts/license-allow.txt`). No non-commercial, share-alike or unknown licenses. CI re-runs the gate on every push and fails on a new one; model cards must list their licenses and are checked by the same gate (`license-gate.sh cards`).
+
 ## Data sources
 
 | Source | Free plan | Verified how | Caveats |

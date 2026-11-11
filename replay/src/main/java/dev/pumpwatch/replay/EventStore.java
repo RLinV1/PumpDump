@@ -31,6 +31,11 @@ public class EventStore implements EventSource {
                 });
     }
 
+    /** Removes every recorded copy of a deleted post (raw-posts rows are keyed by source:postId). */
+    public int deleteByKey(String topic, String key) {
+        return jdbc.update("DELETE FROM recorded_events WHERE topic = ? AND record_key = ?", topic, key);
+    }
+
     @Override
     public List<RecordedEvent> page(Instant from, Instant to, Instant afterTime, long afterId, int limit) {
         // keyset pagination on (event_time, id): stable and index-friendly

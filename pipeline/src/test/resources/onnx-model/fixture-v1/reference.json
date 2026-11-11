@@ -1,0 +1,12 @@
+{
+  "features": {
+    "return": 0.11694379735681609,
+    "volume": 1122300.968226799,
+    "volumeRatio": 2.664582965492637,
+    "volatility": 0.04359652752834393,
+    "filings24h": 0.0,
+    "newsOutlets6h": 1.0,
+    "catalystPrecededMove": 0.0
+  },
+  "expected_score": 56.41025641025641
+}

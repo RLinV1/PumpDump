@@ -31,9 +31,13 @@ public final class Fx {
         return new TopologyTestDriver(t, p);
     }
 
+    private static final dev.pumpwatch.common.SymbolList SYMBOLS = dev.pumpwatch.common.SymbolList.load();
+
     public static String post(Instant when, String author, String text) {
         return Json.toJson(new PostRecord(SchemaVersions.POST, when, when.plusSeconds(1), "reddit",
-                "p-" + when.toEpochMilli() + author, author, when.minusSeconds(86400), text));
+                "p-" + when.toEpochMilli() + author, author, when.minusSeconds(86400),
+                java.util.List.copyOf(dev.pumpwatch.common.TickerLinker.link(text, SYMBOLS, SYMBOLS.known())),
+                dev.pumpwatch.common.SimHash.of(text), null));
     }
 
     public static String filing(Instant when, String ticker, String form, String... items) {

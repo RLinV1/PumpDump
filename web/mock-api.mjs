@@ -3,12 +3,14 @@ import { parseSymbols } from "./market-quotes.mjs";
 const NOTICE = "Risk signal only. Not investment advice. Pumpwatch is a non-commercial project.";
 const SYMBOLS = ["GME", "AMC", "SNDL"];
 const SCORE = [74, 66, 32];
+// Labelled mock forecast: size of move in percent of price, never direction.
+const SWING = [{ median: 3.2, upperBand: 9.5, regime: "extreme" }, { median: 2.1, upperBand: 6.4, regime: "elevated" }, { median: 0.6, upperBand: 1.8, regime: "calm" }];
 const iso = (time) => new Date(time).toISOString();
 
 function flagsAt(now) {
   return SYMBOLS.slice(0, 2).map((ticker, i) => ({
     id: Math.floor(now / 30000) * 10 + 2 - i,
-    ticker, raisedAt: iso(now - (i * 15 + 3) * 60000),
+    ticker, raisedAt: iso(now - (i * 15 + 3) * 60000), swing: SWING[i],
     evidence: {
       score: SCORE[i], modelVersion: "mock-rules-v1",
       topContributors: [{ featureGroup: "social", delta: 30 - i * 5 }, { featureGroup: "market", delta: 24 }],
@@ -52,7 +54,7 @@ export function serveMockApi(request, response, now = Date.now()) {
     const sample = url.searchParams.get("sample") ?? "stream";
     if (!["top", "latest", "stream"].includes(sample)) return json(400, null, "Invalid sentiment sample");
     return json(200, { ticker: context[1], enabled: false, model: "mock", modelStatus: "disabled", streamConnected: false,
-      asOf: iso(now), windowMinutes: sample === "stream" ? 60 : 1440, positive: 0, negative: 0, neutral: 0, total: 0, lastPostAt: null, dropped: 0,
+      asOf: iso(now), windowMinutes: sample === "stream" ? 60 : 1440, positive: 0, negative: 0, neutral: 0, total: 0, lastPostAt: null, dropped: 0, posts: [],
       ...(sample === "stream" ? {} : { sample: { sort: sample, examined: 0 } }) });
   }
   if (url.pathname === "/api/v1/news" || context?.[2] === "news") {
@@ -62,7 +64,7 @@ export function serveMockApi(request, response, now = Date.now()) {
   }
   if (url.pathname === "/api/v1/watchlist") {
     return json(200, SYMBOLS.map((ticker, i) => ({
-      ticker, score: SCORE[i], modelVersion: "mock-rules-v1", windowEnd: iso(now - 60000), computedAt: iso(now), staleSources: [],
+      ticker, score: SCORE[i], modelVersion: "mock-rules-v1", windowEnd: iso(now - 60000), computedAt: iso(now), staleSources: [], swing: SWING[i],
     })));
   }
   if (url.pathname === "/api/v1/flags") {

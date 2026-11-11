@@ -1,11 +1,11 @@
-"""python -m pumpml train|evaluate|vol-baseline   (add --synthetic to use the fixture data)"""
+"""python -m pumpml train|evaluate|vol-baseline|vol-train|vol-evaluate   (add --synthetic to use the fixture data)"""
 import argparse
 import json
 from pathlib import Path
 
 from . import evaluate as E
 from . import model as M
-from . import synth, vol
+from . import synth, vol, vol_eval
 
 
 def main(argv=None):
@@ -24,7 +24,35 @@ def main(argv=None):
     v.add_argument("--synthetic", action="store_true")
     v.add_argument("--watchlist", nargs="*")
     v.add_argument("--out", default="vol-baseline.json")
+    t = sub.add_parser("vol-train")
+    t.add_argument("--bars", help="one-minute bars CSV")
+    t.add_argument("--synthetic", action="store_true")
+    t.add_argument("--watchlist", nargs="*")
+    t.add_argument("--out", default="models")
+    t.add_argument("--version", default="dev")
+    e = sub.add_parser("vol-evaluate")
+    e.add_argument("--bars", help="one-minute bars CSV")
+    e.add_argument("--synthetic", action="store_true")
+    e.add_argument("--watchlist", nargs="*")
+    e.add_argument("--model-dir", required=True)
+    e.add_argument("--calm", nargs=2, metavar=("START", "END"), help="explicit calm dates (default: percentile rule)")
+    e.add_argument("--stressed", nargs=2, metavar=("START", "END"), help="explicit stressed dates")
     a = p.parse_args(argv)
+
+    if a.cmd == "vol-evaluate":
+        if a.synthetic == bool(a.bars):
+            p.error("give exactly one of --bars or --synthetic")
+        bars = vol.synth_bars(days=30) if a.synthetic else vol.load_bars(a.bars, a.watchlist)
+        r = vol_eval.evaluate(bars, Path(a.model_dir), a.calm, a.stressed)
+        print(json.dumps({k: r[k] for k in ("period_rule", "gate")}, indent=2))
+        return
+
+    if a.cmd == "vol-train":
+        if a.synthetic == bool(a.bars):
+            p.error("give exactly one of --bars or --synthetic")
+        bars = vol.synth_bars() if a.synthetic else vol.load_bars(a.bars, a.watchlist)
+        print(json.dumps(vol.train(bars, Path(a.out) / f"vol-{a.version}", a.version), indent=2))
+        return
 
     if a.cmd == "vol-baseline":
         bars = vol.synth_bars() if a.synthetic else vol.load_bars(a.bars, a.watchlist)

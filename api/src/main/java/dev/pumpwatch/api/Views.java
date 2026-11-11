@@ -1,6 +1,7 @@
 package dev.pumpwatch.api;
 
 import dev.pumpwatch.common.Flag;
+import dev.pumpwatch.common.Swing;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -20,9 +21,19 @@ public final class Views {
     }
 
     public record ScoreView(String ticker, double score, String modelVersion, Instant windowEnd, Instant computedAt,
-                            Set<String> staleSources) {}
+                            Set<String> staleSources, Swing swing) {
+        public ScoreView(String ticker, double score, String modelVersion, Instant windowEnd, Instant computedAt,
+                         Set<String> staleSources) {
+            this(ticker, score, modelVersion, windowEnd, computedAt, staleSources, null);
+        }
+    }
 
-    public record FlagView(long id, String ticker, Instant raisedAt, Flag.Evidence evidence) {}
+    /** swing is the ticker's latest forecast at or before the flag; null when none exists yet. */
+    public record FlagView(long id, String ticker, Instant raisedAt, Flag.Evidence evidence, Swing swing) {
+        public FlagView(long id, String ticker, Instant raisedAt, Flag.Evidence evidence) {
+            this(id, ticker, raisedAt, evidence, null);
+        }
+    }
 
     /** Scores and flag markers share one event-time axis: windowEnd for scores, raisedAt for flags. */
     public record Timeline(String ticker, Instant from, Instant to, List<ScorePoint> scores, List<FlagMarker> flags) {}

@@ -5,6 +5,7 @@ import dev.pumpwatch.api.Views.ScoreView;
 import dev.pumpwatch.common.Flag;
 import dev.pumpwatch.common.Json;
 import dev.pumpwatch.common.Score;
+import dev.pumpwatch.common.Swing;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Arrays;
@@ -28,10 +29,11 @@ public class ReadRepository {
     public void saveScore(String runId, String topic, int partition, long offset, Score s) {
         jdbc.update("""
                 INSERT INTO api_scores (run_id, topic, kafka_partition, kafka_offset, ticker, window_end, score,
-                                        model_version, stale_sources, ingest_time)
-                VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
+                                        model_version, stale_sources, ingest_time, swing)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
                 runId, topic, partition, offset, s.ticker(), Timestamp.from(s.windowEnd()), s.score(),
-                s.modelVersion(), String.join(",", new TreeSet<>(s.staleSources())), Timestamp.from(s.ingestTime()));
+                s.modelVersion(), String.join(",", new TreeSet<>(s.staleSources())), Timestamp.from(s.ingestTime()),
+                s.swing() == null ? null : Json.toJson(s.swing()));
     }
 
     public void saveFlag(String runId, String topic, int partition, long offset, Flag f) {
@@ -43,20 +45,20 @@ public class ReadRepository {
 
     public List<ScoreView> latestScores(String runId) {
         return jdbc.query("""
-                SELECT DISTINCT ON (ticker) ticker, score, model_version, window_end, ingest_time, stale_sources
+                SELECT DISTINCT ON (ticker) ticker, score, model_version, window_end, ingest_time, stale_sources, swing
                 FROM api_scores WHERE run_id = ? ORDER BY ticker, window_end DESC, id DESC""", SCORE, runId);
     }
 
     public List<ScoreView> scores(String runId, String ticker, Instant from, Instant to) {
         return jdbc.query("""
-                SELECT ticker, score, model_version, window_end, ingest_time, stale_sources
+                SELECT ticker, score, model_version, window_end, ingest_time, stale_sources, swing
                 FROM api_scores WHERE run_id = ? AND ticker = ? AND window_end >= ? AND window_end <= ?
                 ORDER BY window_end, id""", SCORE, runId, ticker, Timestamp.from(from), Timestamp.from(to));
     }
 
     public List<FlagView> flags(String runId, String ticker, Instant from, Instant to) {
         return jdbc.query("""
-                SELECT id, ticker, raised_at, evidence FROM api_flags
+                SELECT id, ticker, raised_at, evidence, (SELECT s.swing FROM api_scores s WHERE s.run_id = api_flags.run_id AND s.ticker = api_flags.ticker AND s.window_end <= api_flags.raised_at ORDER BY s.window_end DESC, s.id DESC LIMIT 1) AS swing FROM api_flags
                 WHERE run_id = ? AND ticker = ? AND raised_at >= ? AND raised_at <= ? ORDER BY raised_at, id""",
                 FLAG, runId, ticker, Timestamp.from(from), Timestamp.from(to));
     }
@@ -64,14 +66,14 @@ public class ReadRepository {
     /** Newest first. */
     public List<FlagView> recentFlags(String runId, int limit) {
         return jdbc.query("""
-                SELECT id, ticker, raised_at, evidence FROM api_flags WHERE run_id = ?
+                SELECT id, ticker, raised_at, evidence, (SELECT s.swing FROM api_scores s WHERE s.run_id = api_flags.run_id AND s.ticker = api_flags.ticker AND s.window_end <= api_flags.raised_at ORDER BY s.window_end DESC, s.id DESC LIMIT 1) AS swing FROM api_flags WHERE run_id = ?
                 ORDER BY raised_at DESC, id DESC LIMIT ?""", FLAG, runId, limit);
     }
 
     /** Oldest first, for the stream and Last-Event-ID resume. */
     public List<FlagView> flagsAfter(String runId, long afterId, int limit) {
         return jdbc.query("""
-                SELECT id, ticker, raised_at, evidence FROM api_flags WHERE run_id = ? AND id > ?
+                SELECT id, ticker, raised_at, evidence, (SELECT s.swing FROM api_scores s WHERE s.run_id = api_flags.run_id AND s.ticker = api_flags.ticker AND s.window_end <= api_flags.raised_at ORDER BY s.window_end DESC, s.id DESC LIMIT 1) AS swing FROM api_flags WHERE run_id = ? AND id > ?
                 ORDER BY id LIMIT ?""", FLAG, runId, afterId, limit);
     }
 
@@ -84,9 +86,14 @@ public class ReadRepository {
         String stale = rs.getString("stale_sources");
         Set<String> sources = stale.isEmpty() ? Set.of() : Arrays.stream(stale.split(",")).collect(Collectors.toSet());
         return new ScoreView(rs.getString("ticker"), rs.getDouble("score"), rs.getString("model_version"),
-                rs.getTimestamp("window_end").toInstant(), rs.getTimestamp("ingest_time").toInstant(), sources);
+                rs.getTimestamp("window_end").toInstant(), rs.getTimestamp("ingest_time").toInstant(), sources, swing(rs.getString("swing")));
     };
 
     private static final RowMapper<FlagView> FLAG = (rs, i) -> new FlagView(rs.getLong("id"), rs.getString("ticker"),
-            rs.getTimestamp("raised_at").toInstant(), Json.fromJson(rs.getString("evidence"), Flag.Evidence.class));
+            rs.getTimestamp("raised_at").toInstant(), Json.fromJson(rs.getString("evidence"), Flag.Evidence.class),
+            swing(rs.getString("swing")));
+
+    private static Swing swing(String json) {
+        return json == null ? null : Json.fromJson(json, Swing.class);
+    }
 }

@@ -36,6 +36,7 @@ test("mock sentiment keeps top and latest samples disabled and rejects invalid f
     assert.equal(body.data.total, 0);
     assert.equal(body.data.windowMinutes, 1440);
     assert.deepEqual(body.data.sample, { sort: sample, examined: 0 });
+    assert.deepEqual(body.data.posts, []);
   }
   assert.equal((await fetch(`${base}/api/v1/tickers/AMC/sentiment?sample=invalid`)).status, 400);
 });
@@ -76,4 +77,11 @@ test("mock SSE sends labeled aggregate flags and supports event-id resume", asyn
     try { assert.ok(!new TextDecoder().decode((await resumedReader.read()).value).includes("event: flag")); }
     finally { await resumedReader.cancel(); }
   } finally { await reader.cancel(); }
+});
+
+test("mock scores and flags carry a valid mock swing", async () => {
+  const { validSwing } = await import("../lib/api.ts");
+  const scores = (await (await fetch(`${base}/api/v1/watchlist`)).json()).data;
+  const flags = (await (await fetch(`${base}/api/v1/flags`)).json()).data;
+  for (const row of [...scores, ...flags]) assert.ok(row.swing && validSwing(row.swing));
 });

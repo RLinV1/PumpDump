@@ -23,8 +23,8 @@ public class RuleScorer implements Scorer {
     public record Term(String name, String group, String feature, double atLeast, double points) {}
 
     private static final List<Term> CATALYST_TERMS = List.of(
-            new Term("news coverage", "catalyst", "newsOutlets6h", 1, -10),
-            new Term("news coverage", "catalyst", "newsOutlets6h", 3, -20),
+            new Term("news coverage", "catalyst", "newsOutlets6h", 1, -20),
+            new Term("news coverage", "catalyst", "newsOutlets6h", 3, -30),
             new Term("8-K filing", "catalyst", "filings24h", 1, -20),
             new Term("catalyst before the move", "catalyst", "catalystPrecededMove", 1, -15));
 
@@ -86,7 +86,7 @@ public class RuleScorer implements Scorer {
     public Score score(Features f) {
         double total = Math.max(0.0, Math.min(100.0, points(f)));
         return new Score(SchemaVersions.SCORE, f.eventTime(), Instant.now(), f.ticker(), f.windowEnd(), total, version,
-                f.staleSources());
+                f.staleSources(), null);
     }
 
     private double points(Features f) {

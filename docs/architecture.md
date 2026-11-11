@@ -78,7 +78,7 @@ consumers need the relevant key/offset deduplication.
 | `ingest-dlq` | Invalid records and validation failures | Operational inspection |
 | `mentions` | Ticker-linked social features | Feature stage |
 | `features` | Per-ticker event-time windows | Scorer, recorder |
-| `scores` | Versioned risk scores and stale-source markers | Flagger, API, recorder |
+| `scores` | Versioned (v2) risk scores, stale-source markers and an optional `swing` forecast (median and upper band in percent, regime calm/elevated/extreme) | Flagger, API, recorder |
 | `flags` | Threshold crossings and evidence | API, recorder; alerts read the API tables |
 
 ### Extract, aggregate, score and flag
@@ -277,11 +277,13 @@ Provider keys and webhook URLs stay in server configuration. Node replaces calle
 forwarding headers with socket-derived values; Spring trusts only configured proxies.
 Keep the risk API private when deploying the web host separately.
 
-Public risk responses omit post text/authors. Web sentiment text is transient, but
-Java `PostRecord` contains text and author identifiers, and recording can persist
-those normalized records. Minimizing raw content and implementing source-deletion
-handling for that path remain unfinished OpenSpec work. Source retention/training
-permissions are tracked in the [source register](data-sources.md).
+Public risk responses omit post text/authors. Web sentiment text is transient. Social posts are reduced at the
+Bluesky connector (`PostRecord` schema 2) to a hashed author key, linked tickers, a SimHash and timestamps; raw text is
+dropped unless `pumpwatch.sources.bluesky.retain-text` is set (default off). When Jetstream reports a delete for a post
+the connector already published, it publishes a `PostDeletion` marker on `raw-posts` under the post's key; the recorder
+deletes that post's `recorded_events` rows. Not purged: `mentions` records on Kafka (post id, hashed author, SimHash; no
+text) until topic retention expires, and the `seen_items` dedupe row (post identifier only). Retention is a flag, not a
+number of days. Source retention/training permissions are tracked in the [source register](data-sources.md).
 
 Compose is a single-broker development setup. Cloud deployment, production availability,
 learned model serving and a persistent historical sentiment archive are not supplied by this architecture.

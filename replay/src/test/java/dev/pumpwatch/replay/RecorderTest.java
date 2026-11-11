@@ -64,4 +64,20 @@ class RecorderTest {
         assertThat(out).extracting(RecordedEvent::topic).containsExactly("features", "scores", "flags");
         assertThat(out).extracting(RecordedEvent::eventTime).containsOnly(Instant.parse("2026-01-01T00:05:00Z"));
     }
+
+    @Test
+    void deletionMarkerPurgesTheRecordedPostAndIsNotRecorded() {
+        var inserted = new java.util.ArrayList<RecordedEvent>();
+        var purged = new java.util.ArrayList<String>();
+        var store = new EventStore(null) {
+            @Override public void insertAll(List<RecordedEvent> events) { inserted.addAll(events); }
+            @Override public int deleteByKey(String topic, String key) { purged.add(topic + "|" + key); return 1; }
+        };
+        String post = "{\"eventTime\":\"2026-01-01T00:00:05Z\",\"tickers\":[\"GME\"]}";
+        String del = "{\"eventTime\":\"2026-01-01T00:00:09Z\",\"postId\":\"did:plc:a/3k\",\"deleted\":true}";
+        new Recorder(store).onBatch(List.of(rec("raw-posts", "bluesky:did:plc:a/3k", post),
+                rec("raw-posts", "bluesky:did:plc:a/3k", del)));
+        assertThat(inserted).hasSize(1); // the marker itself is never stored
+        assertThat(purged).containsExactly("raw-posts|bluesky:did:plc:a/3k");
+    }
 }

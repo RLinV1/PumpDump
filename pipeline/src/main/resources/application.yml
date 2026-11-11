@@ -29,6 +29,10 @@ pipeline:
   scorer: rules
   # a source is marked stale on scores once it has been unhealthy this long
   stale-after: PT5M
+  # directory with model.onnx, model.json, reference.json (env PIPELINE_MODEL_DIR); empty = no model, rules serve
+  model-dir: ${PIPELINE_MODEL_DIR:}
+  # directory of a vol-train model (env PIPELINE_VOL_MODEL_DIR); empty, absent or failing its self-check = HAR-RV baseline
+  vol-model-dir: ${PIPELINE_VOL_MODEL_DIR:}
 server:
   port: ${PIPELINE_PORT:8082}
 management:

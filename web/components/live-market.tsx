@@ -39,6 +39,19 @@ export default function LiveMarket({ data }: { data: LandingData }) {
                 {asOf && <p className="mt-1 text-mute">Score as of {clock(asOf)}, {age(asOf)}</p>}
               </div>
             )}
+            <div>
+              <p className="text-accent">Expected swing, next hour</p>
+              {score?.swing ? (
+                <>
+                  <p className="mt-1 text-white">
+                    Typical ±{score.swing.median.toFixed(1)}%, up to ±{score.swing.upperBand.toFixed(1)}%.{" "}
+                    <span className="uppercase text-yellow">{score.swing.regime}</span> for this ticker.
+                  </p>
+                  {data.mode === "mock" && <p className="text-mute">Mock forecast, not a model output.</p>}
+                </>
+              ) : <p className="mt-1 text-mute">No forecast yet.</p>}
+              <p className="mt-1 text-mute">Size of move, not direction. Not investment advice.</p>
+            </div>
             {score && score.staleSources.length > 0 && (
               <p className="text-mute">Stale inputs: {score.staleSources.join(", ")}. This score may lag.</p>
             )}

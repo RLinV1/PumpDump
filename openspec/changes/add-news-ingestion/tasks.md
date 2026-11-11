@@ -9,7 +9,7 @@
 
 - [x] 2.1 Define a `NewsSource` interface and per-source scheduling with independent health reporting
 - [x] 2.2 Add shared token-bucket rate limiter configurable per source
-- [ ] 2.3 Extend the `seen` table dedup to cover news item ids and accession numbers
+- [x] 2.3 Extend the `seen` table dedup to cover news item ids and accession numbers
 - [x] 2.4 Test: one failing source does not stop the others
 
 ## 3. Alpaca News
@@ -42,7 +42,7 @@
 
 ## 7. Recording, cross-source behavior and wrap-up
 
-- [ ] 7.1 Add `raw-news` and `raw-filings` to the recorder and verify replay of both
-- [ ] 7.2 Test: same story from two sources keeps both records with one fingerprint
+- [x] 7.1 Add `raw-news` and `raw-filings` to the recorder and verify replay of both
+- [x] 7.2 Test: same story from two sources keeps both records with one fingerprint
 - [ ] 7.3 Confirm each source's terms for storing items for replay and each rate limit; record findings in README
 - [ ] 7.4 End-to-end demo: live news and filings for the watchlist, record, replay at 10x alongside posts and ticks

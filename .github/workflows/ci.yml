@@ -95,6 +95,8 @@ jobs:
         working-directory: research
       - name: Python dependency licenses
         run: |
+          bash scripts/license-gate.sh selftest
+          bash scripts/license-gate.sh cards
           bash scripts/license-gate.sh python
           bash scripts/license-gate.sh research
 

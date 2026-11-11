@@ -3,6 +3,8 @@ export const API_URL = "";
 
 export const NOTICE = "Risk signal only. Not investment advice. Pumpwatch is a non-commercial project.";
 
+// Size of a possible next-hour move in percent of price, never a direction. regime arrives lowercase from the API.
+export type Swing = { median: number; upperBand: number; regime: "calm" | "elevated" | "extreme" };
 export type Score = {
   ticker: string;
   score: number;
@@ -10,12 +12,14 @@ export type Score = {
   windowEnd: string;
   computedAt: string;
   staleSources: string[];
+  swing?: Swing | null;
 };
 export type Contributor = { featureGroup: string; delta: number };
 export type Flag = {
   id: number;
   ticker: string;
   raisedAt: string;
+  swing?: Swing | null;
   evidence: {
     score: number;
     modelVersion: string;
@@ -46,12 +50,14 @@ export type StockNews = {
   items: { id: string; title: string; url: string; source: string; publishedAt: string; symbols: string[]; sentiment?: "positive" | "negative" | "neutral" }[];
   sentimentModel?: string; sentimentStatus?: "ready" | "error" | "busy";
 };
+export type Tone = "positive" | "neutral" | "negative";
+export type SentimentPost = { text: string; label: Tone; irony: boolean; createdAt: string; url: string };
 export type Sentiment = {
   ticker: string; enabled: boolean; model: string; modelStatus: "disabled" | "loading" | "ready" | "error";
   streamConnected: boolean; asOf: string; windowMinutes: number;
   positive: number; negative: number; neutral: number; total: number; lastPostAt: string | null; dropped: number;
   sample?: { sort: "top" | "latest"; examined: number };
-  modelName?: string; ironyModel?: string; irony?: number;
+  modelName?: string; ironyModel?: string; irony?: number; posts?: SentimentPost[];
 };
 
 export type DataMode = "mock" | "live";
@@ -79,13 +85,29 @@ const validScore = (n: number) => Number.isFinite(n) && n >= 0 && n <= 100;
 const validCount = (n: number) => Number.isSafeInteger(n) && n >= 0;
 const strings = (v: string[]) => Array.isArray(v) && v.every((s) => typeof s === "string");
 
+// Scores, flags and timelines carry counts only. A payload with post text or author keys is rejected, never rendered.
+const RAW_KEY = /^(text|raw_?text|body|snippet|handle|did|username|display_?name|author\w*)$/i;
+export function hasRawContent(v: unknown): boolean {
+  if (Array.isArray(v)) return v.some(hasRawContent);
+  if (v && typeof v === "object") return Object.entries(v).some(([k, x]) => RAW_KEY.test(k) || hasRawContent(x));
+  return false;
+}
+
+// Optional: null or absent means no forecast yet.
+export function validSwing(w: Swing | null | undefined): boolean {
+  if (w === undefined || w === null) return true;
+  const ok = (n: number) => typeof n === "number" && Number.isFinite(n) && n >= 0;
+  return typeof w === "object" && ok(w.median) && ok(w.upperBand) && w.upperBand >= w.median
+    && /^(calm|elevated|extreme)$/i.test(String(w.regime));
+}
+
 function validScoreView(s: Score): boolean {
-  return !!(s && validTicker(s.ticker) && validScore(s.score) && validDate(s.windowEnd)
+  return !!(s && validSwing(s.swing) && !hasRawContent(s) && validTicker(s.ticker) && validScore(s.score) && validDate(s.windowEnd)
     && validDate(s.computedAt) && typeof s.modelVersion === "string" && strings(s.staleSources));
 }
 
 function validFlag(f: Flag): boolean {
-  return !!(f && validTicker(f.ticker) && validCount(f.id) && validDate(f.raisedAt)
+  return !!(f && validSwing(f.swing) && !hasRawContent(f) && validTicker(f.ticker) && validCount(f.id) && validDate(f.raisedAt)
     && f.evidence && validScore(f.evidence.score) && typeof f.evidence.modelVersion === "string"
     && validCount(f.evidence.postCount) && validCount(f.evidence.tradeCount)
     && Array.isArray(f.evidence.topContributors) && f.evidence.topContributors.every((c) => c
@@ -95,7 +117,7 @@ function validFlag(f: Flag): boolean {
 }
 
 function validTimeline(t: Timeline): boolean {
-  if (!t || !validTicker(t.ticker) || !validDate(t.from) || !validDate(t.to)
+  if (!t || hasRawContent(t) || !validTicker(t.ticker) || !validDate(t.from) || !validDate(t.to)
     || !Array.isArray(t.scores) || !Array.isArray(t.flags)) return false;
   const from = Date.parse(t.from);
   const to = Date.parse(t.to);
@@ -135,6 +157,11 @@ function validNews(data: StockNews, ticker: string | null): boolean {
     && (data.sentimentStatus === undefined || ["ready", "error", "busy"].includes(data.sentimentStatus));
 }
 
+function validPost(p: SentimentPost): boolean {
+  return !!p && typeof p.text === "string" && p.text.length > 0 && p.text.length <= 140 && ["positive", "neutral", "negative"].includes(p.label)
+    && typeof p.irony === "boolean" && validDate(p.createdAt) && typeof p.url === "string" && p.url.startsWith("https://bsky.app/profile/") && safeLink(p.url);
+}
+
 function validSentiment(data: Sentiment, ticker: string): boolean {
   return !!data && data.ticker === ticker && typeof data.enabled === "boolean" && typeof data.model === "string"
     && ["disabled", "loading", "ready", "error"].includes(data.modelStatus) && typeof data.streamConnected === "boolean"
@@ -143,6 +170,8 @@ function validSentiment(data: Sentiment, ticker: string): boolean {
     && data.total === data.positive + data.negative + data.neutral && (data.lastPostAt === null || validDate(data.lastPostAt))
       && (data.modelName === undefined || typeof data.modelName === "string") && (data.ironyModel === undefined || typeof data.ironyModel === "string")
       && (data.irony === undefined || (validCount(data.irony) && data.irony <= data.total))
+      && (data.posts === undefined || (Array.isArray(data.posts) && data.posts.length <= 15 && data.posts.every(validPost)
+        && (["positive", "neutral", "negative"] as const).every((t) => data.posts!.filter((p) => p.label === t).length <= 5)))
     && (data.sample === undefined || (!!data.sample && ["top", "latest"].includes(data.sample.sort)
       && validCount(data.sample.examined) && data.sample.examined <= 50 && data.total <= Math.min(25, data.sample.examined) && data.windowMinutes === 1440));
 }

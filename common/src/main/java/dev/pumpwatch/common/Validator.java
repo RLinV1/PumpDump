@@ -20,7 +20,16 @@ public final class Validator {
         text(p, "source", r.source());
         text(p, "postId", r.postId());
         text(p, "authorId", r.authorId());
-        text(p, "text", r.text());
+        if (r.tickers().isEmpty()) p.add("tickers is required");
+        return p;
+    }
+
+    public static List<String> validate(PostDeletion r) {
+        var p = new ArrayList<String>();
+        version(p, r.schemaVersion(), SchemaVersions.POST);
+        text(p, "source", r.source());
+        text(p, "postId", r.postId());
+        if (!r.deleted()) p.add("deleted must be true");
         return p;
     }
 
@@ -80,6 +89,14 @@ public final class Validator {
         else if (r.eventTime() != null && !r.eventTime().equals(r.windowEnd())) p.add("eventTime must equal windowEnd");
         finite(p, "score", r.score());
         text(p, "modelVersion", r.modelVersion());
+        var s = r.swing();
+        if (s != null) {
+            finite(p, "swing.median", s.median());
+            finite(p, "swing.upperBand", s.upperBand());
+            if (s.median() < 0) p.add("swing.median must be >= 0");
+            if (s.upperBand() < s.median()) p.add("swing.upperBand must be >= swing.median");
+            if (s.regime() == null) p.add("swing.regime is required");
+        }
         return p;
     }
 

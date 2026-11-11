@@ -30,13 +30,13 @@ move, so it lowers the score. They can never raise it, and the score never goes 
 | traded volume | market | `volume` | 1000000 | 20 |
 | volume surge | market | `volumeRatio` | 5 | 10 |
 | volume surge | market | `volumeRatio` | 20 | 20 |
-| news coverage | catalyst | `newsOutlets6h` | 1 | -10 |
-| news coverage | catalyst | `newsOutlets6h` | 3 | -20 |
+| news coverage | catalyst | `newsOutlets6h` | 1 | -20 |
+| news coverage | catalyst | `newsOutlets6h` | 3 | -30 |
 | 8-K filing | catalyst | `filings24h` | 1 | -20 |
 | catalyst before the move | catalyst | `catalystPrecededMove` | 1 | -15 |
 
 The positive maximum is 65 (social) + 75 (market) = 140, so many signals together saturate at 100. The largest catalyst reduction
-is 20 + 20 + 15 = 55. Not scored: `mentions`, `trades`, `volatility`, `dollarVolume`, `minutesSinceCatalyst` and the
+is 30 + 20 + 15 = 65. Not scored: `mentions`, `trades`, `volatility`, `dollarVolume`, `minutesSinceCatalyst` and the
 `item.<code>` counts. The flag's catalyst check (`found`, and the item codes shown) comes from `minutesSinceCatalyst`
 and the `item.<code>` features.
 
@@ -67,8 +67,8 @@ The catalyst rows are the same as above.
 | traded volume | market | `z.volume` | 5 | 20 |
 | volume surge | market | `z.volumeRatio` | 3 | 10 |
 | volume surge | market | `z.volumeRatio` | 5 | 20 |
-| news coverage | catalyst | `newsOutlets6h` | 1 | -10 |
-| news coverage | catalyst | `newsOutlets6h` | 3 | -20 |
+| news coverage | catalyst | `newsOutlets6h` | 1 | -20 |
+| news coverage | catalyst | `newsOutlets6h` | 3 | -30 |
 | 8-K filing | catalyst | `filings24h` | 1 | -20 |
 | catalyst before the move | catalyst | `catalystPrecededMove` | 1 | -15 |
 

@@ -4,10 +4,12 @@ import dev.pumpwatch.common.Keys;
 import dev.pumpwatch.pipeline.extractor.MentionExtractor;
 import dev.pumpwatch.pipeline.features.FeatureStage;
 import dev.pumpwatch.pipeline.flagger.FlagStage;
+import dev.pumpwatch.pipeline.scorer.OnnxScorer;
 import dev.pumpwatch.pipeline.scorer.RuleScorer;
 import dev.pumpwatch.pipeline.scorer.Scorer;
 import dev.pumpwatch.pipeline.scorer.ScorerHealth;
 import dev.pumpwatch.pipeline.scorer.ScorerStage;
+import dev.pumpwatch.pipeline.scorer.VolatilityScorer;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
@@ -37,7 +39,8 @@ public class PipelineApplication {
 
     @Bean
     Scorer scorer(PipelineProperties p) {
-        return "anomaly".equals(p.scorer()) ? RuleScorer.anomaly() : new RuleScorer();
+        Scorer pump = "anomaly".equals(p.scorer()) ? RuleScorer.anomaly() : OnnxScorer.orRules(p.modelDir());
+        return VolatilityScorer.orBaseline(p.volModelDir()).on(pump);
     }
 
     @Bean
