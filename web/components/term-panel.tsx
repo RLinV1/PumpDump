@@ -6,7 +6,7 @@ import type { DataMode } from "@/lib/api";
 
 // A numbered terminal panel. The title bar goes amber (reverse video) when a command has just jumped here.
 export function Panel({ id, number, title, tag, active, className = "", children }: {
-  id: string; number: number; title: ReactNode; tag?: ReactNode; active?: boolean; className?: string; children: ReactNode;
+  id: string; number: number | string; title: ReactNode; tag?: ReactNode; active?: boolean; className?: string; children: ReactNode;
 }) {
   return (
     <section id={id} tabIndex={-1} aria-labelledby={`${id}-title`} className={`flex min-h-0 min-w-0 scroll-mt-28 flex-col border border-line-strong bg-bg outline-offset-[-2px] ${className}`}>

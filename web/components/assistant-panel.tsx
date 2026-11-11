@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NOTICE, askAssistant, type AssistantAnswer } from "@/lib/api";
 import { btnGhost } from "@/lib/ui";
-import { Panel, Skeleton } from "@/components/term-panel";
+import { Skeleton } from "@/components/term-panel";
 
 export type AssistantState =
   | { status: "idle" }
@@ -30,18 +30,21 @@ export function useAssistant() {
   return { state, ask };
 }
 
-const EXAMPLES = ["ASK Is GME being pumped?", "ASK What is a pump and dump?", "ASK What is the sentiment on AMC?"];
+export function assistantTag(state: AssistantState) {
+  return state.status === "loading" ? "THINKING" : state.status === "done" ? `LLM ${state.result.llm.toUpperCase()} / DATA ${state.result.dataMode.toUpperCase()}` : undefined;
+}
 
-export function AssistantPanel({ state, onAsk, active }: { state: AssistantState; onAsk: (question: string) => void; active?: boolean }) {
-  const tag = state.status === "loading" ? "THINKING" : state.status === "done" ? `LLM ${state.result.llm.toUpperCase()} / DATA ${state.result.dataMode.toUpperCase()}` : undefined;
+// The conversation shown inside the floating chat widget.
+export function AssistantBody({ state, onAsk, ticker }: { state: AssistantState; onAsk: (question: string) => void; ticker?: string }) {
+  const examples = [`Is ${ticker ?? "GME"} being pumped?`, "What is a pump and dump?", `What is the sentiment on ${ticker ?? "AMC"}?`];
   return (
-    <Panel id="assistant" number={9} title="Assistant" tag={tag} active={active} className="lg:col-span-3 lg:col-start-1 lg:row-start-4">
+    <>
       {state.status === "idle" ? (
         <div className="p-3 text-xs" role="status">
           <p className="font-semibold text-accent">Ask about a stock</p>
-          <p className="mt-1 max-w-[52ch] text-mute">Answers come from read-only tools and cite their sources. For pump questions it reads the same risk score and sentiment as the panels here. It cannot place orders. With no Gemini key a rule-based mock agent answers, and the panel says so.</p>
+          <p className="mt-1 max-w-[52ch] text-mute">Answers come from read-only tools and cite their sources. For pump questions it reads the same risk score and sentiment as the panels here. It cannot place orders. With no Gemini key a rule-based mock agent answers, and the answer says so.</p>
           <ul className="mt-2 space-y-0.5">
-            {EXAMPLES.map((e) => <li key={e} className="text-yellow">{e} &lt;GO&gt;</li>)}
+            {examples.map((e) => <li key={e}><button type="button" onClick={() => onAsk(e)} className="min-h-8 text-left text-yellow underline-offset-2 hover:underline">{e}</button></li>)}
           </ul>
           <p className="mt-2 text-mute">{NOTICE}</p>
         </div>
@@ -95,6 +98,6 @@ export function AssistantPanel({ state, onAsk, active }: { state: AssistantState
           <p className="border-t border-line px-2 py-1.5 text-mute">{state.notice}</p>
         </div>
       )}
-    </Panel>
+    </>
   );
 }

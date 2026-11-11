@@ -1,9 +1,12 @@
 // The terminal command line. Pure, so the grammar is testable without a browser.
-export type Panel = "watchlist" | "chart" | "flags" | "news" | "sentiment" | "movers" | "lookup" | "paper" | "assistant";
+export type Panel = "watchlist" | "chart" | "flags" | "news" | "sentiment" | "movers" | "lookup";
 
 export type Command =
   | { type: "empty" }
   | { type: "panel"; panel: Panel }
+  | { type: "paper" }
+  | { type: "assistant" }
+  | { type: "mode" }
   | { type: "select"; ticker: string }
   | { type: "add"; ticker: string }
   | { type: "remove"; ticker: string }
@@ -15,7 +18,7 @@ export type Command =
   | { type: "refresh" }
   | { type: "error"; message: string };
 
-// Panel numbers are shown in each panel's title bar, so typing the number jumps there.
+// Panel numbers are shown in each panel's title bar, so typing the number jumps there. Paper trading is the /paper tab and the assistant is a chat widget, not panels.
 export const PANELS: { id: Panel; number: number; mnemonic: string; title: string; aliases: string[] }[] = [
   { id: "watchlist", number: 1, mnemonic: "WL", title: "Watchlist", aliases: ["WATCH", "WATCHLIST"] },
   { id: "chart", number: 2, mnemonic: "GR", title: "Score chart", aliases: ["CHART", "SCORE"] },
@@ -24,8 +27,6 @@ export const PANELS: { id: Panel; number: number; mnemonic: string; title: strin
   { id: "sentiment", number: 5, mnemonic: "SENT", title: "Sentiment", aliases: ["SENTIMENT"] },
   { id: "movers", number: 6, mnemonic: "MOV", title: "Movers", aliases: ["MOVERS"] },
   { id: "lookup", number: 7, mnemonic: "LOOK", title: "Stock lookup", aliases: ["DES", "LOOKUP"] },
-  { id: "paper", number: 8, mnemonic: "PT", title: "Paper trading", aliases: ["PAPER"] },
-  { id: "assistant", number: 9, mnemonic: "ASK", title: "Assistant", aliases: ["AI", "ASSISTANT"] },
 ];
 
 export const MAX_QTY = 10_000;
@@ -39,7 +40,7 @@ export function parseCommand(input: string): Command {
   const ask = /^ask\s+([\s\S]+)$/i.exec(input.trim());
   if (ask) {
     const question = ask[1].replace(/\s*<GO>\s*$/i, "").replace(/\s+/g, " ").trim();
-    if (!question || /^go$/i.test(question)) return { type: "panel", panel: "assistant" }; // "ASK <GO>" is the panel mnemonic
+    if (!question || /^go$/i.test(question)) return { type: "assistant" }; // "ASK <GO>" opens the chat widget
     if (question.length > MAX_QUESTION) return { type: "error", message: `QUESTIONS ARE LIMITED TO ${MAX_QUESTION} CHARACTERS.` };
     return { type: "ask", question };
   }
@@ -51,6 +52,9 @@ export function parseCommand(input: string): Command {
   if (byNumber) return { type: "panel", panel: byNumber.id };
   const byName = PANELS.find((p) => p.mnemonic === text || p.aliases.includes(text));
   if (byName) return { type: "panel", panel: byName.id };
+  if (text === "ASK" || text === "AI" || text === "ASSISTANT") return { type: "assistant" };
+  if (text === "PT" || text === "PAPER") return { type: "paper" };
+  if (text === "MODE") return { type: "mode" };
   if (text === "HELP" || text === "?") return { type: "help" };
   if (text === "RF" || text === "REFRESH") return { type: "refresh" };
 

@@ -4,3 +4,5 @@
 - [x] Run full web tests, lint and production build after final edits.
 - [x] Verify desktop/mobile layout, keyboard controls and persistence in the browser.
 - [x] Update DESIGN and README with current feature screenshots.
+- [x] Move the assistant to a floating chat widget and paper trading to the `/paper` tab; drop `paper` and `assistant` ids from saved layouts.
+- [x] Make `/` an interactive command palette (tickers, commands, ask the assistant).

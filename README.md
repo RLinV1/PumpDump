@@ -26,8 +26,7 @@ a hidden panel, so every feature remains reachable.
 | --- | --- |
 | Default | Watchlist, risk chart, flags, movers, news and sentiment |
 | Monitor | Watchlist, risk chart and flags |
-| Research | Stock lookup, assistant, news and sentiment |
-| Trading | Watchlist, stock lookup and paper trading |
+| Research | Stock lookup, news and sentiment |
 | Custom | Your chosen panels in your chosen order |
 
 ![Current default workspace with all six monitoring panels](docs/img/workspace-default.jpg)
@@ -123,10 +122,10 @@ is claimed to perfectly interpret posts, and possible irony never reverses tone 
 
 ## Stock lookup and paper trading
 
-The pump watch is the product. The private Python service in `research/` provides stock lookup, paper trading and a read-only research assistant beside the pump panels in the `/live` terminal.
+The pump watch is the product. The private Python service in `research/` provides stock lookup, paper trading and a read-only research assistant around the pump panels: paper trading is the `/paper` tab and the assistant is a chat at the bottom right of the `/live` terminal.
 
 - **Stock lookup.** `LOOK GME` (alias `DES GME`) fills panel 7 with the name, sector, price, daily move, market cap and P/E, price performance, SMAs, RSI, 52-week range, beta and volatility, from the pure numpy/pandas code in `research/src/portfolio_risk/risk/`.
-- **Paper trading.** `BUY GME 10`, `SELL GME 10`, `PT` and `PT RESET` (then `PT RESET CONFIRM`) drive panel 8, marked PAPER: cash, positions, P&L and order history. Whole shares, no shorting, integer cents, atomic updates.
+- **Paper trading.** `BUY GME 10`, `SELL GME 10`, `PT` and `PT RESET` (then `PT RESET CONFIRM`) work from the terminal command line, and the Paper tab (`PT`) shows the account with an order form, marked PAPER: cash, positions, P&L and order history. Whole shares, no shorting, integer cents, atomic updates.
 - **Anonymous.** No sign-in. Your browser makes a random account token, keeps it in localStorage and sends it in a header; the service stores only its hash, in SQLite on the `researchpaper` volume. Clear your browser data and the account is gone.
 - **Server-decided prices.** The browser never sends a price. Mock mode fills at the service's mock close. Live mode (your own machine only) fills at the web server's own Alpaca quote, and the order is refused if there is none. Lookups in live mode use yfinance.
 - **One origin.** The browser only calls `/api/v1/lookup` and `/api/v1/paper` on the web server, which validates, rate limits and forwards to the private `research` service (apps profile, no published port). Caddy is unchanged and the flag stream still bypasses Node.
@@ -144,7 +143,7 @@ Run it locally with the `apps` profile (`docker compose --profile apps up -d --b
 
 ## Research assistant (Gemini, MCP and RAG)
 
-Type `ASK Is GME being pumped?`, or open panel 9 with `ASK`, `AI` or `9`.
+Type `ASK Is GME being pumped?`, or open the chat with `ASK` or `AI`.
 Answers identify the answering agent (Gemini or the rule-based mock), data mode,
 tools used and retrieved sources. The assistant can read stock snapshots, price
 performance, technical indicators, news, pump signals, sentiment and your own paper
