@@ -12,9 +12,9 @@
 
 ## 3. Evaluation
 
-- [ ] 3.1 Report QLIKE loss, mean absolute error of the log range, and band coverage with confidence intervals
-- [ ] 3.2 Evaluate separately on a calm period and a stressed period
-- [ ] 3.3 Enforce the promotion gate: the model replaces the baseline only if it beats it on both periods
+- [x] 3.1 Report QLIKE loss, mean absolute error of the log range, and band coverage with confidence intervals. Owner command, from `ml/`: `python -m pumpml vol-evaluate --bars bars.csv --watchlist A B --model-dir models/vol-1`
+- [x] 3.2 Evaluate separately on a calm period and a stressed period
+- [x] 3.3 Enforce the promotion gate: the model replaces the baseline only if it beats it on both periods (writes `report.json`, `model-card-vol.md`, and a `promoted` file only on a pass)
 
 ## 4. Surfaces
 
