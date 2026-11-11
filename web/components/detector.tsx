@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { CATALYST_FACTOR, WEIGHTS, scoreOf, verdictOf, type Inputs } from "@/lib/verdict";
+import { NOTICE } from "@/lib/api";
 import { heading } from "@/lib/ui";
 
 const CONTROLS = [
@@ -72,6 +73,7 @@ export function Detector() {
             a move a real reason. These sliders use simplified weights for the simulation. The live
             view uses the versioned scorer identified beside each score.
           </p>
+          <p className="mt-3 max-w-[46ch] text-xs text-mute">{NOTICE}</p>
         </div>
 
         <div className="grid gap-x-8 gap-y-6 border border-line-strong bg-surface p-4 md:grid-cols-2 md:p-6">

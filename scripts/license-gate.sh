@@ -5,8 +5,8 @@ cd "$(dirname "$0")/.."
 BAD='NC|Non[- ]?Commercial|Share[- ]?Alike|CC-BY-NC|CC-BY-SA|GPL|AGPL|SSPL|BUSL|BSL|UNKNOWN|UNLICENSED|Custom'
 ALLOW=$(grep -v '^\s*#' scripts/license-allow.txt | sed 's/\s*#.*//; s/\s*$//' | grep -v '^$' || true)
 fail=0
-only="${1:-all}"  # all | npm | maven | python (ml) | research
-case "$only" in all|npm|maven|python|research) ;; *) echo "usage: $0 [all|npm|maven|python|research]" >&2; exit 2 ;; esac
+only="${1:-all}"  # all | npm | maven | python (ml) | research | cards | selftest
+case "$only" in all|npm|maven|python|research|cards|selftest) ;; *) echo "usage: $0 [all|npm|maven|python|research|cards|selftest]" >&2; exit 2 ;; esac
 
 # prints "name<TAB>license" lines on stdin; flags bad ones not on the allow-list
 flag() {
@@ -19,10 +19,59 @@ flag() {
   done
 }
 
+# Every model card must have a "## Licenses" section with at least one "- name version: LICENSE" line,
+# and each license goes through the same classification as code dependencies (so a CC-BY-NC model fails).
+check_card() {
+  local card="$1" lines
+  lines=$(sed -n '/^## Licenses/,/^## /p' "$card" | sed -nE 's/^- (.+): (.+)$/\1\t\2/p')
+  if [ -z "$lines" ]; then echo "FLAGGED: model card $card has no license entries under '## Licenses'"; fail=1; return; fi
+  flag <<< "$lines"
+}
+
+if [ "$only" = selftest ]; then
+  d=$(mktemp -d); trap 'rm -rf "$d"' EXIT; bad=0
+  t() { # expected(0=pass,1=fail) description; stdin = name<TAB>license lines
+    fail=0; flag > /dev/null; [ "$fail" = "$1" ] || { echo "SELFTEST FAIL: $2"; bad=1; }
+  }
+  t 0 "MIT passes"            <<< $'a@1	MIT'
+  t 0 "Apache OR MIT passes"  <<< $'a@1	Apache-2.0 OR MIT'
+  t 0 "LGPL ignored"          <<< $'a@1	LGPL-3.0-or-later'
+  t 1 "CC-BY-NC fails"        <<< $'a@1	CC-BY-NC-4.0'
+  t 1 "CC-BY-SA fails"        <<< $'a@1	CC-BY-SA-4.0'
+  t 1 "CC-BY-NC-SA fails"     <<< $'a@1	CC BY-NC-SA 4.0'
+  t 1 "GPL fails"             <<< $'a@1	GPL-3.0'
+  t 1 "AGPL fails"            <<< $'a@1	AGPL-3.0'
+  t 1 "UNKNOWN fails"         <<< $'a@1	UNKNOWN'
+  t 0 "allow-listed passes"   <<< $'gsap@3.12.5	Custom: https://gsap.com/standard-license'
+  printf '## Licenses
+- lightgbm 4.0: MIT
+' > "$d/ok.md"
+  printf '## Licenses
+- finbert 1: CC BY-NC-SA 4.0
+' > "$d/nc.md"
+  printf '## Known limits
+- x
+' > "$d/none.md"
+  fail=0; check_card "$d/ok.md" > /dev/null;   [ $fail = 0 ] || { echo "SELFTEST FAIL: good card"; bad=1; }
+  fail=0; check_card "$d/nc.md" > /dev/null;   [ $fail = 1 ] || { echo "SELFTEST FAIL: NC card"; bad=1; }
+  fail=0; check_card "$d/none.md" > /dev/null; [ $fail = 1 ] || { echo "SELFTEST FAIL: card without license"; bad=1; }
+  [ $bad = 0 ] && echo "license gate selftest: OK"; exit $bad
+fi
+
+echo "== model cards =="
+if [ "$only" != all ] && [ "$only" != cards ]; then echo "skipped"
+else
+  # shipped cards are written to ml/models/<version>/model-card.md by 'pumpml evaluate'
+  n=0
+  while IFS= read -r card; do check_card "$card"; n=$((n+1)); done < <(find ml research -name 'model-card*.md' -not -path '*/node_modules/*' -not -path '*/.venv/*' 2>/dev/null)
+  echo "$n model card(s) checked"
+fi
+
 echo "== npm (web) =="
 if [ "$only" != all ] && [ "$only" != npm ]; then echo "skipped"
 elif [ -d web/node_modules ]; then
   (cd web && npx --yes license-checker@25.0.1 --production --json) > "${TMPDIR:-/tmp}/npm-lic.json" || { echo "license-checker failed"; exit 2; }
+  node -e 'const d=JSON.parse(require("fs").readFileSync(0,"utf8")),c={};for(const [k,v] of Object.entries(d)){if(k.startsWith("web@"))continue;const l=[].concat(v.licenses).join(" OR ");c[l]=(c[l]||0)+1}console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([l,n])=>n+" "+l).join(", "))' < "${TMPDIR:-/tmp}/npm-lic.json"
   flag < <(node -e '
     const d=JSON.parse(require("fs").readFileSync(0,"utf8"));
     for (const [k,v] of Object.entries(d)) {

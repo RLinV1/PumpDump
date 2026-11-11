@@ -23,11 +23,11 @@
 
 ## 5. License gate
 
-- [ ] 5.1 Add a CI job listing npm, Maven and Python licenses and failing on non-commercial, share-alike or unknown
-- [ ] 5.2 Require a license field in every model card and check it in the gate
-- [ ] 5.3 Add the license list for the web app to the audit file
+- [x] 5.1 Add a CI job listing npm, Maven and Python licenses and failing on non-commercial, share-alike or unknown
+- [x] 5.2 Require a license field in every model card and check it in the gate
+- [x] 5.3 Add the license list for the web app to the audit file
 
 ## 6. Notices
 
-- [ ] 6.1 Add the not-advice notice to every score, flag and alert
-- [ ] 6.2 State the non-commercial status and the not-advice notice on the landing page
+- [x] 6.1 Add the not-advice notice to every score, flag and alert
+- [x] 6.2 State the non-commercial status and the not-advice notice on the landing page
