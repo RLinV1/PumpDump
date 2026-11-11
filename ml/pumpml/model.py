@@ -102,7 +102,7 @@ def load(model_dir: Path):
 # --- baselines -------------------------------------------------------------------------------------------------
 
 def rule_score(df: pd.DataFrame) -> np.ndarray:
-    """rules-v1 from docs/rule-scorer.md; terms whose feature is absent (social, in v1) add nothing."""
+    """rules-v1 from docs/ml/rule-scorer.md; terms whose feature is absent (social, in v1) add nothing."""
     pts = {}
     for feat, at_least, p in RULES:
         if feat in df:

@@ -93,7 +93,7 @@ social, trades, news, filings -> Kafka raw topics -> extractor -> feature-builde
 
 ## 8. Data and constraints
 
-- Sources: Alpaca (free plan, small live watchlist), SEC EDGAR (10 requests per second with a User-Agent), Finnhub, press-release feeds, and social sources whose terms allow the use. Reddit, Finnhub and Alpaca news terms are unverified and recorded as such in `docs/free-use-audit.md`.
+- Sources: Alpaca (free plan, small live watchlist), SEC EDGAR (10 requests per second with a User-Agent), Finnhub, press-release feeds, and social sources whose terms allow the use. Reddit, Finnhub and Alpaca news terms are unverified and recorded as such in `docs/data/free-use-audit.md`.
 - Free sources give no historical social data, so version 1 of the model trains on market and catalyst features. Social features are recorded from day one and join a later model version.
 - Sources that forbid training on their content feed live scoring only and stay out of every training set.
 - Models with non-commercial licenses are excluded.
@@ -119,7 +119,7 @@ social, trades, news, filings -> Kafka raw topics -> extractor -> feature-builde
 
 ## 11. Milestones
 
-1. Project skeleton: shared contracts, Docker Compose with Kafka and Postgres. Milestones M1 to M8 and their tickets are listed in `docs/roadmap.md`.
+1. Project skeleton: shared contracts, Docker Compose with Kafka and Postgres. Milestones M1 to M8 and their tickets are listed in `docs/product/roadmap.md`.
 2. Ingestion and replay.
 3. Pipeline with the rule scorer, proven by one recorded synthetic day that yields exactly one flag.
 4. Labels, the first trained pump model, and the evaluation gate.

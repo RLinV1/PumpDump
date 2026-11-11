@@ -13,7 +13,7 @@ import java.util.Map;
  * <p>A z-score is only reported once a feature has {@link #MIN_HISTORY} observations. The spread is floored at 5% of
  * the mean (and a tiny absolute value), and z is capped at {@link #MAX_Z}, so a surge out of a flat history reads as
  * very anomalous without producing infinities. Limit: overlapping hopping windows are not independent samples, so the
- * history understates the true spread; the thresholds in docs/rule-scorer.md are set with that in mind.
+ * history understates the true spread; the thresholds in docs/ml/rule-scorer.md are set with that in mind.
  */
 public final class AnomalyBaseline {
     public static final int MIN_HISTORY = 30;

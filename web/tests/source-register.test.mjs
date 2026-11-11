@@ -12,7 +12,7 @@ test("every configured source has a register row", () => {
       .filter((entry) => entry.isFile() && entry.name.endsWith(".yml"))
       .map((entry) => readFileSync(resolve(root, "connectors/src/main/resources", entry.name), "utf8")),
   );
-  const markdown = readFileSync(resolve(root, "docs/data-sources.md"), "utf8");
+  const markdown = readFileSync(resolve(root, "docs/data/sources.md"), "utf8");
 
   assert.ok(keys.length > 0, "connector source configuration must be discovered");
   assert.deepEqual(validateSourceRegister(keys, markdown, new Date().toISOString().slice(0, 10)), []);

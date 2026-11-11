@@ -23,6 +23,6 @@
 - [x] 3.4 Proxy `/api` through the web host
 - [x] 3.5 Verify first paint and total JavaScript size did not regress
 
-Verification: `docs/verification-2026-10-29.md`. Live proxy behavior uses controlled upstream responses;
+Verification: `docs/reports/verification-2026-10-29.md`. Live proxy behavior uses controlled upstream responses;
 actual provider verification is documented in the report's live activation section. The user-requested `DATA_MODE=mock|live` switch keeps aggregate mock
 records isolated from the real backend and labels both web surfaces explicitly.

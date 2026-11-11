@@ -14,7 +14,7 @@ DATA_MODE=mock
 
 To connect the real backend later:
 
-1. Add your `ALPACA_KEY_ID` and `ALPACA_SECRET_KEY` to the root `.env` without putting secrets in chat or Git. Complete the source verification recorded in `docs/data-sources.md`, then enable the intended connectors (`ALPACA_ENABLED=true` for trades).
+1. Add your `ALPACA_KEY_ID` and `ALPACA_SECRET_KEY` to the root `.env` without putting secrets in chat or Git. Complete the source verification recorded in `docs/data/sources.md`, then enable the intended connectors (`ALPACA_ENABLED=true` for trades).
 2. Start Kafka, Postgres, connectors, pipeline and API with `scripts/dev-up.sh --apps` from the repository root.
 3. Set `DATA_MODE=live` in the root `.env`, restart the web server and reload the page.
 

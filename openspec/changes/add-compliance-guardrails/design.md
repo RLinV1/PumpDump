@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md and `docs/free-use-audit.md` for the findings. The system takes data from four kinds of source, runs open-source infrastructure and trains a small model. Each has its own terms, and several can change.
+See proposal.md and `docs/data/free-use-audit.md` for the findings. The system takes data from four kinds of source, runs open-source infrastructure and trains a small model. Each has its own terms, and several can change.
 
 ## Goals / Non-Goals
 
@@ -15,7 +15,7 @@ See proposal.md and `docs/free-use-audit.md` for the findings. The system takes 
 
 ## Decisions
 
-**A plain register file, checked by a test.** `docs/data-sources.md` has one row per source. A unit test reads the connector configuration and fails if a source has no row, no terms link or a verification date older than a configured age. Alternative: a database table. Rejected: a reviewed file in the repository is simpler and visible in pull requests.
+**A plain register file, checked by a test.** `docs/data/sources.md` has one row per source. A unit test reads the connector configuration and fails if a source has no row, no terms link or a verification date older than a configured age. Alternative: a database table. Rejected: a reviewed file in the repository is simpler and visible in pull requests.
 
 **Free-tier mode as a configuration default.** Each connector declares its plan and limits in configuration. The default plan is the free one. Enabling a paid feed needs an explicit setting, and startup logs the result. This prevents quietly depending on a paid feed.
 

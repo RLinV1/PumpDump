@@ -65,7 +65,7 @@ Drafted 2026-11-11 from official pages; owner to confirm.
 
 ## Actions
 
-1. Read the official terms for Reddit, Finnhub and Alpaca's news product before relying on them, and record the date in `data-sources.md`.
+1. Read the official terms for Reddit, Finnhub and Alpaca's news product before relying on them, and record the date in `sources.md`.
 2. Keep to derived data for social content and show no raw posts publicly.
 3. Do not use FinBERT. Use an Apache-2.0 embedding model instead.
 4. Keep the watchlist at or below 30 symbols on the free market-data plan.

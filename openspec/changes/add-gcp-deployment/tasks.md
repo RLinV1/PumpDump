@@ -20,7 +20,7 @@
 
 ## 4. Docs and verification
 
-- [x] 4.1 Write `docs/deploy-gcp.md` runbook: prerequisites, create, verify, load test, destroy
+- [x] 4.1 Write `docs/operations/gcp.md` runbook: prerequisites, create, verify, load test, destroy
 - [x] 4.2 Add website screenshots (Playwright) and a performance section to the README
 - [x] 4.3 Validate Terraform (`terraform validate`), compose config, web build and lint
 - [x] 4.4 Mark `add-ec2-smoke-deployment` as superseded
