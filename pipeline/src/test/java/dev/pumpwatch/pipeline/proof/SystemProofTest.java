@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 class SystemProofTest {
     // margin 50 can never be met (scores top out at 100), so only the first crossing per ticker may flag
     static final PipelineProperties PROPS = new PipelineProperties(SyntheticDay.TICKERS, 5, 0.1, 60,
-            Duration.ofMinutes(30), 50, Duration.ofHours(1), "rules", Duration.ofMinutes(5), "");
+            Duration.ofMinutes(30), 50, Duration.ofHours(1), "rules", Duration.ofMinutes(5), "", ""); // no model dirs: rule scorer, baseline volatility
 
     record Out(List<Flag> flags, List<Score> scores) {}
 

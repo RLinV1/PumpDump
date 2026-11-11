@@ -60,8 +60,12 @@ final class SyntheticDay {
             add(tape, t, Topics.RAW_POSTS, PUMP, post(t, PUMP, "pump" + i, 1));
         }
         spike(tape, PUMP, 10, "10.00", "10.60", "11.40", "12.00");
-        // news-backed move: article first, same spike, no unusual chatter
+        // news-backed move: article first, same spike, ordinary chatter
         add(tape, at(39, 0), Topics.RAW_NEWS, NEWS_MOVE, Fx.news(at(39, 0), "synthetic-wire", NEWS_MOVE));
+        for (int i = 0; i < 2; i++) {
+            Instant t = at(40, 0).plusSeconds(i * 20L);
+            add(tape, t, Topics.RAW_POSTS, NEWS_MOVE, post(t, NEWS_MOVE, "news" + i, 365));
+        }
         spike(tape, NEWS_MOVE, 40, "20.00", "21.20", "22.80", "24.00");
         return tape.values().stream().flatMap(List::stream).toList();
     }
