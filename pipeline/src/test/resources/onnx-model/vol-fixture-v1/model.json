@@ -1,0 +1,33 @@
+{
+  "version": "fixture-v1",
+  "features": [
+    "rv5",
+    "rv30",
+    "rvd",
+    "vol_ratio",
+    "tod",
+    "gap"
+  ],
+  "quantiles": {
+    "median": 0.5,
+    "upper": 0.9
+  },
+  "target": "log(high/low) over next 60 min",
+  "coverage_shift": 0.004167238647502344,
+  "coverage_level": 0.9,
+  "har_coef": [
+    0.003020472048885125,
+    3.1042913664652807,
+    0.7154587985026161,
+    0.004899789948842326
+  ],
+  "har_band_shift": 5.3522748916235,
+  "validation_coverage_raw": 0.821917808219178,
+  "validation_coverage_corrected": 0.9041095890410958,
+  "rows": {
+    "train": 1338,
+    "validation": 438,
+    "test": 450
+  },
+  "trained_on": "2026-11-10"
+}
