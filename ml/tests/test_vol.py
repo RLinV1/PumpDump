@@ -50,6 +50,7 @@ def test_quantile_models_and_coverage_correction(tmp_path):
     info = vol.train(bars, tmp_path / "vol-t", "t")
     assert abs(info["validation_coverage_corrected"] - 0.9) < 0.02
     saved = json.loads((tmp_path / "vol-t" / "model.json").read_text())
+    assert saved["format"] == 2 and abs(saved["har_band_shift"]) < 1
     assert saved["coverage_shift"] == info["coverage_shift"] and saved["features"] == vol.FEATURES
     _, _, te = vol.split(vol.build(bars))
     med_b = vol.lgb.Booster(model_file=str(tmp_path / "vol-t" / "median.txt"))

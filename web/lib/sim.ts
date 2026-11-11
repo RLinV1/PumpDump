@@ -11,7 +11,7 @@ export type Candle = {
   newShare: number; // share of posts from accounts under 30 days old
   dupeShare: number; // share of near-duplicate posts
   flag: boolean; // the candle on which the flag fires
-  swing: number; // expected one-hour price swing, in percent (stand-in for the volatility model's output)
+  swing: number; // expected one-hour high-to-low range, in percent (stand-in for the volatility model's output)
 };
 
 export const swingRegime = (s: number) => (s < 6 ? "Calm" : s < 15 ? "Elevated" : "Extreme");
@@ -67,7 +67,7 @@ function build(startPrice: number, seed: number): Candle[] {
     if (flag) flagged = true;
     rets.push(c / o - 1);
     if (rets.length > 20) rets.shift();
-    const swing = 100 * Math.sqrt(rets.reduce((a, b) => a + b * b, 0) / rets.length) * Math.sqrt(60);
+    const swing = 100 * Math.sqrt(rets.reduce((a, b) => a + b * b, 0) / rets.length) * Math.sqrt(60) * Math.sqrt(8 / Math.PI); // Brownian expected range, as the JVM baseline
 
     out.push({
       swing,

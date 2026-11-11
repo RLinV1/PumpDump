@@ -75,6 +75,8 @@ public record Bars(List<Bar> bars, List<Day> days) {
         }
         if (b.size() > SHORT) out.put("rv5", Math.sqrt(sum(r2, SHORT)));
         if (b.size() > LONG) out.put("rv30", Math.sqrt(sum(r2, LONG)));
+        // warm-up: one-day volatility scaled up from the n bars so far; only the default HAR baseline may read it
+        if (b.size() > LONG && b.size() <= DAY) out.put("rvd_est", Math.sqrt(sum(r2, b.size()) * DAY / b.size()));
         if (b.size() > DAY) {
             out.put("rvd", Math.sqrt(sum(r2, DAY)));
             double[] v = b.stream().mapToDouble(Bar::volume).toArray();

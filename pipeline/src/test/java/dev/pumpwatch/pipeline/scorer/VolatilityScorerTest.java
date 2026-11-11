@@ -63,6 +63,32 @@ class VolatilityScorerTest {
     }
 
     @Test
+    void warmUpServesTheDefaultBaselineOnlyFromRv30AndNeverOnnx() throws Exception {
+        Features f = refFeatures();
+        Map<String, Double> v = new HashMap<>(f.values());
+        v.remove("rvd");
+        v.put("rvd_est", 0.01);
+        Features warm = new Features(1, f.eventTime(), f.ingestTime(), "GME", f.windowStart(), f.windowEnd(), 5, v, null);
+        Swing sw = VolatilityScorer.orBaseline(FIXTURE.toString()).swing(warm);
+        assertThat(sw.median()).isCloseTo(pct(VolatilityScorer.DEFAULT_HAR[3] * 0.01), EPS);
+        assertThat(sw.upperBand()).isGreaterThanOrEqualTo(sw.median()).isCloseTo(pct(VolatilityScorer.DEFAULT_HAR[3] * 0.015), EPS);
+        v.remove("rvd_est");
+        Features none = new Features(1, f.eventTime(), f.ingestTime(), "GME", f.windowStart(), f.windowEnd(), 5, v, null);
+        assertThat(VolatilityScorer.orBaseline("").swing(none)).isNull();
+    }
+
+    @Test
+    void oldFormatOrBogusShiftModelFallsBackToTheDefaultBaseline(@TempDir Path dir) throws Exception {
+        copyFixture(dir);
+        String ok = Files.readString(dir.resolve("model.json"));
+        assertThat(VolatilityScorer.orBaseline(dir.toString()).modelVersion()).startsWith("onnx-");
+        Files.writeString(dir.resolve("model.json"), ok.replace("\"format\": 2,", ""));
+        assertThat(VolatilityScorer.orBaseline(dir.toString()).modelVersion()).isEqualTo("har-default");
+        Files.writeString(dir.resolve("model.json"), ok.replaceAll("\"har_band_shift\": [^,]+", "\"har_band_shift\": 5.2"));
+        assertThat(VolatilityScorer.orBaseline(dir.toString()).modelVersion()).isEqualTo("har-default");
+    }
+
+    @Test
     void noDirectoryServesTheDefaultBaseline() throws Exception {
         VolatilityScorer s = VolatilityScorer.orBaseline("");
         assertThat(s.modelVersion()).isEqualTo("har-default");
