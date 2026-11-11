@@ -402,3 +402,10 @@ Run `mvn -B verify` from the root. In `web/`, run `npm test`, `npm run lint` and
 Docker is needed for Testcontainers integration tests; web tests open local HTTP/SSE
 listeners. GitHub Actions also runs dependency-license checks. See the
 [build and test tools](docs/tech-stack.md#checks-and-build-tools) for details.
+
+## License
+
+The code and the trained models are released under the [MIT License](LICENSE). The license
+covers this project's own work only. Market data, news and social posts stay under their
+providers' terms (see [docs/data-sources.md](docs/data-sources.md)); the MIT license grants no
+rights to them.
