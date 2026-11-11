@@ -39,7 +39,9 @@
 
 ## 6. Serving
 
-- [ ] 6.1 Export the model and calibration to ONNX with a stored reference input and expected score
-- [ ] 6.2 Implement `OnnxScorer` with ONNX Runtime and the startup self-check
-- [ ] 6.3 Fall back to `RuleScorer` on a missing or failing model and test both paths
+- [x] 6.1 Export the model and calibration to ONNX with a stored reference input and expected score
+- [x] 6.2 Implement `OnnxScorer` with ONNX Runtime and the startup self-check
+- [x] 6.3 Fall back to `RuleScorer` on a missing or failing model and test both paths
 - [ ] 6.4 Run the replay of the recorded test day through the model scorer and compare with rules
+  - Owner: train and promote a model locally (`python -m pumpml train --data <csv> --version <v>`, then `evaluate`, from `ml/`).
+  - Owner: replay the recorded day with `PIPELINE_MODEL_DIR=ml/models/<v>` set (needs `model.onnx`, `model.json`, `reference.json`) and compare with a rules-only run.

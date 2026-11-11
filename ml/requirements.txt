@@ -9,3 +9,13 @@ threadpoolctl==3.7.0
 python-dateutil==2.9.0.post0
 six==1.17.0
 tzdata==2026.4
+# ONNX export (onnxruntime only checks the export in tests)
+onnx==1.23.2
+onnxmltools==1.16.0
+skl2onnx==1.20.0
+onnxruntime==1.31.1
+protobuf==7.35.1
+flatbuffers==25.12.19
+ml_dtypes==0.6.0
+packaging==26.0
+typing_extensions==4.15.0

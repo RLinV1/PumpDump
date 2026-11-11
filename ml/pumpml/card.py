@@ -7,7 +7,7 @@ from pathlib import Path
 # License of the trained model artifact itself: MIT, chosen by the owner so anyone may use it.
 # It covers the weights only; it grants no rights to the market data they were trained on.
 MODEL_LICENSE = os.environ.get("PUMPML_MODEL_LICENSE", "MIT")
-LICENSES = {"lightgbm": "MIT", "scikit-learn": "BSD-3-Clause", "pandas": "BSD-3-Clause", "numpy": "BSD-3-Clause"}
+LICENSES = {"lightgbm": "MIT", "onnxmltools": "Apache-2.0", "onnxruntime": "MIT", "scikit-learn": "BSD-3-Clause", "pandas": "BSD-3-Clause", "numpy": "BSD-3-Clause"}
 LIMITS = [
     "Version 1 uses market and catalyst features only; social features are not in this model.",
     "Positives come from caught cases (survivorship): the score means pump-like behavior, not proof of manipulation.",
