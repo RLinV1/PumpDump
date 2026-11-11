@@ -22,10 +22,10 @@
 
 ## 4. Proof
 
-- [ ] 4.1 Record a short synthetic day containing one pump-shaped episode and one news-backed move
-- [ ] 4.2 Integration test: replay the recorded day and assert exactly one flag, on the pump, with evidence stating no catalyst
-- [ ] 4.3 Replay-parity test: run the same day twice and assert identical flags
-- [ ] 4.4 Failure test: stop the social connector mid-day and assert scoring continues with stale markers
+- [x] 4.1 Generate (by code, so schema bumps never stale it) a short synthetic day containing one pump-shaped episode and one news-backed move
+- [x] 4.2 Integration test: replay the recorded day and assert exactly one flag, on the pump, with evidence stating no catalyst
+- [x] 4.3 Replay-parity test: run the same day twice and assert identical flags
+- [x] 4.4 Failure test: stop the social connector mid-day and assert scoring continues with stale markers
 
 ## 5. Milestones
 
