@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
  */
 class ModelVsRulesReplayTest {
     static final String MODEL_DIR = System.getProperty("pumpwatch.modelDir", "src/test/resources/onnx-model/fixture-v1");
-    static final Path REPORT = Path.of("..", "docs", "model-vs-rules-synthetic-day.md");
+    static final Path REPORT = Path.of("..", "docs", "ml", "model-vs-rules-synthetic-day.md");
 
     private static double max(Out o, String ticker) {
         return o.scores().stream().filter(s -> s.ticker().equals(ticker)).mapToDouble(Score::score).max().orElse(Double.NaN);

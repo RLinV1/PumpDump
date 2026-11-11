@@ -27,7 +27,8 @@ Plans for new behaviour live in [`openspec/changes/`](../openspec/changes/), not
 | --- | --- |
 | [rule-scorer.md](ml/rule-scorer.md) | `rules-v1` thresholds and the anomaly baseline (checked by tests against the code) |
 | [sentiment-evaluation-2026-11-06.md](ml/sentiment-evaluation-2026-11-06.md) | Sentiment and irony model comparison on the 46-case synthetic set, with retained errors |
-| `model-vs-rules-synthetic-day.md` | Synthetic-day comparison of a trained model against the rules (added separately; stays at the docs root) |
+| [model-vs-rules-synthetic-day.md](ml/model-vs-rules-synthetic-day.md) | Synthetic-day comparison of the fixture model against the rules (issue #36, task 6.4) |
+| [../data/labels/DECISIONS.md](../data/labels/DECISIONS.md) | Labelled episodes: classes, sources, and the owner's labelling decisions |
 | [../ml/README.md](../ml/README.md) | Python training and evaluation commands |
 | [../ml/LIVE-SENTIMENT.md](../ml/LIVE-SENTIMENT.md) | Live sentiment model, matching rules, retention, limits |
 
