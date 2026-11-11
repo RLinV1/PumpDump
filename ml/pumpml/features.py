@@ -5,7 +5,7 @@ MARKET = ["return", "volume", "volumeRatio", "volatility"]
 CATALYST = ["filings24h", "newsOutlets6h", "catalystPrecededMove"]
 FEATURES = MARKET + CATALYST
 
-# docs/rule-scorer.md (rules-v1): feature, "at least" threshold, points. Rows rise by threshold; the last match wins.
+# docs/ml/rule-scorer.md (rules-v1): feature, "at least" threshold, points. Rows rise by threshold; the last match wins.
 RULES = [
     ("mentionRatio", 3, 20), ("mentionRatio", 10, 35),
     ("distinctAuthors", 5, 5), ("distinctAuthors", 20, 10),

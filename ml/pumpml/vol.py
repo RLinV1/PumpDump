@@ -2,7 +2,7 @@
 HAR-RV and naive last-hour baselines, time-based train / validation / test split.
 
 Bars CSV columns: ticker, timestamp, open, high, low, close, volume (one-minute bars). Free source: Alpaca
-historical bars on the free IEX feed (see docs/data-sources.md). Nothing is downloaded here.
+historical bars on the free IEX feed (see docs/data/sources.md). Nothing is downloaded here.
 shortcut: minutes are treated as consecutive, with no market-hours or gap handling; add it when real bars arrive."""
 import datetime
 import json

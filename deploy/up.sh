@@ -10,7 +10,7 @@ SSH="pumpwatch@$IP"
 until ssh -o StrictHostKeyChecking=accept-new "$SSH" 'test -f /opt/pumpwatch/.vm-ready && docker info' >/dev/null 2>&1; do echo "waiting for VM..."; sleep 10; done
 git archive HEAD | ssh "$SSH" 'tar -x -C /opt/pumpwatch'
 # Secrets travel over SSH, never through Terraform state. Alpaca keys never reach this public VM: their terms cover
-# personal use, and public redistribution is unverified (docs/data-sources.md). DEPLOY_DATA_MODE=live is for load tests.
+# personal use, and public redistribution is unverified (docs/data/sources.md). DEPLOY_DATA_MODE=live is for load tests.
 # Lookup, paper trading and the assistant stay on mock data; Gemini keys never reach the public VM.
 { grep -vE '^[[:space:]]*(export[[:space:]]+)?(ALPACA_|GEMINI_|DATA_MODE[[:space:]]*=|USE_MOCK_DATA[[:space:]]*=|USE_MOCK_LLM[[:space:]]*=|RESEARCH_)' .env; printf 'ALPACA_ENABLED=false
 ALPACA_NEWS_ENABLED=false

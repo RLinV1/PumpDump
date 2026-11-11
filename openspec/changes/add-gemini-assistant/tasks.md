@@ -2,7 +2,7 @@
 
 **Goal:** Finish the research assistant with Docker support and repeatable verification.
 **Architecture:** Keep the existing web proxy, private Research service, bounded Gemini/MCP loop and Chroma store. Mock mode remains the default without a key.
-**Spec:** proposal.md; verification results are recorded in docs/verification-2026-11-06.md.
+**Spec:** proposal.md; verification results are recorded in docs/reports/verification-2026-11-06.md.
 
 ## Constraints and review focus
 

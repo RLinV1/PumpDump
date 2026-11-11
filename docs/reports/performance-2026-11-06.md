@@ -42,4 +42,4 @@ Claude's earlier local notes reported 164,508 versus 3,507 processed ticks in ro
 
 ## Limits
 
-There is no apples-to-apples before/after capacity comparison in this run. The earlier 438.8 requests/s result went through a different proxy path; the fresh 612.6 figure targets the Java API directly. It does not establish a code-caused speedup. These tests do not measure cloud networking, paid-provider limits, sustained day-long traffic, or predictive accuracy. See the [sentiment evaluation](sentiment-evaluation-2026-11-06.md) for the model's separate accuracy limitations.
+There is no apples-to-apples before/after capacity comparison in this run. The earlier 438.8 requests/s result went through a different proxy path; the fresh 612.6 figure targets the Java API directly. It does not establish a code-caused speedup. These tests do not measure cloud networking, paid-provider limits, sustained day-long traffic, or predictive accuracy. See the [sentiment evaluation](../ml/sentiment-evaluation-2026-11-06.md) for the model's separate accuracy limitations.

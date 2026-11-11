@@ -4,7 +4,7 @@
 - [x] 1.2 Define the flag evidence structure (score, model version, top contributors, post and trade counts, catalyst lookback result)
 - [x] 1.3 Add a run-id header and topic-prefix convention for replay isolation
 
-- [x] 1.4 Keep `docs/resources-needed.md` current with every account, key, tool, machine, model and dataset a milestone needs
+- [x] 1.4 Keep `docs/data/resources.md` current with every account, key, tool, machine, model and dataset a milestone needs
 
 ## 2. Pipeline skeleton
 
@@ -30,4 +30,4 @@
 ## 5. Milestones
 
 - [ ] 5.1 Order of work: ingestion changes, then the pipeline skeleton with rules, then labels and the first model, then the API and alerts, then web integration, then the one-off cloud smoke test
-- [x] 5.2 Record the milestone status in the README after each is merged, following `docs/roadmap.md`
+- [x] 5.2 Record the milestone status in the README after each is merged, following `docs/product/roadmap.md`
