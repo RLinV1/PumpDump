@@ -28,7 +28,9 @@ public final class Json {
 
     public static <T> T fromJson(String json, Class<T> type) {
         try {
-            return MAPPER.readValue(json, type);
+            T value = MAPPER.readValue(json, type);
+            if (value == null) throw new IllegalArgumentException("cannot parse " + type.getSimpleName() + ": null value");
+            return value;
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("cannot parse " + type.getSimpleName() + ": " + e.getOriginalMessage(), e);
         }
