@@ -52,7 +52,7 @@ export function serveMockApi(request, response, now = Date.now()) {
     const sample = url.searchParams.get("sample") ?? "stream";
     if (!["top", "latest", "stream"].includes(sample)) return json(400, null, "Invalid sentiment sample");
     return json(200, { ticker: context[1], enabled: false, model: "mock", modelStatus: "disabled", streamConnected: false,
-      asOf: iso(now), windowMinutes: sample === "stream" ? 60 : 1440, positive: 0, negative: 0, neutral: 0, total: 0, lastPostAt: null, dropped: 0,
+      asOf: iso(now), windowMinutes: sample === "stream" ? 60 : 1440, positive: 0, negative: 0, neutral: 0, total: 0, lastPostAt: null, dropped: 0, posts: [],
       ...(sample === "stream" ? {} : { sample: { sort: sample, examined: 0 } }) });
   }
   if (url.pathname === "/api/v1/news" || context?.[2] === "news") {

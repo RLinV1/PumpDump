@@ -34,8 +34,8 @@ test("top-post sentiment searches 24 hours and classifies relevant unique posts 
   assert.equal(result.negative, 1);
   assert.equal(result.windowMinutes, 1440);
   assert.deepEqual(result.sample, { sort: "top", examined: 7 });
-  assert.ok(!JSON.stringify(result).includes("PRIVATE_"));
-  assert.ok(!JSON.stringify(result).includes("did:plc"));
+  assert.ok(!JSON.stringify(result).includes("PRIVATE_AUTHOR"));
+  assert.equal(result.posts.length, 2);
 });
 
 test("search caches aggregate results, coalesces reads and separates top from latest", async () => {
@@ -80,4 +80,19 @@ test("invalid requests are rejected before fetching and a stalled search has a d
   await assert.rejects(load("AMC", "invalid"));
   assert.equal(reads, 0);
   await assert.rejects(load("AMC", "top"), /Recent Bluesky sentiment unavailable/);
+});
+
+test("snippets are short, capped per tone and carry no author fields", async () => {
+  const long = "$AMC " + "word   ".repeat(60);
+  const posts = Array.from({ length: 8 }, (_, i) => post(`p${i}`, i === 0 ? long : `$AMC post ${i}`));
+  const load = createBlueskySearch({ now: () => NOW, sentiment: { snapshot, classify: async (t) => t.includes("post 7") ? "negative" : "positive" }, fetchImpl: async () => Response.json({ posts }) });
+  const result = await load("AMC", "latest");
+  assert.equal(result.posts.filter((p) => p.label === "positive").length, 5);
+  assert.equal(result.posts.filter((p) => p.label === "negative").length, 1);
+  assert.ok(result.posts.length <= 15);
+  assert.ok(result.posts.every((p) => p.text.length <= 140 && !/\s{2}/.test(p.text)));
+  assert.ok(result.posts[0].text.endsWith("…"));
+  assert.equal(result.posts[1].url, "https://bsky.app/profile/did:plc:private/post/p1");
+  const json = JSON.stringify(result);
+  for (const word of ["handle", "displayName", "author", "PRIVATE_AUTHOR"]) assert.ok(!json.includes(word), word);
 });
