@@ -37,10 +37,11 @@ public final class VolatilityScorer implements AutoCloseable {
     public static final List<String> FEATURES = List.of("rv5", "rv30", "rvd", "vol_ratio", "tod", "gap");
     /**
      * Default HAR-RV when no fitted coefficients exist: [intercept, rv5, rv30, rvd] on the log range. Expected range of a
-     * Brownian path over an hour is sqrt(8/pi) * sigma_hour, and sigma_hour = rvd * sqrt(60/390). Band: +ln(1.5).
+     * Brownian path over an hour is sqrt(8/pi) * sigma_hour, and sigma_hour = rvd * sqrt(60/390). Band: x1.5, see {@link #DEFAULT_BAND_SHIFT}.
      */
     public static final double[] DEFAULT_HAR = {0, 0, 0, Math.sqrt(8 / Math.PI) * Math.sqrt(60.0 / 390)};
-    public static final double DEFAULT_BAND_SHIFT = Math.log(1.5);
+    /** NaN stands for "no fitted shift": the default band is the median x {@link #DEFAULT_BAND_FACTOR}. */
+    public static final double DEFAULT_BAND_SHIFT = Double.NaN, DEFAULT_BAND_FACTOR = 1.5;
     /** Regime cut-offs in units of sigma_hour: Brownian range p50 (~1.5) and p90 (~2.3). See design.md. */
     public static final double CALM_BELOW = 1.5, EXTREME_FROM = 2.3;
     private static final ZoneId EXCHANGE = ZoneId.of("America/New_York");
@@ -172,13 +173,13 @@ public final class VolatilityScorer implements AutoCloseable {
         return d == null ? 0.0 : d; // missing reads as 0, like the pump scorer
     }
 
-    /** {log median, log upper band}. */
+    /** {median, upper band} as log(high/low), the unit of the target, the boosters and the HAR fit. */
     private double[] forecast(double[] row) {
         if (median == null) {
             double h = har[0];
             for (int i = 0; i < 3; i++) h += har[i + 1] * row[features.indexOf(FEATURES.get(i))];
-            double m = Math.log(Math.max(h, 1e-6));
-            return new double[] {m, m + harBand};
+            double m = Math.max(h, 1e-6); // vol.py HarRV.predict
+            return new double[] {m, Double.isNaN(harBand) ? m * DEFAULT_BAND_FACTOR : Math.max(m + harBand, m)};
         }
         double m = run(median, row), u = run(upper, row);
         return new double[] {m, Math.max(Math.max(u, m) + shift, m)};

@@ -8,5 +8,7 @@
     "gap": 0.00035152859315809804
   },
   "expected_median": 0.0019353951180586422,
-  "expected_upper": 0.008000121854784235
+  "expected_upper": 0.008000121854784235,
+  "expected_har_median": 0.0036556225339629497,
+  "expected_har_upper": 0.014931075790182628
 }
