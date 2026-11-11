@@ -57,6 +57,12 @@ class CommonTest {
     }
 
     @Test
+    void jsonNullIsNotARecord() {
+        assertThatThrownBy(() -> Json.fromJson("null", Score.class))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void jsonIgnoresUnknownFields() {
         var json = Json.toJson(tick()).replace("{", "{\"extra\":1,");
         assertThat(Json.fromJson(json, TickRecord.class)).isEqualTo(tick());
