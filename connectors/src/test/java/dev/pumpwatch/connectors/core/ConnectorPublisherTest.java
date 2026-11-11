@@ -157,7 +157,8 @@ class ConnectorPublisherTest {
         p.start();
         try {
             long deadline = System.currentTimeMillis() + 5000;
-            while (sender.sent.isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(5);
+            // the loop records the send before it drops the row from the buffer, so wait for both
+            while ((sender.sent.isEmpty() || p.bufferSize() > 0) && System.currentTimeMillis() < deadline) Thread.sleep(5);
             assertThat(sender.sent).hasSize(1);
             assertThat(p.bufferSize()).isZero();
         } finally {
