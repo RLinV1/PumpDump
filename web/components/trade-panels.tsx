@@ -152,7 +152,7 @@ export function PaperPanel({ paper, onConfirmReset, active }: { paper: ReturnTyp
   const { state } = paper;
   const tag = <><span className="mr-2 border border-yellow px-1 text-yellow">PAPER</span>{state.status === "done" ? modeLabel(state.account.dataMode) : ""}</>;
   return (
-    <Panel id="paper" number={8} title="Paper trading" tag={tag} active={active} className="lg:col-start-3 lg:row-start-3">
+    <Panel id="paper" number="PT" title="Paper account" tag={tag} active={active}>
       {state.status === "loading" ? (
         <Skeleton rows={3} />
       ) : state.status === "error" ? (
@@ -169,7 +169,7 @@ export function PaperPanel({ paper, onConfirmReset, active }: { paper: ReturnTyp
             <div><dt className="text-accent">P&amp;L</dt><dd className={`tabular-nums ${dirTone(state.account.pnlCents)}`}>{signedUsd(state.account.pnlCents)}</dd></div>
           </dl>
           {state.account.positions.length === 0 ? (
-            <p className="px-2 py-2 text-mute">No positions. <span className="text-yellow">BUY GME 10 &lt;GO&gt;</span> places a simulated order.</p>
+            <p className="px-2 py-2 text-mute">No positions. Use the order form to place a simulated order.</p>
           ) : (
             <table className="w-full tabular-nums">
               <caption className="sr-only">Paper positions</caption>
@@ -203,7 +203,7 @@ export function PaperPanel({ paper, onConfirmReset, active }: { paper: ReturnTyp
                 <button type="button" onClick={paper.cancelReset} className={btnGhost}>Cancel</button>
               </>
             ) : (
-              <span>Simulated only: no broker, no real orders. PT RESET starts over. Not investment advice.</span>
+              <span>Paper money, not real: simulated only, no broker, no real orders. Not investment advice.</span>
             )}
           </div>
         </div>

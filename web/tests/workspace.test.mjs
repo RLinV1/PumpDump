@@ -24,7 +24,16 @@ test("custom layouts preserve order, keep at least one panel and can reveal comm
   assert.deepEqual(movePanel(custom, "watchlist", -1), custom);
   const single = { name: "custom", panels: ["chart"] };
   assert.deepEqual(togglePanel(single, "chart"), single);
-  assert.deepEqual(revealPanel(single, "assistant").panels, ["chart", "assistant"]);
+  assert.deepEqual(revealPanel(single, "news").panels, ["chart", "news"]);
   assert.deepEqual(revealPanel(single, "chart"), single);
   assert.deepEqual(parseWorkspace(JSON.stringify(custom)), custom);
+});
+
+test("layouts saved before paper trading and the assistant left the grid drop those ids", () => {
+  const old = (name, panels) => JSON.stringify({ name, panels });
+  assert.deepEqual(parseWorkspace(old("custom", ["chart", "paper", "assistant", "news"])), { name: "custom", panels: ["chart", "news"] });
+  assert.deepEqual(parseWorkspace(old("research", ["lookup", "assistant", "news", "sentiment"])), PRESETS.research);
+  assert.deepEqual(parseWorkspace(old("trading", ["watchlist", "lookup", "paper"])), { name: "custom", panels: ["watchlist", "lookup"] });
+  assert.deepEqual(parseWorkspace(old("custom", ["paper", "assistant"])), PRESETS.default); // nothing left: fall back
+  for (const preset of Object.values(PRESETS)) assert.ok(!preset.panels.includes("paper") && !preset.panels.includes("assistant"));
 });

@@ -19,8 +19,7 @@ a hidden panel, so every feature remains reachable.
 | --- | --- |
 | Default | Watchlist, risk chart, flags, movers, news and sentiment |
 | Monitor | Watchlist, risk chart and flags |
-| Research | Stock lookup, assistant, news and sentiment |
-| Trading | Watchlist, stock lookup and paper trading |
+| Research | Stock lookup, news and sentiment |
 | Custom | Your chosen panels in your chosen order |
 
 ![Current default workspace with all six monitoring panels](../img/workspace-default.jpg)

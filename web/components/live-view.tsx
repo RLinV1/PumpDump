@@ -1,34 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useApi } from "@/lib/use-api";
 import { sentimentSummary } from "@/lib/sentiment-summary";
 import { LiveChart } from "@/components/live-chart";
 import { MoversPanel, NewsPanel, SentimentPanel } from "@/components/market-context";
-import { AssistantPanel, useAssistant } from "@/components/assistant-panel";
-import { LookupPanel, PaperPanel, useLookup, usePaper } from "@/components/trade-panels";
+import { useAssistant } from "@/components/assistant-panel";
+import { AssistantWidget } from "@/components/assistant-widget";
+import { AppTabs } from "@/components/app-tabs";
+import { LookupPanel, useLookup, usePaper } from "@/components/trade-panels";
 import { Message, Panel, Skeleton, Stale, Verdict, dirTone, modeTag, money, signed } from "@/components/term-panel";
 import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag, type MarketMovers, type Quote, type Quotes, type Score, type Sentiment, type Timeline } from "@/lib/api";
 import { PANELS, parseCommand, type Panel as PanelId } from "@/lib/commands";
 import { btnGhost } from "@/lib/ui";
+import { verdictOf } from "@/lib/verdict";
+import { GROUP_TITLE, paletteItems, type PaletteItem } from "@/lib/palette";
 import { addTicker, parseWatchlist, readWatchlist, saveWatchlist, subscribeWatchlist } from "@/lib/watchlist";
 import { WorkspaceToolbar } from "@/components/workspace-toolbar";
 import { parseWorkspace, readWorkspace, revealPanel, saveWorkspace, subscribeWorkspace, type Workspace } from "@/lib/workspace";
 
 const DOWN = { title: "Risk data unavailable", body: "The latest data could not be loaded. Retry, or use the simulated detector while the feed recovers." };
-const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers", lookup: "lookup", paper: "paper", assistant: "assistant" };
+const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score-chart", flags: "flags", news: "stock-news", sentiment: "stock-sentiment", movers: "market-movers", lookup: "lookup" };
 const HELP: [string, string][] = [
   ["GME <GO>", "Select a ticker (1 to 5 letters). Chart, news and sentiment follow it."],
-  ["WL  GR  FLAG  NEWS  SENT  MOV  LOOK  PT  ASK", "Jump to a panel. The panel numbers 1 to 9 work too."],
-  ["ASK Is GME being pumped?", "Ask the research assistant (panel 9). Read-only tools, cited sources, not investment advice. Says whether Gemini or the mock agent answered."],
+  ["WL  GR  FLAG  NEWS  SENT  MOV  LOOK", "Jump to a panel. The panel numbers 1 to 7 work too."],
+  ["ASK Is GME being pumped?", "Ask the research assistant in the chat at the bottom right. Read-only tools, cited sources, not investment advice. Says whether Gemini or the mock agent answered. ASK alone opens the chat."],
+  ["PT", "Open the Paper tab: your simulated account and order form."],
+  ["MODE", "Say whether the data is mock or live."],
   ["LOOK GME  /  DES GME", "Stock lookup (panel 7): snapshot, performance, indicators, beta and volatility."],
-  ["BUY GME 10  /  SELL GME 10", "Simulated paper order (panel 8). Whole shares, filled at the server's price. No broker, no real money."],
-  ["PT  /  PT RESET", "Open the paper account. PT RESET asks you to confirm with PT RESET CONFIRM."],
+  ["BUY GME 10  /  SELL GME 10", "Simulated paper order, from here or the Paper tab. Whole shares, filled at the server's price. No broker, no real money."],
+  ["PT RESET", "Reset the paper account. It asks you to confirm with PT RESET CONFIRM."],
   ["ADD AMC  /  RM AMC", "Add a stock to your browser-saved watchlist, or remove it."],
   ["SEL FLAG", "Select a ticker that shares its name with a command."],
   ["RF", "Reload every panel."],
-  ["/", "Return to the command line. Esc clears it. Up and Down recall earlier commands."],
+  ["/", "Return to the command line. Type to search tickers and commands; Up and Down pick, Enter runs, Esc clears. With nothing typed, Up and Down recall earlier commands."],
 ];
 
 type Out = { kind: "info" | "error" | "help"; text: string };
@@ -286,6 +293,10 @@ export function LiveView() {
   const lookup = useLookup();
   const paper = usePaper();
   const assistant = useAssistant();
+  const router = useRouter();
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
 
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 5000);
@@ -325,6 +336,17 @@ export function LiveView() {
       ...(movers.data?.gainers ?? []).slice(0, 5), ...(movers.data?.losers ?? []).slice(0, 5),
     ].filter((item) => !seen.has(item.ticker) && seen.add(item.ticker));
   }, [q.data, movers.data]);
+
+  const known = useMemo(() => {
+    const seen = new Set<string>();
+    const badge = (t: string) => { const sc = scores?.find((x) => x.ticker === t); return sc ? `${Math.round(sc.score)} ${verdictOf(sc.score).label}` : undefined; };
+    return [...symbols, ...(scores ?? []).map((x) => x.ticker), ...tape.map((x) => x.ticker)]
+      .filter((t) => !seen.has(t) && seen.add(t)).map((t) => ({ ticker: t, onList: symbols.includes(t), badge: badge(t) }));
+  }, [symbols, scores, tape]);
+  const items = useMemo(() => paletteItems(command, known), [command, known]);
+  const listOpen = focused && items.length > 0;
+  // A line that is not a command picks its best match, so Enter does something useful; a real command still runs as typed.
+  const sel = listOpen ? (highlight >= 0 ? Math.min(highlight, items.length - 1) : parseCommand(command).type === "error" ? 0 : -1) : -1;
 
   const jump = useCallback((panel: PanelId) => {
     setActive(panel);
@@ -375,22 +397,25 @@ export function LiveView() {
       }
       case "help": setOut({ kind: "help", text: "" }); break;
       case "refresh": setRefreshKey((key) => key + 1); void paper.refresh(); setOut({ kind: "info", text: "RELOADING ALL PANELS." }); break;
-      case "ask": void assistant.ask(cmd.question); jump("assistant"); setOut({ kind: "info", text: "ASKING THE ASSISTANT. THE ANSWER APPEARS IN PANEL 9." }); break;
+      case "ask": void assistant.ask(cmd.question); setAssistantOpen(true); setOut({ kind: "info", text: "ASKING THE ASSISTANT. THE ANSWER APPEARS IN THE CHAT AT THE BOTTOM RIGHT." }); break;
+      case "assistant": setAssistantOpen(true); setOut({ kind: "info", text: "ASSISTANT OPEN AT THE BOTTOM RIGHT." }); break;
+      case "paper": setOut({ kind: "info", text: "OPENING THE PAPER TAB." }); router.push("/paper"); break;
+      case "mode": setOut({ kind: "info", text: mode ? `DATA MODE: ${mode.toUpperCase()}. ${mode === "mock" ? "FIGURES ARE INVENTED FOR DEMONSTRATION." : "FIGURES COME FROM THE LIVE FEED."}` : "DATA MODE NOT KNOWN YET: STILL CONNECTING." }); break;
       case "look": void lookup.look(cmd.ticker); jump("lookup"); setOut({ kind: "info", text: `LOOKING UP ${cmd.ticker}. THE RESULT APPEARS IN PANEL 7.` }); break;
       case "trade":
-        jump("paper");
         setOut({ kind: "info", text: `SENDING SIMULATED ${cmd.side} ${cmd.qty} ${cmd.ticker}...` });
         void paper.trade(cmd.side, cmd.ticker, cmd.qty).then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }));
         break;
       case "reset":
-        jump("paper");
-        if (!cmd.confirmed) { paper.askReset(); setOut({ kind: "info", text: "RESET CLEARS ALL POSITIONS AND HISTORY. TYPE PT RESET CONFIRM, OR PRESS CONFIRM IN PANEL 8." }); }
+        if (!cmd.confirmed) setOut({ kind: "info", text: "RESET CLEARS ALL POSITIONS AND HISTORY. TYPE PT RESET CONFIRM, OR USE THE PAPER TAB." });
         else void paper.reset().then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }));
         break;
       case "error": setOut({ kind: "error", text: cmd.message }); break;
     }
     setCommand("");
+    setHighlight(-1);
   };
+  const choose = (item: PaletteItem) => { run(item.run); input.current?.focus(); };
 
   return (
     <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
@@ -399,16 +424,29 @@ export function LiveView() {
           <Link href="/" className="inline-flex min-h-11 shrink-0 items-center font-display text-3xl font-black uppercase leading-none tracking-wide text-accent">
             Pumpwatch
           </Link>
-          <form role="search" aria-label="Command line" className="flex min-w-0 flex-1 basis-64 items-center gap-2" onSubmit={(event) => { event.preventDefault(); run(command); }}>
+          <AppTabs current="/live" />
+          <form role="search" aria-label="Command line" className="relative flex min-w-0 flex-1 basis-64 items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (sel >= 0) choose(items[sel]); else run(command); }}>
             <label htmlFor="command" className="sr-only">Command line. Type a ticker or a command, then press Enter. Type HELP for the list.</label>
             <span aria-hidden className="shrink-0 font-bold text-accent">PW&gt;</span>
             <input
               ref={input}
               id="command"
               value={command}
-              onChange={(event) => setCommand(event.target.value)}
+              role="combobox"
+              aria-expanded={listOpen}
+              aria-controls="palette-list"
+              aria-autocomplete="list"
+              aria-activedescendant={sel >= 0 ? `palette-${items[sel].id}` : undefined}
+              onChange={(event) => { setCommand(event.target.value); setHighlight(-1); }}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onKeyDown={(event) => {
-                if (event.key === "Escape") { setCommand(""); setOut((o) => (o?.kind === "help" ? undefined : o)); }
+                if (event.key === "Escape") { setCommand(""); setHighlight(-1); setOut((o) => (o?.kind === "help" ? undefined : o)); }
+                else if (listOpen && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+                  event.preventDefault();
+                  const step = event.key === "ArrowDown" ? 1 : -1;
+                  setHighlight(sel < 0 ? (step > 0 ? 0 : items.length - 1) : (sel + step + items.length) % items.length);
+                }
                 else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
                   event.preventDefault();
                   const next = Math.min(history.current.length - 1, Math.max(-1, cursor.current + (event.key === "ArrowUp" ? 1 : -1)));
@@ -426,6 +464,42 @@ export function LiveView() {
               className="h-11 min-w-0 flex-1 border-0 border-b border-yellow bg-bg px-1 text-base uppercase text-yellow placeholder:text-mute lg:h-9 lg:text-sm"
             />
             <button type="submit" className="inline-flex h-11 shrink-0 items-center bg-yellow px-3 text-xs font-bold text-bg lg:h-9">&lt;GO&gt;</button>
+            {listOpen && (
+              <div className="absolute inset-x-0 top-full z-40 mt-px max-h-[60dvh] overflow-y-auto border border-line-strong bg-bg text-xs">
+                <ul id="palette-list" role="listbox" aria-label="Matching tickers and commands">
+                  {(["tickers", "commands", "ask"] as const).map((group) => {
+                    const rows = items.filter((i) => i.group === group);
+                    return rows.length === 0 ? null : (
+                      <li key={group} role="presentation">
+                        <p id={`palette-${group}`} className="bar px-2 py-0.5 font-semibold uppercase">{GROUP_TITLE[group]}</p>
+                        <ul role="group" aria-labelledby={`palette-${group}`}>
+                          {rows.map((item) => {
+                            const at = items.indexOf(item), on = at === sel;
+                            return (
+                              <li
+                                key={item.id}
+                                id={`palette-${item.id}`}
+                                role="option"
+                                aria-selected={on}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseMove={() => at !== sel && setHighlight(at)}
+                                onClick={() => choose(item)}
+                                className={`flex min-h-11 cursor-pointer items-baseline gap-2 px-2 py-2 lg:min-h-8 lg:py-1 ${on ? "bg-accent text-bg" : "text-white"}`}
+                              >
+                                <span className="min-w-0 truncate">{[...item.label].map((ch, i) => item.indexes.includes(i) ? <b key={i} className={on ? "underline" : "text-yellow"}>{ch}</b> : ch)}</span>
+                                {item.badge && <span className={`shrink-0 border px-1 ${on ? "border-bg" : "border-yellow text-yellow"}`}>{item.badge}</span>}
+                                {item.detail && <span className={`ml-auto shrink-0 ${on ? "text-bg" : "text-mute"}`}>{item.detail}</span>}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="border-t border-line px-2 py-1 text-mute"><kbd className="text-yellow">Up</kbd> <kbd className="text-yellow">Down</kbd> pick, <kbd className="text-yellow">Enter</kbd> run, <kbd className="text-yellow">Esc</kbd> clear, <kbd className="text-yellow">/</kbd> focus</p>
+              </div>
+            )}
           </form>
           <p className="hidden shrink-0 text-xs text-mute xl:block">Press <kbd className="text-yellow">/</kbd> to type a command</p>
         </div>
@@ -479,13 +553,13 @@ export function LiveView() {
             ))}
             {id === "movers" && <MoversPanel state={movers} selectedTicker={ticker} active={active === id} onPick={setPick} />}
             {id === "lookup" && <LookupPanel state={lookup.state} onRetry={(t) => void lookup.look(t)} active={active === id} />}
-            {id === "paper" && <PaperPanel paper={paper} onConfirmReset={() => void paper.reset().then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }))} active={active === id} />}
-            {id === "assistant" && <AssistantPanel state={assistant.state} onAsk={(question) => void assistant.ask(question)} active={active === id} />}
           </div>
         ))}
       </main>
 
-      <footer className="flex flex-wrap items-center gap-x-5 gap-y-0.5 border-t border-accent px-3 py-1 text-xs">
+      <AssistantWidget open={assistantOpen} onOpenChange={setAssistantOpen} state={assistant.state} onAsk={(question) => void assistant.ask(question)} ticker={ticker} />
+
+      <footer className="flex flex-wrap items-center gap-x-5 gap-y-0.5 border-t border-accent px-3 py-1 pb-16 text-xs sm:pb-1 lg:min-h-10 lg:pr-24">
         <span className="text-accent">DATA <strong className={mode === "mock" ? "bg-accent px-1 text-bg" : "text-white"}>{mode ? mode.toUpperCase() : "--"}</strong></span>
         <span className="text-accent">TIME <Clock /></span>
         <span className="text-accent">LINK <strong className={connection === "STREAMING" ? "text-cyan" : "text-yellow"}>{connection}</strong></span>

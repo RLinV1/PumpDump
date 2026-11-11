@@ -59,16 +59,19 @@ test("BUY and SELL take a ticker and a whole quantity from 1 to 10,000", () => {
   assert.deepEqual(parseCommand("SEL BUY"), { type: "select", ticker: "BUY" });
 });
 
-test("PT opens the paper panel and PT RESET needs a second, explicit confirmation", () => {
-  for (const input of ["PT", "pt <GO>", "8", "PAPER"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "paper" }, input);
+test("PT opens the Paper tab and PT RESET needs a second, explicit confirmation", () => {
+  for (const input of ["PT", "pt <GO>", "PAPER"]) assert.deepEqual(parseCommand(input), { type: "paper" }, input);
+  assert.equal(parseCommand("8").type, "error"); // paper is no longer a numbered panel
   assert.deepEqual(parseCommand("PT RESET"), { type: "reset", confirmed: false });
   assert.deepEqual(parseCommand("pt reset confirm"), { type: "reset", confirmed: true });
   assert.equal(parseCommand("PT NOW").type, "error");
 });
 
-test("ASK sends the question with its own case, 9 and ASK jump to the assistant panel, long questions are refused", () => {
+test("ASK sends the question with its own case, a bare ASK opens the chat widget, long questions are refused", () => {
   assert.deepEqual(parseCommand("ask Is GME being pumped? <GO>"), { type: "ask", question: "Is GME being pumped?" });
   assert.deepEqual(parseCommand("ASK  what   is a P/E ratio"), { type: "ask", question: "what is a P/E ratio" });
-  for (const input of ["ASK", "ask <GO>", "9", "AI"]) assert.deepEqual(parseCommand(input), { type: "panel", panel: "assistant" }, input);
+  for (const input of ["ASK", "ask <GO>", "AI", "assistant"]) assert.deepEqual(parseCommand(input), { type: "assistant" }, input);
+  assert.equal(parseCommand("9").type, "error");
+  assert.deepEqual(parseCommand("mode"), { type: "mode" });
   assert.equal(parseCommand(`ASK ${"x".repeat(301)}`).type, "error");
 });

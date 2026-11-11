@@ -4,21 +4,22 @@ export type Workspace = { name: string; panels: Panel[] };
 export const PRESETS: Record<string, Workspace> = {
   default: { name: "default", panels: ["watchlist", "chart", "flags", "movers", "news", "sentiment"] },
   monitor: { name: "monitor", panels: ["watchlist", "chart", "flags"] },
-  research: { name: "research", panels: ["lookup", "assistant", "news", "sentiment"] },
-  trading: { name: "trading", panels: ["watchlist", "lookup", "paper"] },
+  research: { name: "research", panels: ["lookup", "news", "sentiment"] },
 };
-const IDS = new Set([...PRESETS.default.panels, "lookup", "paper", "assistant"]);
+const IDS = new Set<string>([...PRESETS.default.panels, "lookup"]);
 const KEY = "pumpwatch:workspace:v1";
 
+// Layouts saved before paper trading and the assistant left the grid still list "paper" and "assistant": those ids are dropped.
 export function parseWorkspace(raw: string | null): Workspace {
   try {
     const value = JSON.parse(raw ?? "null");
-    if (!value || !Array.isArray(value.panels) || !value.panels.length || value.panels.length > IDS.size
-      || !value.panels.every((p: unknown) => typeof p === "string" && IDS.has(p))
-      || new Set(value.panels).size !== value.panels.length) return PRESETS.default;
+    if (!value || !Array.isArray(value.panels) || value.panels.length > 16) return PRESETS.default;
+    const panels: Panel[] = value.panels.filter((p: unknown): p is Panel => typeof p === "string" && IDS.has(p));
+    if (!panels.length || new Set(panels).size !== panels.length) return PRESETS.default;
+    if (value.panels.some((p: unknown) => typeof p !== "string")) return PRESETS.default;
     const preset = PRESETS[value.name];
-    const name = preset && JSON.stringify(preset.panels) === JSON.stringify(value.panels) ? preset.name : "custom";
-    return { name, panels: value.panels };
+    const name = preset && JSON.stringify(preset.panels) === JSON.stringify(panels) ? preset.name : "custom";
+    return { name, panels };
   } catch { return PRESETS.default; }
 }
 
