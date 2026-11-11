@@ -14,7 +14,7 @@ RULES = [
     ("return", 0.05, 20), ("return", 0.15, 35),
     ("volume", 100_000, 10), ("volume", 1_000_000, 20),
     ("volumeRatio", 5, 10), ("volumeRatio", 20, 20),
-    ("newsOutlets6h", 1, -10), ("newsOutlets6h", 3, -20),
+    ("newsOutlets6h", 1, -20), ("newsOutlets6h", 3, -30),
     ("filings24h", 1, -20),
     ("catalystPrecededMove", 1, -15),
 ]
