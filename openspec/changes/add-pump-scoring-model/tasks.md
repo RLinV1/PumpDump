@@ -25,7 +25,7 @@
 - [x] 4.2 Collect pump episodes from public enforcement records, each with a source URL
 - [x] 4.3 Collect negatives: news-backed movers, hype without manipulation, matched controls
 - [x] 4.4 Add the dataset report (counts per class and period) and the minimum-count gate
-  - Owner: 63 of 127 rows are `uncertain` and await review in `data/labels/REVIEW.md` (keep or drop).
+  - Owner: 63 of 127 rows are `uncertain`. They are grouped into 6 policy questions and 3 one-off rows in `data/labels/REVIEW.md`; answer in `data/labels/decisions.json` (all `null` now, so uncertain rows are excluded).
 
 ## 5. Training and evaluation (`ml/`)
 

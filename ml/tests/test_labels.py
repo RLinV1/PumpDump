@@ -45,7 +45,7 @@ def test_committed_labels_are_valid_and_pass_the_gate():
 
 
 def test_report_counts():
-    rows = [row(), row(id="P2", confidence="uncertain")]
+    rows = [row(), row(id="P2", confidence="uncertain", policy="long_windows")]
     out = labels.report(rows)
     assert "| pump | 2 | 1 | 1 |" in out and "| 2021 | 2 |" in out
     assert "P2" in labels.review(rows) and "P1" not in labels.review(rows)
@@ -74,3 +74,28 @@ def test_cli_gates_real_data_but_not_synthetic(tmp_path):
     with pytest.raises(SystemExit, match="refusing to train"):
         main(["train", "--data", str(p), "--out", str(tmp_path)])
     main(["train", "--synthetic", "--out", str(tmp_path)])
+
+
+def test_policy_rules():
+    assert any("needs a policy" in e for e in labels.validate([row(confidence="uncertain")]))
+    assert any("must not have a policy" in e for e in labels.validate([row(policy="one_off")]))
+    assert any("unknown policy" in e for e in labels.validate([row(confidence="uncertain", policy="nope")]))
+
+
+def test_decisions_apply():
+    rows = [row(), row(id="P2", confidence="uncertain", policy="suspension_windows"),
+            row(id="P3", ticker="CCC", confidence="uncertain", policy="long_windows one_off", end="2021-06-30")]
+    assert [r["id"] for r in labels.apply_decisions(rows, {})] == ["P1"]  # null excludes
+    both = {"policies": {"suspension_windows": True, "long_windows": True}, "rows": {"P3": True}}
+    kept = labels.apply_decisions(rows, both)
+    assert [r["id"] for r in kept] == ["P1", "P2", "P3"] and kept[2]["end"] == "2021-02-02"  # trimmed to day 30
+    assert [r["id"] for r in labels.apply_decisions(rows, {"policies": {"suspension_windows": True, "long_windows": True}})] == ["P1", "P2"]
+    assert [r["id"] for r in labels.apply_decisions(rows, {"policies": {"suspension_windows": False}})] == ["P1"]
+    assert labels.validate_decisions(rows, {"policies": {"x": True}, "rows": {"P1": True}})
+
+
+def test_committed_decisions_valid_and_outcomes():
+    rows = labels.load()
+    assert labels.validate_decisions(rows, labels.load_decisions()) == []
+    o = labels.outcomes(rows)
+    assert o["all yes"]["short"] == [] and o["all no"]["short"] == ["hype_no_manipulation"]

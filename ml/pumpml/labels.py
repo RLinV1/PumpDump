@@ -6,7 +6,18 @@ from collections import Counter
 from pathlib import Path
 
 LABELS_DIR = Path(__file__).resolve().parents[2] / "data" / "labels"
-FIELDS = ["id", "ticker", "class", "start", "end", "source_urls", "note", "confidence", "labeled_on"]
+FIELDS = ["id", "ticker", "class", "start", "end", "source_urls", "note", "confidence", "labeled_on"]  # plus optional `policy`
+# Each uncertain row names the policy decision(s) that cover it (space-separated). Owner answers them in decisions.json.
+POLICIES = {
+    "suspension_windows": "Count SEC trading-suspension windows as pump episodes? (The dates are the suspension period, and a suspension is not a finding.)",
+    "long_windows": "Keep pump windows longer than 60 days, trimmed to their first 30 days?",
+    "order_date_ends": "Use the order date as the end date when the scheme end is not stated?",
+    "approx_dates": "Keep pump rows whose dates are month bounds or a year-end placeholder?",
+    "hype_unenforced": "Count heavily hyped tickers with no enforcement action found as hype_no_manipulation negatives?",
+    "news_mover_caveats": "Keep news-mover rows whose catalyst timing, size or deal status is soft (after-close news, term sheet, label change, nano-cap, COVID)?",
+    "one_off": "Row-by-row call (see the one-off table); answer under `rows` in decisions.json.",
+}
+DECISIONS_FILE = LABELS_DIR / "decisions.json"
 CLASSES = ("pump", "news_mover", "hype_no_manipulation", "control")
 CONFIDENCE = ("high", "uncertain")
 MIN_PER_CLASS = 20  # configured minimum episodes per class before real-label training is allowed
@@ -46,6 +57,12 @@ def validate(rows: list[dict]) -> list[str]:
             errs.append(f"{rid}: invalid start/end date")
         elif e < s:
             errs.append(f"{rid}: end before start")
+        pol = (r.get("policy") or "").split()
+        if r.get("confidence") == "uncertain" and not pol:
+            errs.append(f"{rid}: uncertain row needs a policy")
+        if r.get("confidence") == "high" and pol:
+            errs.append(f"{rid}: high-confidence row must not have a policy")
+        errs += [f"{rid}: unknown policy {p}" for p in pol if p not in POLICIES]
         if _date(r.get("labeled_on")) is None:
             errs.append(f"{rid}: invalid labeled_on")
         urls = (r.get("source_urls") or "").split()
@@ -77,13 +94,71 @@ def report(rows: list[dict]) -> str:
     return "\n".join(out) + "\n"
 
 
-def review(rows: list[dict]) -> str:
-    out = ["# Rows awaiting owner review", "",
-           "Each row is marked `uncertain`. Say keep or drop. The reason is the row's own note.", "",
-           "| id | ticker | why uncertain | link |", "| --- | --- | --- | --- |"]
+def load_decisions(path: Path | None = None) -> dict:
+    return json.loads((path or DECISIONS_FILE).read_text(encoding="utf-8"))
+
+
+def validate_decisions(rows: list[dict], dec: dict) -> list[str]:
+    errs = [f"policies.{k}: unknown policy" for k in dec.get("policies", {}) if k not in POLICIES]
+    errs += [f"policies.{k}: must be true, false or null" for k, v in dec.get("policies", {}).items() if v not in (True, False, None)]
+    one_off = {r["id"] for r in rows if "one_off" in (r.get("policy") or "").split()}
+    errs += [f"rows.{k}: not a one_off row" for k in dec.get("rows", {}) if k not in one_off]
+    errs += [f"rows.{k}: must be true, false or null" for k, v in dec.get("rows", {}).items() if v not in (True, False, None)]
+    return errs
+
+
+def apply_decisions(rows: list[dict], dec: dict) -> list[dict]:
+    """Rows to train on: every high row, and an uncertain row only when every policy covering it is true
+    (a one_off row needs its own `rows` answer). null or false excludes it. long_windows=true trims the end to day 30."""
+    pol, one = dec.get("policies", {}), dec.get("rows", {})
+    out = []
     for r in rows:
-        if r["confidence"] == "uncertain":
-            out.append(f"| {r['id']} | {r['ticker']} | {r['note'].replace('|', '/')} | {(r['source_urls'].split() or ['none'])[0]} |")
+        names = (r.get("policy") or "").split()
+        if any((one.get(r["id"]) if n == "one_off" else pol.get(n)) is not True for n in names):
+            continue
+        if "long_windows" in names:
+            cap = (datetime.date.fromisoformat(r["start"]) + datetime.timedelta(days=29)).isoformat()
+            r = r | {"end": min(r["end"], cap)}
+        out.append(r)
+    return out
+
+
+def outcome_counts(rows: list[dict], dec: dict) -> dict[str, int]:
+    kept = apply_decisions(rows, dec)
+    return {c: sum(r["class"] == c for r in kept) for c in CLASSES}
+
+
+def outcomes(rows: list[dict]) -> dict[str, dict]:
+    """Class counts and gate status if every decision is yes, and if every decision is no."""
+    one = [r["id"] for r in rows if "one_off" in (r.get("policy") or "").split()]
+    out = {}
+    for name, v in {"all yes": True, "all no": False}.items():
+        c = outcome_counts(rows, {"policies": {k: v for k in POLICIES}, "rows": {i: v for i in one}})
+        out[name] = {"counts": c, "short": [k for k, n in c.items() if n < MIN_PER_CLASS]}
+    return out
+
+
+def review(rows: list[dict], dec: dict | None = None) -> str:
+    dec = dec or {}
+    out = ["# Owner review: policy decisions", "",
+           "Uncertain rows are grouped by reason. Answer each policy with true or false in `decisions.json` "
+           "(`null` = undecided, rows excluded from training). A row is used only when every policy covering it is true. "
+           "The row's `policy` column says which ones.", ""]
+    for name, q in POLICIES.items():
+        cov = [r for r in rows if name in (r.get("policy") or "").split()]
+        if name == "one_off" or not cov:
+            continue
+        out += [f"## {name}: {len(cov)} rows", "", q, "", f"Current answer: `{dec.get('policies', {}).get(name)}`. Examples:", ""]
+        for r in cov[:3]:
+            out.append(f"- {r['id']} {r['ticker']} ({r['start']} to {r['end']}): {(r['source_urls'].split() or ['none'])[0]}")
+        out.append("")
+    one = [r for r in rows if "one_off" in (r.get("policy") or "").split()]
+    out += [f"## one_off: {len(one)} rows (row by row)", "", "| id | ticker | why | link | answer |", "| --- | --- | --- | --- | --- |"]
+    for r in one:
+        out.append(f"| {r['id']} | {r['ticker']} | {r['note'].replace('|', '/')} | {(r['source_urls'].split() or ['none'])[0]} | `{dec.get('rows', {}).get(r['id'])}` |")
+    out += ["", "## Gate status by outcome", "", "| outcome | " + " | ".join(CLASSES) + " | gate |", "| --- |" + " --- |" * (len(CLASSES) + 1)]
+    for name, o in outcomes(rows).items():
+        out.append(f"| {name} | " + " | ".join(str(o["counts"][c]) for c in CLASSES) + " | " + ("pass" if not o["short"] else "fail: " + ", ".join(o["short"])) + " |")
     return "\n".join(out) + "\n"
 
 
@@ -113,7 +188,8 @@ def main(argv=None):
     p.add_argument("--file")
     a = p.parse_args(argv)
     rows = load(Path(a.file) if a.file else None)
-    errs = validate(rows)
+    dec = load_decisions((Path(a.file).parent / "decisions.json") if a.file else None)
+    errs = validate(rows) + validate_decisions(rows, dec)
     if errs:
         raise SystemExit("\n".join(errs))
     if a.cmd == "validate":
@@ -121,7 +197,7 @@ def main(argv=None):
         return
     d = Path(a.file).parent if a.file else LABELS_DIR
     (d / "REPORT.md").write_text(report(rows), encoding="utf-8")
-    (d / "REVIEW.md").write_text(review(rows), encoding="utf-8")
+    (d / "REVIEW.md").write_text(review(rows, dec), encoding="utf-8")
     print(json.dumps(Counter(r["class"] for r in rows)))
 
 

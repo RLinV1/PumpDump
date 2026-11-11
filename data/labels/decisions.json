@@ -1,0 +1,15 @@
+{
+  "policies": {
+    "suspension_windows": null,
+    "long_windows": null,
+    "order_date_ends": null,
+    "approx_dates": null,
+    "hype_unenforced": null,
+    "news_mover_caveats": null
+  },
+  "rows": {
+    "P008": null,
+    "H004": null,
+    "H015": null
+  }
+}
