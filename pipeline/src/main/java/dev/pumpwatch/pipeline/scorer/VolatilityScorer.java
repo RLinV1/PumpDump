@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>{@link #orBaseline} never throws: if the directory is absent, corrupt or fails the self-check it serves the HAR-RV
  * baseline (coefficients from model.json when readable, else {@link #DEFAULT_HAR}). Without {@code rvd} (no one-day
- * realised volatility) there is no forecast and the swing is null, which is the spec's "not enough history".
+ * realised volatility, which needs 391 one-minute bars; the pipeline's {@code Bars} computes the inputs as vol.py does) there is no forecast and the swing is null, which is the spec's "not enough history".
  */
 public final class VolatilityScorer implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(VolatilityScorer.class);
@@ -44,8 +44,6 @@ public final class VolatilityScorer implements AutoCloseable {
     /** Regime cut-offs in units of sigma_hour: Brownian range p50 (~1.5) and p90 (~2.3). See design.md. */
     public static final double CALM_BELOW = 1.5, EXTREME_FROM = 2.3;
     private static final ZoneId EXCHANGE = ZoneId.of("America/New_York");
-    /** Pipeline key to use when the model feature has no value of its own. */
-    private static final Map<String, String> ALIAS = Map.of("rv5", "volatility", "vol_ratio", "volumeRatio");
 
     private final String version;
     private final List<String> features;
@@ -166,12 +164,11 @@ public final class VolatilityScorer implements AutoCloseable {
     }
 
     private static double input(Features f, String name) {
-        if ("tod".equals(name)) {
+        if ("tod".equals(name) && !f.values().containsKey(name)) { // live features carry the latest bar's minute
             var t = f.windowEnd().atZone(EXCHANGE);
             return t.getHour() * 60 + t.getMinute();
         }
         Double d = f.values().get(name);
-        if (d == null && ALIAS.containsKey(name)) d = f.values().get(ALIAS.get(name));
         return d == null ? 0.0 : d; // missing reads as 0, like the pump scorer
     }
 
