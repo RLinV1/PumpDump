@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { NOTICE } from "../lib/api.ts";
+
+test("the shared notice states not-advice and non-commercial status", () => {
+  assert.match(NOTICE, /Not investment advice/);
+  assert.match(NOTICE, /non-commercial/);
+});
 
 const web = resolve(import.meta.dirname, "..");
 const read = (p) => readFileSync(resolve(web, p), "utf8");

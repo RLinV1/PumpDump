@@ -81,7 +81,7 @@ def test_evaluate_reports_and_promotes_with_card(df, trained):
     # news-backed movers fool the rules; the model should beat them on the fixture
     assert r["gate"]["promoted"], r["gate"]
     card = (trained / "model-card.md").read_text()
-    for field in ("## Data", "Model size", "## Metrics", "## Known limits", "## Licenses", "Date:", "Level"):
+    for field in ("## Data", "Model size", "## Metrics", "## Known limits", "## Licenses", "- model ", "Date:", "Level"):
         assert field in card
 
 

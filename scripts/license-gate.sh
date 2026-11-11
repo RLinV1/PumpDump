@@ -19,13 +19,23 @@ flag() {
   done
 }
 
-# Every model card must have a "## Licenses" section with at least one "- name version: LICENSE" line,
-# and each license goes through the same classification as code dependencies (so a CC-BY-NC model fails).
+# Every model card must have a "## Licenses" section with a "- model <name>: LICENSE" line for the model artifact
+# itself plus "- name version: LICENSE" lines for its dependencies. Card licenses must be recognized SPDX ids
+# (or allow-listed); anything unrecognized, non-commercial or share-alike fails.
+KNOWN='MIT|BSD-2-Clause|BSD-3-Clause|Apache-2.0|ISC|0BSD|CC0-1.0|CC-BY-4.0|PSF-2.0|Python-2.0|Unlicense'
 check_card() {
-  local card="$1" lines
+  local card="$1" lines name lic
   lines=$(sed -n '/^## Licenses/,/^## /p' "$card" | sed -nE 's/^- (.+): (.+)$/\1\t\2/p')
   if [ -z "$lines" ]; then echo "FLAGGED: model card $card has no license entries under '## Licenses'"; fail=1; return; fi
+  grep -Eq '^model[[:space:]]' <<< "$lines" || { echo "FLAGGED: model card $card has no '- model <name>: LICENSE' entry"; fail=1; }
   flag <<< "$lines"
+  while IFS=$'\t' read -r name lic; do
+    if echo "$ALLOW" | grep -Fxq -e "$name" -e "${name%% *}"; then continue; fi
+    # every id in an OR/AND expression must be recognized
+    if tr -d '()' <<< "$lic" | sed -E 's/ (OR|AND) /\n/g' | grep -Evxq "$KNOWN"; then
+      echo "FLAGGED: $name  [$lic] in $card is not a recognized license"; fail=1
+    fi
+  done <<< "$lines"
 }
 
 if [ "$only" = selftest ]; then
@@ -44,6 +54,7 @@ if [ "$only" = selftest ]; then
   t 1 "UNKNOWN fails"         <<< $'a@1	UNKNOWN'
   t 0 "allow-listed passes"   <<< $'gsap@3.12.5	Custom: https://gsap.com/standard-license'
   printf '## Licenses
+- model v1: Apache-2.0
 - lightgbm 4.0: MIT
 ' > "$d/ok.md"
   printf '## Licenses
@@ -55,6 +66,14 @@ if [ "$only" = selftest ]; then
   fail=0; check_card "$d/ok.md" > /dev/null;   [ $fail = 0 ] || { echo "SELFTEST FAIL: good card"; bad=1; }
   fail=0; check_card "$d/nc.md" > /dev/null;   [ $fail = 1 ] || { echo "SELFTEST FAIL: NC card"; bad=1; }
   fail=0; check_card "$d/none.md" > /dev/null; [ $fail = 1 ] || { echo "SELFTEST FAIL: card without license"; bad=1; }
+  printf '## Licenses
+- lightgbm 4.0: MIT
+' > "$d/nomodel.md"
+  fail=0; check_card "$d/nomodel.md" > /dev/null; [ $fail = 1 ] || { echo "SELFTEST FAIL: card without model license"; bad=1; }
+  printf '## Licenses
+- model 1: Proprietary
+' > "$d/unknown.md"
+  fail=0; check_card "$d/unknown.md" > /dev/null; [ $fail = 1 ] || { echo "SELFTEST FAIL: unrecognized card license"; bad=1; }
   [ $bad = 0 ] && echo "license gate selftest: OK"; exit $bad
 fi
 
