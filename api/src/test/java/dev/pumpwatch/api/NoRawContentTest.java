@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import dev.pumpwatch.api.Views.Envelope;
 import dev.pumpwatch.common.Flag;
 import dev.pumpwatch.common.Json;
+import dev.pumpwatch.common.SchemaVersions;
 import dev.pumpwatch.common.Score;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
@@ -59,7 +60,7 @@ class NoRawContentTest {
         var evidence = new Flag.Evidence(70, "rules-1", List.of(new Flag.Contributor("chatter", 30)), 5, 2,
                 new Flag.CatalystCheck(false, T, T, List.of()));
         String flagJson = pollute(Json.toJson(new Flag(1, T, T, "GME", T, evidence)));
-        String scoreJson = pollute(Json.toJson(new Score(1, T, T, "GME", T, 55, "rules-1", Set.of("news"))));
+        String scoreJson = pollute(Json.toJson(new Score(SchemaVersions.SCORE, T, T, "GME", T, 55, "rules-1", Set.of("news"), null)));
         ingest.handle(new ConsumerRecord<>("flags", 0, 1L, "GME", flagJson));
         ingest.handle(new ConsumerRecord<>("scores", 0, 1L, "GME", scoreJson));
         var f = ArgumentCaptor.forClass(Flag.class);
