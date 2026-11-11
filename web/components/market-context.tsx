@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { age, type MarketMovers, type Sentiment, type StockNews } from "@/lib/api";
+import { age, type MarketMovers, type Sentiment, type StockNews, type Tone } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 import { btnGhost } from "@/lib/ui";
 import { Panel, Skeleton, dirTone, modeTag, money, signed } from "@/components/term-panel";
@@ -102,27 +102,59 @@ export function SentimentPanel({ ticker, refreshKey, active }: { ticker: string;
   </div>} />;
 }
 
+const TONES = [["positive", "Positive"], ["neutral", "Neutral"], ["negative", "Negative"]] as const;
+
+// Small thumb icons in currentColor: up, flat (neutral) and down.
+function Thumb({ tone }: { tone: Tone }) {
+  const d = tone === "positive" ? "M5 21H2V10h3zM8 10l4-8c1.5 0 2.5 1 2.5 2.5V8H21l-2 11c-.2 1.2-1 2-2.2 2H8z"
+    : tone === "negative" ? "M5 3H2v11h3zM8 14l4 8c1.5 0 2.5-1 2.5-2.5V16H21l-2-11c-.2-1.2-1-2-2.2-2H8z" : "M4 12h16";
+  return <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false" className="shrink-0" fill={tone === "neutral" ? "none" : "currentColor"} stroke="currentColor" strokeWidth={tone === "neutral" ? 3 : 0}><path d={d} /></svg>;
+}
+
 function SentimentResults({ ticker, refreshKey, sample, controls, active }: { ticker: string; refreshKey: number; sample: string; controls: ReactNode; active?: boolean }) {
   const state = useApi<Sentiment>(`/api/v1/tickers/${ticker}/sentiment?sample=${sample}`, sample === "stream" ? 15000 : 60000, 0, undefined, refreshKey);
+  const [filter, setFilter] = useState<Tone | null>(null);
   return <Panel id="stock-sentiment" number={5} title={`${ticker} sentiment`} tag={modeTag(state.mode)} active={active}>
     {controls}
-    <Body state={state}>{(data) => <div className="space-y-2 p-3 text-xs">
-      <p className="text-xs text-mute">{data.modelName ?? "FinTwitBERT"}, local financial-post sentiment. CardiffNLP checks possible irony separately. Bluesky posts.</p>
-      {!data.enabled ? <p>{state.mode === "mock" ? "Mock demo: no Bluesky posts are collected or analyzed." : "Live Bluesky sentiment collection is switched off. No posts have been analyzed."}</p> : data.modelStatus === "loading" ? <p role="status">Loading the sentiment model. The first run downloads its weights.</p>
-        : data.modelStatus === "error" ? <p role="alert">The sentiment model is unavailable. No sentiment has been estimated.</p>
-        : <>
-          <p className="text-xs text-mute">{data.sample ? `${data.sample.sort === "top" ? "Top-ranked" : "Most recent"} matching posts, last 24 hours, checked ${time(data.asOf)}` : `${data.streamConnected ? "Bluesky connected" : "Bluesky reconnecting"}, last ${data.windowMinutes} minutes`}</p>
-          {data.sample && <p className="text-xs text-mute">Classified {data.total} matching posts from {data.sample.examined} search results. Up to 25 posts per sample.</p>}
-          {data.total === 0 ? <p>{data.sample ? `No matching stock posts found for ${ticker} in this search sample.` : `No classified posts for ${ticker} in this window. Newly selected stocks collect posts from this point forward.`}</p> : <dl className="grid grid-cols-3 gap-2">
-            {([["Positive", data.positive, "text-white"], ["Neutral", data.neutral, "text-white"], ["Negative", data.negative, "text-white"]] as const).map(([label, count, tone]) => <div key={label} className="border border-line p-2"><dt className="text-xs text-accent">{label}</dt><dd className={`text-xl ${tone}`}>{count}</dd></div>)}
-          </dl>}
-          {data.lastPostAt && <p className="text-xs text-mute">Last classified post {age(data.lastPostAt)}.</p>}
-          {data.irony !== undefined && <p className="text-xs text-mute">Possible irony: {data.irony} of {data.total} posts. This detector can produce false flags; tone labels have not been reversed.</p>}
-          {data.sample && <a href={`https://bsky.app/search?q=${encodeURIComponent(`$${ticker}`)}&sort=${data.sample.sort}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-cyan underline underline-offset-4 lg:min-h-0">View search on Bluesky</a>}
-        </>}
-      <p className="border-t border-line pt-2 text-xs leading-relaxed text-mute">This model classifies financial-language tone. Risk scores use rules-v1. The pump-detection LightGBM model remains an offline training pipeline.</p>
-      <p className="text-xs leading-relaxed text-mute">Sarcasm, slang and mixed or quoted claims can be misread. A post mentioning several stocks gets one tone label, which may not describe each stock.</p>
-      {data.dropped > 0 && <p className="text-xs text-mute">{data.dropped} posts skipped during processing limits.</p>}
-    </div>}</Body>
+    <Body state={state}>{(data) => {
+      const posts = (data.posts ?? []).filter((p) => !filter || p.label === filter);
+      const meta = [data.sample ? `${data.total} of ${data.sample.examined} posts` : `${data.total} posts`,
+        data.sample ? `${data.sample.sort} · 24h` : `${data.streamConnected ? "connected" : "reconnecting"} · ${data.windowMinutes}m`,
+        data.lastPostAt && `last ${age(data.lastPostAt)}`, data.irony ? `${data.irony} possible irony` : null].filter(Boolean).join(" · ");
+      return <div className="space-y-2 p-3 text-xs">
+        {!data.enabled ? <p>{state.mode === "mock" ? "Mock demo: no Bluesky posts are collected or analyzed." : "Live Bluesky sentiment collection is switched off. No posts have been analyzed."}</p> : data.modelStatus === "loading" ? <p role="status">Loading the sentiment model. The first run downloads its weights.</p>
+          : data.modelStatus === "error" ? <p role="alert">The sentiment model is unavailable. No sentiment has been estimated.</p>
+          : <>
+            {data.total === 0 ? <p>{data.sample ? `No matching stock posts found for ${ticker} in this search sample.` : `No classified posts for ${ticker} in this window. Newly selected stocks collect posts from this point forward.`}</p> : <>
+              <div role="group" aria-label="Filter posts by tone" className="grid grid-cols-3 gap-2">
+                {TONES.map(([key, label]) => {
+                  const inner = <dl><dt className="flex items-center gap-1 text-xs text-accent"><Thumb tone={key} />{label}</dt><dd className="text-xl text-white">{data[key]}</dd></dl>;
+                  return data.posts ? <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(filter === key ? null : key)}
+                    className={`min-h-11 border p-2 text-left lg:min-h-0 ${filter === key ? "border-accent bg-line" : "border-line hover:bg-line"}`}>{inner}</button>
+                    : <div key={key} className="border border-line p-2">{inner}</div>;
+                })}
+              </div>
+              <p className="text-xs text-mute">{meta}</p>
+            </>}
+            {data.posts && data.total > 0 && (posts.length === 0 ? <p>{filter ? `No ${filter} posts in this sample.` : null}</p> : <ul>
+              {posts.map((p) => <li key={p.url} className="border-t border-line py-1.5">
+                <p className="flex flex-wrap items-center gap-x-2 text-xs text-mute">
+                  <span className="inline-flex items-center gap-1 border border-accent px-1 uppercase text-accent"><Thumb tone={p.label} />{p.label}</span>
+                  {p.irony && <span className="border border-line px-1 text-mute">irony?</span>}
+                  <time dateTime={p.createdAt}>{age(p.createdAt)}</time>
+                </p>
+                <p className="py-0.5 leading-snug text-white">{p.text}</p>
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-cyan underline underline-offset-4 lg:min-h-0">open</a>
+              </li>)}
+            </ul>)}
+            {data.sample && <a href={`https://bsky.app/search?q=${encodeURIComponent(`$${ticker}`)}&sort=${data.sample.sort}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-cyan underline underline-offset-4 lg:min-h-0">View search on Bluesky</a>}
+          </>}
+        <details className="border-t border-line pt-2 text-mute">
+          <summary className="inline-flex min-h-11 cursor-pointer items-center text-accent lg:min-h-0">About this model</summary>
+          <p className="leading-relaxed">{data.modelName ?? "FinTwitBERT"} labels financial-post tone locally; CardiffNLP flags possible irony separately. Sarcasm, slang and multi-stock posts can be misread, and tone is not a price forecast. Risk scores use rules-v1.</p>
+        </details>
+        {data.dropped > 0 && <p className="text-xs text-mute">{data.dropped} posts skipped during processing limits.</p>}
+      </div>;
+    }}</Body>
   </Panel>;
 }

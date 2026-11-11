@@ -13,7 +13,7 @@ export function createBlueskySearch({ sentiment, fetchImpl = fetch, now = Date.n
   return async function load(ticker, sort = "top") {
     if (!/^[A-Z]{1,5}$/.test(ticker) || !["top", "latest"].includes(sort)) throw new Error("Invalid sentiment search");
     const state = sentiment.snapshot(ticker);
-    const base = { ...state, windowMinutes: 1440, positive: 0, neutral: 0, negative: 0, total: 0, irony: 0, lastPostAt: null, dropped: 0, sample: { sort, examined: 0 } };
+    const base = { ...state, windowMinutes: 1440, positive: 0, neutral: 0, negative: 0, total: 0, irony: 0, lastPostAt: null, dropped: 0, posts: [], sample: { sort, examined: 0 } };
     if (!state.enabled || state.modelStatus !== "ready") return base;
     const key = `${ticker}:${sort}`, previous = cache.get(key);
     if (previous && previous.expiresAt > now()) {
@@ -38,7 +38,7 @@ export function createBlueskySearch({ sentiment, fetchImpl = fetch, now = Date.n
           const body = await response.json();
           if (!body || !Array.isArray(body.posts)) throw unavailable();
           const posts = body.posts.slice(0, 50), seen = new Set();
-          const data = { ...base, asOf: new Date(at).toISOString(), sample: { sort, examined: posts.length } };
+          const data = { ...base, posts: [], asOf: new Date(at).toISOString(), sample: { sort, examined: posts.length } };
           for (const post of posts) {
             if (controller.signal.aborted) throw unavailable();
             const text = post?.record?.text, createdAt = post?.record?.createdAt;
@@ -52,6 +52,11 @@ export function createBlueskySearch({ sentiment, fetchImpl = fetch, now = Date.n
             const label = result.label;
             if (!["positive", "neutral", "negative"].includes(label)) throw unavailable();
             data[label]++; data.total++;
+            if (data.posts.filter((p) => p.label === label).length < 5) {
+              const flat = text.replace(/\s+/g, " ").trim();
+              data.posts.push({ text: flat.length > 140 ? `${flat.slice(0, 139).trimEnd()}…` : flat, label, irony: result.irony === true, createdAt: new Date(created).toISOString(),
+                url: `https://bsky.app/profile/${post.uri.slice(5).replace("/app.bsky.feed.post/", "/post/")}` });
+            }
             if (result.irony === true) data.irony++;
             if (data.lastPostAt === null || created > Date.parse(data.lastPostAt)) data.lastPostAt = new Date(created).toISOString();
             if (data.total === 25) break;

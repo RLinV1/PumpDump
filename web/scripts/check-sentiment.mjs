@@ -49,7 +49,12 @@ try {
   const search = createBlueskySearch({ sentiment, now: () => now, fetchImpl: async () => Response.json({ posts: fixtures }) });
   for (const sample of ["top", "latest"]) {
     const data = await search("GME", sample);
-    assertCounts(data);
+    // Search snippets link to their post, so the DID may appear only inside each post url; no author fields.
+    for (const p of data.posts) {
+      assert.deepEqual(Object.keys(p).sort(), ["createdAt", "irony", "label", "text", "url"]);
+      assert.match(p.url, /^https:\/\/bsky\.app\/profile\/did:plc:[^/]+\/post\/[^/]+$/);
+    }
+    assertCounts({ ...data, posts: undefined });
     assert.equal(data.sample.examined, 5);
     console.log(`${sample} search aggregation: positive=1 neutral=1 negative=1 total=3; duplicate and unrelated ticker excluded`);
   }

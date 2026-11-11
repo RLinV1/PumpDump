@@ -36,6 +36,7 @@ test("mock sentiment keeps top and latest samples disabled and rejects invalid f
     assert.equal(body.data.total, 0);
     assert.equal(body.data.windowMinutes, 1440);
     assert.deepEqual(body.data.sample, { sort: sample, examined: 0 });
+    assert.deepEqual(body.data.posts, []);
   }
   assert.equal((await fetch(`${base}/api/v1/tickers/AMC/sentiment?sample=invalid`)).status, 400);
 });

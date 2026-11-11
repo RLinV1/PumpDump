@@ -169,6 +169,22 @@ test("the public sentiment contract rejects impossible irony totals and unsafe h
   await assert.rejects(api.get("/api/v1/tickers/GME/news"), /Invalid API data/);
 });
 
+test("sentiment post snippets must be short, bsky-linked and capped per tone", async () => {
+  const post = { text: "Synthetic $GME snippet", label: "negative", irony: false, createdAt: "2026-11-06T11:00:00Z",
+    url: "https://bsky.app/profile/did:plc:abc/post/xyz" };
+  const data = { ticker: "GME", enabled: true, model: "FinTwitBERT", modelStatus: "ready", streamConnected: true,
+    asOf: "2026-11-06T12:00:00Z", windowMinutes: 1440, positive: 0, negative: 1, neutral: 0, total: 1, lastPostAt: null, dropped: 0, posts: [post] };
+  const reply = (d) => { globalThis.fetch = async () => Response.json({ notice: api.NOTICE, data: d }); };
+  reply(data);
+  assert.equal((await api.get("/api/v1/tickers/GME/sentiment")).data.posts[0].text, post.text);
+  for (const bad of [{ ...post, url: "https://evil.example/post" }, { ...post, text: "x".repeat(141) }]) {
+    reply({ ...data, posts: [bad] });
+    await assert.rejects(api.get("/api/v1/tickers/GME/sentiment"), /Invalid API data/);
+  }
+  reply({ ...data, posts: Array(6).fill(post) });
+  await assert.rejects(api.get("/api/v1/tickers/GME/sentiment"), /Invalid API data/);
+});
+
 test("a caller cancellation signal does not disable the request deadline", async () => {
   const controller = new AbortController();
   let timer;
