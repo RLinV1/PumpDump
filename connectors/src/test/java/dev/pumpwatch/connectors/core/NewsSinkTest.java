@@ -36,4 +36,25 @@ class NewsSinkTest {
         assertThat(sink.publish(a)).isFalse();
         assertThat(seen).isEmpty();
     }
+
+    @Test
+    void sameStoryFromTwoSourcesKeepsBothRecordsWithOneFingerprint() {
+        var outbox = new InMemoryOutbox();
+        var publisher = new ConnectorPublisher("news", outbox, (t, k, v) -> CompletableFuture.completedFuture(null),
+                PumpwatchKafkaProperties.defaults(), new SimpleMeterRegistry(), Clock.systemUTC());
+        Set<String> seen = new HashSet<>();
+        var sink = new NewsSink(publisher, (s, i) -> seen.contains(s + "|" + i), (s, i) -> seen.add(s + "|" + i),
+                () -> false);
+        Instant t = Instant.now().minusSeconds(5);
+        var wire = new ArticleRecord(SchemaVersions.ARTICLE, t, Instant.now(), "alpaca-news", "a-1",
+                "ABC Corp. wins contract", null, List.of("ABC"), Fingerprints.fingerprint("ABC Corp. wins contract"));
+        var pr = new ArticleRecord(SchemaVersions.ARTICLE, t, Instant.now(), "rss:prnewswire", "guid-9",
+                "PRESS RELEASE: ABC Corp wins contract!", "http://pr/9", List.of("ABC"),
+                Fingerprints.fingerprint("PRESS RELEASE: ABC Corp wins contract!"));
+
+        assertThat(sink.publish(wire)).isTrue();
+        assertThat(sink.publish(pr)).isTrue(); // dedup is per (source, itemId); no cross-source drop
+        assertThat(wire.fingerprint()).isEqualTo(pr.fingerprint());
+        assertThat(outbox.count("news")).isEqualTo(2);
+    }
 }
