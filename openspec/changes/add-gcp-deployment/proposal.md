@@ -24,7 +24,7 @@ The project is ready to leave the laptop. The owner has Google Cloud, not AWS, s
 
 ## Impact
 
-- New files: `web/Dockerfile`, proxy config, `infra/` Terraform, `load/` k6 scripts, `docs/deploy-gcp.md`.
+- New files: `web/Dockerfile`, proxy config, `infra/` Terraform, `load/` k6 scripts, `docs/operations/gcp.md`.
 - `docker-compose.yml` gains `web` and `proxy` services under the existing `apps` profile.
 - `web/next.config.ts` gains `output: "standalone"`.
 - External systems: one Google Cloud project with billing. The VM, its disk and egress cost money; the budget alarm is the guard.

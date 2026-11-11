@@ -10,11 +10,11 @@ Everything you need to build and run Pumpwatch, grouped by what it is, with the 
 | Alpaca account (a free paper-trading account is enough for data keys) | Live trades and historical bars | Free plan | IEX only, 30 live symbols, historical data older than 15 minutes, 200 calls per minute. Opening an account needs an email address; a funded live account is not needed for data. |
 | Finnhub API key (`FINNHUB_TOKEN`) | Company and market news | Free key (reported 60 calls per minute) | Terms unverified. Reported as personal and non-commercial. Optional; off by default (`FINNHUB_ENABLED`). |
 | SEC EDGAR (`SEC_USER_AGENT`) | 8-K filings | Free, no key | Send a descriptive User-Agent with a contact email. Stay under 10 requests per second. |
-| Alpaca News and press-release RSS (`ALPACA_NEWS_ENABLED`, `RSS_ENABLED`, `RSS_FEEDS`) | More news sources | Free | Same Alpaca keys as above. Both are off until their storage terms are verified (`data-sources.md`). |
+| Alpaca News and press-release RSS (`ALPACA_NEWS_ENABLED`, `RSS_ENABLED`, `RSS_FEEDS`) | More news sources | Free | Same Alpaca keys as above. Both are off until their storage terms are verified (`sources.md`). |
 | Google Gemini API key (`GEMINI_API_KEY`) | The private research assistant in `research/` | Free tier key from Google AI Studio | Optional. Without it the assistant uses the labelled mock agent. Local use only: never put it in the public VM, Vercel or a `NEXT_PUBLIC_*` variable. |
 | Hugging Face (no account) | Downloading the sentiment models on first run | Free | Pinned public repos; see Machine learning resources. No token is needed. |
 | A social data source | Chatter features | See the table below | The hardest resource to get right. |
-| Google Cloud account (owner only) | The public mock-data VM in `infra/` and `docs/deploy-gcp.md` | Costs money unless covered by credits | Owner only. The agent never runs `terraform apply` or creates cloud resources. |
+| Google Cloud account (owner only) | The public mock-data VM in `infra/` and `docs/operations/gcp.md` | Costs money unless covered by credits | Owner only. The agent never runs `terraform apply` or creates cloud resources. |
 | Vercel account (owner only) | Hosting the web app | Free hobby plan | Owner only: sign in to Vercel yourself. The deployment carries no Alpaca or Gemini key. |
 | AWS account (owner only) | One-off cloud test only | Costs money unless covered by credits | Owner only. Set a budget alarm before creating anything. |
 | LocalStack student license | Rehearsing the AWS setup locally | Free for students | Optional. |

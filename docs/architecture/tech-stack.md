@@ -8,16 +8,16 @@ checkout; manifests and lockfiles remain the source of truth.
 
 | Technology | Version/configuration | What it does here |
 | --- | --- | --- |
-| Java | 21 target in [parent POM](../pom.xml) | Runs connectors, recording/replay, risk processing and the API |
+| Java | 21 target in [parent POM](../../pom.xml) | Runs connectors, recording/replay, risk processing and the API |
 | Spring Boot | 3.5.5 | Dependency injection, configuration, HTTP services, scheduled work and health endpoints |
 | Spring Kafka / Kafka Streams | Managed by Spring Boot | Kafka clients and stateful event-time processing |
-| Apache Kafka | 3.9.1 in [Compose](../docker-compose.yml) | Carries source, feature, score and flag streams; local setup is one KRaft broker |
+| Apache Kafka | 3.9.1 in [Compose](../../docker-compose.yml) | Carries source, feature, score and flag streams; local setup is one KRaft broker |
 | PostgreSQL | 17 in Compose | Connector outboxes/positions, recordings, API read tables and alert delivery state |
 | JDBC / Flyway | Managed Java dependencies | Explicit SQL and versioned database migrations |
 | Node.js | 22.13+ recommended; Node 22 web CI | Custom Next.js server, provider adapters and local sentiment inference |
 | Next.js / React | 16.4.2 / 19.3.0 | App Router pages, server-rendered landing shell and interactive dashboard |
 | TypeScript / Tailwind CSS | Version 5 / version 4 ranges | Typed UI/API contracts, response validation and visual tokens |
-| GSAP / Lenis | Ranges in [web package](../web/package.json) | Existing hero motion and smooth scrolling |
+| GSAP / Lenis | Ranges in [web package](../../web/package.json) | Existing hero motion and smooth scrolling |
 | Transformers.js | `@huggingface/transformers` 4.3.2 | Loads and runs a pinned quantized ONNX sentiment model on CPU |
 
 The web lockfile resolves JavaScript dependency ranges. Maven manages Java versions
@@ -37,7 +37,7 @@ can query indexed tables instead of reconstructing state from Kafka.
 The default scorer is `rules-v1`, a documented threshold table with catalyst
 deductions. The alternative `anomaly-v1` compares features against earlier per-ticker
 observations. `pipeline.scorer` selects between them. Neither is the pretrained
-sentiment model. See [the scorer guide](rule-scorer.md).
+sentiment model. See [the scorer guide](../ml/rule-scorer.md).
 
 ### Node and React: dashboard and context
 
@@ -50,21 +50,21 @@ The personal watchlist uses `localStorage` and `useSyncExternalStore`. It persis
 within a browser origin and can synchronize open tabs through storage events;
 there is no account database or cross-device watchlist synchronization.
 
-Use `npm run dev` or `npm start`: both run [server.mjs](../web/server.mjs).
+Use `npm run dev` or `npm start`: both run [server.mjs](../../web/server.mjs).
 Running `next start` directly bypasses its mock/context routing and header handling.
 Builds use webpack because the project recorded a Windows Turbopack CSS-worker issue.
 
 ### Pretrained sentiment: local text classification
 
 Transformers.js runs the quantized ONNX version of Financial DistilRoBERTa, pinned
-to a revision in [bluesky-sentiment.mjs](../web/bluesky-sentiment.mjs). It classifies
+to a revision in [bluesky-sentiment.mjs](../../web/bluesky-sentiment.mjs). It classifies
 matching public posts as positive, neutral or negative. It is pretrained elsewhere;
 this application does not retrain it, and its labels do not alter Java risk scores.
 
 First enabled startup may download model files into the ignored
 `.playwright-mcp/sentiment-model-cache/` directory. Inference runs locally on CPU.
 The model was trained on financial news; accuracy on social-media language remains
-an evaluation question. [Live sentiment](../ml/LIVE-SENTIMENT.md) documents the
+an evaluation question. [Live sentiment](../../ml/LIVE-SENTIMENT.md) documents the
 license, model revision, matching, deletion handling and resource limits.
 
 ### Python: offline model research
@@ -76,7 +76,7 @@ license, model revision, matching, deletion handling and resource limits.
 | pandas / NumPy | Feature tables, preparation and numerical operations |
 | SciPy and supporting pinned packages | Statistical and numerical dependencies |
 
-The [ML package](../ml/README.md) provides training/evaluation with time splits,
+The [ML package](../../ml/README.md) provides training/evaluation with time splits,
 baselines, bootstrap intervals and a promotion gate. It also implements volatility
 baselines. Synthetic inputs exercise the workflow; they do not demonstrate market
 predictive value. Learned model export/serving and learned volatility surfaces remain
@@ -115,12 +115,12 @@ unfinished. The dashboard's live sentiment feature does not invoke this Python p
 - **License gate:** `scripts/license-gate.sh` inspects npm, Maven and installed Python
   dependencies against the project policy and allow-list.
 
-The [Dockerfile](../Dockerfile) builds each Java app in a Maven/Temurin 21 stage,
+The [Dockerfile](../../Dockerfile) builds each Java app in a Maven/Temurin 21 stage,
 then runs it with a Temurin 21 JRE as a non-root user. Compose supplies the Java
 backend, Kafka and PostgreSQL. The web app is started separately with npm.
 
 Kafka retains events between components; PostgreSQL holds delivery state and query
 models; Java processes event-time windows independently of browser sessions; Node
 serves context without waiting for the risk pipeline; Python evaluates candidates
-without replacing the active scorer. The [architecture guide](architecture.md)
+without replacing the active scorer. The [architecture guide](overview.md)
 explains how these boundaries affect configuration and user-visible data.

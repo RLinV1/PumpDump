@@ -13,7 +13,7 @@
 
 - [x] 2.1 `deploy/aws-up.sh` and `deploy/aws-down.sh`
 - [x] 2.2 Manual-only `aws-deploy.yml`; credential-free `terraform fmt` and `validate` in `ci.yml`
-- [x] 2.3 `docs/deploy-aws.md` runbook and cost table; README section with diagram
+- [x] 2.3 `docs/operations/aws.md` runbook and cost table; README section with diagram
 
 ## 3. Verification
 

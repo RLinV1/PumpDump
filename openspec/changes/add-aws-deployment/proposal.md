@@ -9,7 +9,7 @@ The owner wants the project deployable on AWS as well as Google Cloud, using the
 - Add `infra/aws/` Terraform (hashicorp/aws): VPC, ECR, ECS on Fargate with Cloud Map discovery, an Application Load Balancer, RDS PostgreSQL 17, Secrets Manager, CloudWatch dashboard and alarms with SNS, an AWS Budgets alarm, autoscaling, and optional Amazon MSK and GitHub OIDC role.
 - Add `deploy/aws-up.sh` and `deploy/aws-down.sh`, run by the owner.
 - Add a manual-only `aws-deploy.yml` workflow; add credential-free `terraform fmt` and `validate` to `ci.yml`.
-- Add `docs/deploy-aws.md` with a runbook and a labelled cost estimate, and a README section with a diagram.
+- Add `docs/operations/aws.md` with a runbook and a labelled cost estimate, and a README section with a diagram.
 - Out of scope: running `terraform apply` or touching any AWS account in this change, production hosting, NAT Gateway, WAF, remote state (a commented example only), changes to application code, Elastic Beanstalk.
 
 ## Capabilities
@@ -22,5 +22,5 @@ The owner wants the project deployable on AWS as well as Google Cloud, using the
 
 ## Impact
 
-- New files: `infra/aws/*`, `deploy/aws-*.sh`, `.github/workflows/aws-deploy.yml`, `docs/deploy-aws.md`. `ci.yml` gains one job.
+- New files: `infra/aws/*`, `deploy/aws-*.sh`, `.github/workflows/aws-deploy.yml`, `docs/operations/aws.md`. `ci.yml` gains one job.
 - External systems: one AWS account. Running it costs roughly 0.20 USD an hour (0.24 with MSK); see the runbook.

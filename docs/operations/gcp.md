@@ -1,6 +1,6 @@
 # Deploy to Google Cloud
 
-One Compute Engine VM runs the whole stack with Docker Compose. Caddy forwards everything on port 80 to the web server, which answers market-movers, news and sentiment itself and proxies the rest of `/api` to the private API. The compose `web` service forces `DATA_MODE=live`. This is a test deployment, not production: plain HTTP, one VM, no autoscaling.
+One Compute Engine VM runs the whole stack with Docker Compose. Caddy forwards everything on port 80 to the web server, which answers market-movers, news and sentiment itself and proxies the rest of `/api` to the private API. The compose `web` service takes `DATA_MODE` from `.env` (default `mock`), and `deploy/up.sh` writes `DATA_MODE=mock` unless `DEPLOY_DATA_MODE=live`. This is a test deployment, not production: plain HTTP, one VM, no autoscaling.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ One Compute Engine VM runs the whole stack with Docker Compose. Caddy forwards e
 
 ## Data on the public VM
 
-The VM always serves labelled mock data, and `deploy/up.sh` strips every `ALPACA_` line from `.env` before copying it. Alpaca's free plan is for personal use and public redistribution rights are unverified (`docs/data-sources.md`), so real market data stays on your own machine: set `DATA_MODE=live` and your keys in the local `.env`. Stock lookup and paper trading (Research) follow the same rule: `deploy/up.sh` pins them to mock data, so the VM never shows real prices, and every figure is labelled MOCK. Paper accounts are anonymous tokens in a SQLite file on the `researchpaper` volume.
+The VM always serves labelled mock data, and `deploy/up.sh` strips every `ALPACA_` line from `.env` before copying it. Alpaca's free plan is for personal use and public redistribution rights are unverified (`docs/data/sources.md`), so real market data stays on your own machine: set `DATA_MODE=live` and your keys in the local `.env`. Stock lookup and paper trading (Research) follow the same rule: `deploy/up.sh` pins them to mock data, so the VM never shows real prices, and every figure is labelled MOCK. Paper accounts are anonymous tokens in a SQLite file on the `researchpaper` volume.
 
 ## Create
 

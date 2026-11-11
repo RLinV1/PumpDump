@@ -28,7 +28,7 @@ deduplication, deletion handling and expiry. No observed posts are used for trai
 News enrichment caches the current headline snapshot, coalesces parallel reads and
 preserves the source headlines if its model is unavailable.
 
-The [46-case synthetic comparison](../docs/sentiment-evaluation-2026-11-06.md)
+The [46-case synthetic comparison](../docs/ml/sentiment-evaluation-2026-11-06.md)
 records all misses. FinTwitBERT scored 38/46, versus 37/46 for the news model on the
 same social examples. Sarcasm improved from 1/6 to 4/6 but negation regressed.
 The irony detector found 5/6 sarcasm examples and falsely flagged 12/40 others.

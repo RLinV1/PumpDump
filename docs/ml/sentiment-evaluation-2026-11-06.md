@@ -27,7 +27,7 @@ FinTwitBERT improved this set's sarcasm and clear examples but regressed on nega
 
 The irony detector flagged **5/6** intended sarcasm cases and **12/40** other cases. That false-flag rate is too high to treat its output as a fact or use it to reverse sentiment mechanically. The UI says “possible irony” and discloses false flags.
 
-The complete predictions, intended labels and misses are preserved in [baseline](performance/2026-11-06/sentiment-news-baseline.json) and [social plus irony](performance/2026-11-06/sentiment-social-irony.json) reports. In particular, the financial-news model labelled the synthetic bankruptcy/default sentence neutral; FinTwitBERT misread “avoided the expected loss” and some positive results phrased through negation. These failures are retained, not relabelled to improve the score.
+The complete predictions, intended labels and misses are preserved in [baseline](../reports/performance/2026-11-06/sentiment-news-baseline.json) and [social plus irony](../reports/performance/2026-11-06/sentiment-social-irony.json) reports. In particular, the financial-news model labelled the synthetic bankruptcy/default sentence neutral; FinTwitBERT misread “avoided the expected loss” and some positive results phrased through negation. These failures are retained, not relabelled to improve the score.
 
 ## Pipeline checks with actual model weights
 
