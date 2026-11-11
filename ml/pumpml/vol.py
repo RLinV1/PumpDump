@@ -167,7 +167,7 @@ def train(bars: pd.DataFrame, out_dir: Path, version: str = "dev") -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     med_b.save_model(str(out_dir / "median.txt"))
     up_b.save_model(str(out_dir / "upper.txt"))
-    info = {"version": version, "features": FEATURES, "quantiles": QUANTILES, "target": "log(high/low) over next 60 min",
+    info = {"format": 2, "version": version, "features": FEATURES, "quantiles": QUANTILES, "target": "log(high/low) over next 60 min",
             "coverage_shift": shift, "coverage_level": COVERAGE,
             "har_coef": har.coef.tolist(), "har_band_shift": har_shift,  # [intercept, rv5, rv30, rvd]; band = max(har + shift, har), same units as the boosters
             "validation_coverage_raw": coverage(va["target"], predict_band(med_b, up_b, 0.0, va)[1]),

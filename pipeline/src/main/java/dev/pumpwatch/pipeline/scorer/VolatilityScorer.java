@@ -26,14 +26,17 @@ import org.slf4j.LoggerFactory;
  * correction is applied here: {@code max(max(upper, median) + shift, median)}.
  *
  * <p>{@link #orBaseline} never throws: if the directory is absent, corrupt or fails the self-check it serves the HAR-RV
- * baseline (coefficients from model.json when readable, else {@link #DEFAULT_HAR}). Without {@code rvd} (no one-day
- * realised volatility, which needs 391 one-minute bars; the pipeline's {@code Bars} computes the inputs as vol.py does) there is no forecast and the swing is null, which is the spec's "not enough history".
+ * baseline (coefficients from model.json when readable, else {@link #DEFAULT_HAR}). A model.json without
+ * {@code format} >= 2 or with |har_band_shift| >= 1 is refused like a missing model. Without {@code rvd} (391 one-minute
+ * bars) the swing comes from {@link #DEFAULT_HAR} on {@code rvd_est} (31 to 390 bars); below 31 bars it is null.
  */
 public final class VolatilityScorer implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(VolatilityScorer.class);
     private static final ObjectMapper JSON = new ObjectMapper();
     /** Self-check tolerance on the log range; float32 vs float64 differences are ~1e-6. */
     public static final double TOLERANCE = 1e-4;
+    /** model.json format written by vol.py train(); older files are refused. */
+    public static final int MIN_FORMAT = 2;
     public static final List<String> FEATURES = List.of("rv5", "rv30", "rvd", "vol_ratio", "tod", "gap");
     /**
      * Default HAR-RV when no fitted coefficients exist: [intercept, rv5, rv30, rvd] on the log range. Expected range of a
@@ -77,6 +80,7 @@ public final class VolatilityScorer implements AutoCloseable {
             log.warn("Volatility model in '{}' not served, falling back to the HAR-RV baseline: {}", dir, e.toString());
             try {
                 JsonNode info = JSON.readTree(Files.readAllBytes(Path.of(dir, "model.json")));
+                requireCurrent(info); // a stale model.json's coefficients are not trusted either
                 return baseline("har-" + Path.of(dir).toAbsolutePath().getFileName(), doubles(info.get("har_coef")),
                         info.get("har_band_shift").asDouble());
             } catch (Exception | LinkageError ignored) {
@@ -90,8 +94,16 @@ public final class VolatilityScorer implements AutoCloseable {
         return new VolatilityScorer(version, FEATURES, 0, har, band, null, null, null);
     }
 
+    /** Models trained before the vol.py train() fix may carry a bogus har_band_shift (about 5); retrain with vol-train. */
+    private static void requireCurrent(JsonNode info) {
+        if (info.path("format").asInt(0) < MIN_FORMAT || Math.abs(info.path("har_band_shift").asDouble(0)) >= 1) {
+            throw new IllegalStateException("stale model.json (needs format >= " + MIN_FORMAT + " and |har_band_shift| < 1), retrain with vol-train");
+        }
+    }
+
     public static VolatilityScorer load(Path dir) throws Exception {
         JsonNode info = JSON.readTree(Files.readAllBytes(dir.resolve("model.json")));
+        requireCurrent(info);
         List<String> features = new ArrayList<>();
         info.get("features").forEach(n -> features.add(n.asText()));
         if (features.isEmpty()) throw new IllegalStateException("bad model.json");
@@ -129,7 +141,12 @@ public final class VolatilityScorer implements AutoCloseable {
     public Swing swing(Features f) {
         Map<String, Double> v = f.values();
         double rvd = v.getOrDefault("rvd", 0.0);
-        if (!(rvd > 0)) return null;
+        if (!(rvd > 0)) { // warm-up (31 to 390 bars): default HAR on the estimated rvd, never the trained models
+            double est = v.getOrDefault("rvd_est", 0.0);
+            if (!(est > 0)) return null;
+            double m = Math.max(DEFAULT_HAR[3] * est, 1e-6);
+            return new Swing(pct(m), pct(m * DEFAULT_BAND_FACTOR), regime(m, est));
+        }
         double[] row = new double[features.size()];
         for (int i = 0; i < row.length; i++) row[i] = input(f, features.get(i));
         double[] fc = forecast(row);

@@ -289,7 +289,7 @@ export function Market() {
       set("newacc", `${Math.round(c.newShare * 100)}%`);
       set("dupes", `${Math.round(c.dupeShare * 100)}%`);
       set("volx", `x${(c.v / NORMAL_VOLUME).toFixed(1)}`);
-      set("swing", `±${c.swing.toFixed(0)}% ${swingRegime(c.swing)}`);
+      set("swing", `${c.swing.toFixed(0)}% ${swingRegime(c.swing)}`);
     };
 
     const resize = () => {
@@ -437,7 +437,7 @@ export function Market() {
                 ["Posts from new accounts", "newacc", `${Math.round(lastC.newShare * 100)}%`],
                 ["Copy-paste posts", "dupes", `${Math.round(lastC.dupeShare * 100)}%`],
                 ["Volume", "volx", `x${(lastC.v / NORMAL_VOLUME).toFixed(1)}`],
-                ["Expected 1h swing", "swing", `±${lastC.swing.toFixed(0)}% ${swingRegime(lastC.swing)}`],
+                ["Expected 1h range", "swing", `${lastC.swing.toFixed(0)}% ${swingRegime(lastC.swing)}`],
               ].map(([label, k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
                   <dt className="text-accent">{label}</dt>

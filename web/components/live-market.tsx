@@ -44,7 +44,7 @@ export default function LiveMarket({ data }: { data: LandingData }) {
               {score?.swing ? (
                 <>
                   <p className="mt-1 text-white">
-                    Typical ±{score.swing.median.toFixed(1)}%, up to ±{score.swing.upperBand.toFixed(1)}%.{" "}
+                    Expected range next hour: about {score.swing.median.toFixed(1)}%, up to {score.swing.upperBand.toFixed(1)}% (high to low).{" "}
                     <span className="uppercase text-yellow">{score.swing.regime}</span> for this ticker.
                   </p>
                   {data.mode === "mock" && <p className="text-mute">Mock forecast, not a model output.</p>}

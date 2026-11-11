@@ -12,6 +12,9 @@ python -m pumpml vol-train --synthetic                            # quantile mod
 # owner, real bars (stays local): python -m pumpml vol-train --bars bars.csv --watchlist A B --version 1
 ```
 
+Volatility models trained before `model.json` got `"format": 2` (and the `har_band_shift` fix) are refused by the JVM,
+which serves the default baseline instead. Retrain them with `vol-train`.
+
 Use `--data labels.csv` (columns: `episode_id, ticker, kind, label, window_end, peak_time`, then the feature names in
 `pumpml/features.py`) once the labeled dataset exists (issue #34), and `--bars bars.csv --watchlist A B` for volatility
 (one-minute bars: `ticker, timestamp, open, high, low, close, volume`).

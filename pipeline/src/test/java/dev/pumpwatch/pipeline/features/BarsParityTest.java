@@ -71,6 +71,31 @@ class BarsParityTest {
         assertThat(f.get("gap")).isZero(); // first day: no previous close
     }
 
+    /** Swing is null below 31 bars, a positive default-HAR warm-up from 31 to 390, and the normal path from 391. */
+    @Test
+    void warmUpSwingBetween31And390BarsThenTheNormalPath() {
+        VolatilityScorer scorer = VolatilityScorer.orBaseline("");
+        Bars bars = Bars.EMPTY;
+        for (int n = 1; n <= 391; n++) {
+            bars = bars.add(Agg.trade(at(n - 1, 0).toEpochMilli(), 10 + 0.05 * (n % 7), 100));
+            if (n != 30 && n != 31 && n != 390 && n != 391) continue;
+            Map<String, Double> f = bars.features(at(n, 0));
+            var features = new dev.pumpwatch.common.Features(1, at(n, 0), at(n, 1), "GME", at(n - 5, 0), at(n, 0), 5, f, null);
+            var swing = scorer.swing(features);
+            if (n == 30) {
+                assertThat(f).doesNotContainKeys("rv30", "rvd_est");
+                assertThat(swing).isNull();
+            } else if (n < 391) {
+                assertThat(f).containsKey("rvd_est").doesNotContainKey("rvd");
+                assertThat(swing.median()).isPositive();
+                assertThat(swing.upperBand()).isGreaterThanOrEqualTo(swing.median());
+            } else {
+                assertThat(f).containsKey("rvd").doesNotContainKey("rvd_est");
+                assertThat(swing.median()).isPositive();
+            }
+        }
+    }
+
     /**
      * Whole pipeline: the swing is null without a day of bars and non-null with one. The 400 earlier bars are written
      * straight into the vol-bars store, because piping 391 minutes of ticks through the topology takes minutes.
