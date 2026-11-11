@@ -10,7 +10,7 @@ import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.common.Validator;
 import dev.pumpwatch.pipeline.Fx;
 import dev.pumpwatch.pipeline.extractor.Mention;
-import dev.pumpwatch.pipeline.extractor.SimHash;
+import dev.pumpwatch.common.SimHash;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;

@@ -1,4 +1,4 @@
-package dev.pumpwatch.pipeline.extractor;
+package dev.pumpwatch.common;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;

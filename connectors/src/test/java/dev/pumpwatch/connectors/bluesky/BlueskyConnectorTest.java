@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.pumpwatch.common.DeadLetter;
 import dev.pumpwatch.common.Json;
+import dev.pumpwatch.common.Keys;
+import dev.pumpwatch.common.PostDeletion;
 import dev.pumpwatch.common.PostRecord;
+import dev.pumpwatch.common.SimHash;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.connectors.core.ConnectorPublisher;
 import dev.pumpwatch.connectors.core.FakePositions;
@@ -35,7 +38,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 class BlueskyConnectorTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-27T12:05:00Z"), ZoneOffset.UTC);
     private static final BlueskyProperties PROPS = new BlueskyProperties(true, "wss://example.test/subscribe",
-            List.of("stock", "shares", "short squeeze"));
+            List.of("stock", "shares", "short squeeze"), false);
 
     private final List<String[]> sent = new CopyOnWriteArrayList<>(); // topic, key, value
     private final FakeSeenItems seen = new FakeSeenItems();
@@ -110,7 +113,7 @@ class BlueskyConnectorTest {
             context.registerBean(BlueskyConnector.class, () -> connector);
             context.refresh();
             await(() -> !sent.isEmpty());
-            assertThat(Json.fromJson(sent.getFirst()[2], PostRecord.class).text()).isEqualTo("Loading up on $GME today");
+            assertThat(Json.fromJson(sent.getFirst()[2], PostRecord.class).tickers()).containsExactly("GME");
         }
         assertThat(stopped.await(5, TimeUnit.SECONDS)).isTrue();
         assertThat(positions.saved).containsKey("bluesky");
@@ -127,9 +130,9 @@ class BlueskyConnectorTest {
         var p = Json.fromJson(sent.get(0)[2], PostRecord.class);
         assertThat(p.source()).isEqualTo("bluesky");
         assertThat(p.postId()).isEqualTo("did:plc:aaa/3kcash");
-        assertThat(p.authorId()).isEqualTo("did:plc:aaa");
+        assertThat(p.authorId()).isEqualTo(Keys.authorKey("did:plc:aaa")).doesNotContain("did:plc");
         assertThat(p.authorCreatedAt()).isNull();
-        assertThat(p.text()).isEqualTo("Loading up on $GME today");
+        assertThat(p.tickers()).containsExactly("GME");
         assertThat(p.eventTime()).isEqualTo(Instant.parse("2026-10-27T12:00:00Z"));
         assertThat(p.ingestTime()).isEqualTo(Instant.parse("2026-10-27T12:05:00Z"));
         assertThat(Json.fromJson(sent.get(1)[2], PostRecord.class).postId()).isEqualTo("did:plc:bbb/3kterm");
@@ -175,5 +178,37 @@ class BlueskyConnectorTest {
         assertThat(Json.fromJson(sent.get(0)[2], DeadLetter.class).reason()).contains("eventTime");
         assertThat(meters.get("pumpwatch.bluesky.unparseable").counter().count()).isEqualTo(1.0);
         assertThat(new ArrayList<>(sent)).hasSize(1);
+    }
+
+    @Test
+    void deletedPostThatWasKeptPublishesAPurgeMarker() throws Exception {
+        var del = "{\"did\":\"did:plc:aaa\",\"time_us\":1790000000000700,\"kind\":\"commit\",\"commit\":{\"rev\":\"r9\","
+                + "\"operation\":\"delete\",\"collection\":\"app.bsky.feed.post\",\"rkey\":\"3kcash\"}}";
+        var batch = new ArrayList<>(lines("jetstream-sample.jsonl"));
+        batch.add(del);
+        run(List.of(batch));
+        await(() -> sent.size() >= 3);
+        var last = sent.get(2);
+        assertThat(last[0]).isEqualTo(Topics.RAW_POSTS);
+        assertThat(last[1]).isEqualTo("bluesky:did:plc:aaa/3kcash"); // same key as the post it removes
+        var d = Json.fromJson(last[2], PostDeletion.class);
+        assertThat(d.deleted()).isTrue();
+        assertThat(d.postId()).isEqualTo("did:plc:aaa/3kcash");
+    }
+
+    @Test
+    void textIsKeptOnlyWhenExplicitlyOptedIn() throws Exception {
+        publisher = new ConnectorPublisher("bluesky", new InMemoryOutbox(), (t, k, v) -> {
+            sent.add(new String[] {t, k, v});
+            return CompletableFuture.completedFuture(null);
+        }, PumpwatchKafkaProperties.defaults(), meters, CLOCK);
+        publisher.start();
+        var props = new BlueskyProperties(true, "wss://example.test/subscribe", List.of("stock"), true);
+        connector = new BlueskyConnector(props, List.of("GME"), publisher, seen, positions,
+                (uri, onMessage) -> { onMessage.accept(lines("jetstream-sample.jsonl").getFirst()); Thread.sleep(60_000); },
+                meters, CLOCK, Duration.ofMillis(1), Duration.ofMillis(4));
+        connector.start();
+        await(() -> !sent.isEmpty());
+        assertThat(Json.fromJson(sent.getFirst()[2], PostRecord.class).text()).isEqualTo("Loading up on $GME today");
     }
 }

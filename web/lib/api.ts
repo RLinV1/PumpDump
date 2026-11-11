@@ -79,13 +79,21 @@ const validScore = (n: number) => Number.isFinite(n) && n >= 0 && n <= 100;
 const validCount = (n: number) => Number.isSafeInteger(n) && n >= 0;
 const strings = (v: string[]) => Array.isArray(v) && v.every((s) => typeof s === "string");
 
+// Scores, flags and timelines carry counts only. A payload with post text or author keys is rejected, never rendered.
+const RAW_KEY = /text|author|handle|^did$|body|snippet|username|displayname/i;
+export function hasRawContent(v: unknown): boolean {
+  if (Array.isArray(v)) return v.some(hasRawContent);
+  if (v && typeof v === "object") return Object.entries(v).some(([k, x]) => RAW_KEY.test(k) || hasRawContent(x));
+  return false;
+}
+
 function validScoreView(s: Score): boolean {
-  return !!(s && validTicker(s.ticker) && validScore(s.score) && validDate(s.windowEnd)
+  return !!(s && !hasRawContent(s) && validTicker(s.ticker) && validScore(s.score) && validDate(s.windowEnd)
     && validDate(s.computedAt) && typeof s.modelVersion === "string" && strings(s.staleSources));
 }
 
 function validFlag(f: Flag): boolean {
-  return !!(f && validTicker(f.ticker) && validCount(f.id) && validDate(f.raisedAt)
+  return !!(f && !hasRawContent(f) && validTicker(f.ticker) && validCount(f.id) && validDate(f.raisedAt)
     && f.evidence && validScore(f.evidence.score) && typeof f.evidence.modelVersion === "string"
     && validCount(f.evidence.postCount) && validCount(f.evidence.tradeCount)
     && Array.isArray(f.evidence.topContributors) && f.evidence.topContributors.every((c) => c
@@ -95,7 +103,7 @@ function validFlag(f: Flag): boolean {
 }
 
 function validTimeline(t: Timeline): boolean {
-  if (!t || !validTicker(t.ticker) || !validDate(t.from) || !validDate(t.to)
+  if (!t || hasRawContent(t) || !validTicker(t.ticker) || !validDate(t.from) || !validDate(t.to)
     || !Array.isArray(t.scores) || !Array.isArray(t.flags)) return false;
   const from = Date.parse(t.from);
   const to = Date.parse(t.to);

@@ -1,7 +1,7 @@
 package dev.pumpwatch.common;
 
 public final class SchemaVersions {
-    public static final int POST = 1;
+    public static final int POST = 2;
     public static final int TICK = 1;
     public static final int ARTICLE = 1;
     public static final int FILING = 1;

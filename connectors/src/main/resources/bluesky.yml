@@ -3,6 +3,7 @@ pumpwatch:
     bluesky:
       enabled: ${BLUESKY_ENABLED:false} # off until terms are verified (docs/data-sources.md)
       url: ${BLUESKY_JETSTREAM_URL:wss://jetstream2.us-east.bsky.network/subscribe}
+      retain-text: ${BLUESKY_RETAIN_TEXT:false} # opt-in: keep raw post text on the record (default: derived fields only)
       # a watchlist ticker without a cashtag must appear with one of these (case-insensitive)
       finance-terms:
         - stock

@@ -4,6 +4,7 @@ import dev.pumpwatch.common.ArticleRecord;
 import dev.pumpwatch.common.DeadLetter;
 import dev.pumpwatch.common.FilingRecord;
 import dev.pumpwatch.common.Json;
+import dev.pumpwatch.common.PostDeletion;
 import dev.pumpwatch.common.PostRecord;
 import dev.pumpwatch.common.SchemaVersions;
 import dev.pumpwatch.common.SourceHealth;
@@ -227,6 +228,7 @@ public final class ConnectorPublisher implements AutoCloseable {
         return switch (r) {
             case TickRecord t -> Validator.validate(t);
             case PostRecord p -> Validator.validate(p);
+            case PostDeletion d -> Validator.validate(d);
             case ArticleRecord a -> Validator.validate(a);
             case FilingRecord f -> Validator.validate(f);
             default -> List.of("unsupported record type " + r.getClass().getSimpleName());

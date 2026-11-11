@@ -1,4 +1,4 @@
-package dev.pumpwatch.pipeline.extractor;
+package dev.pumpwatch.common;
 
 import java.io.BufferedReader;
 import java.io.IOException;

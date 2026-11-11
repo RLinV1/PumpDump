@@ -17,7 +17,7 @@ class CommonTest {
     static final Instant T = Instant.parse("2025-01-02T14:30:00Z");
 
     static PostRecord post() {
-        return new PostRecord(1, T, T.plusSeconds(2), "reddit", "abc", "u1", null, "GME to the moon");
+        return new PostRecord(2, T, T.plusSeconds(2), "reddit", "abc", "u1", null, List.of("GME"), 42L, null);
     }
 
     static TickRecord tick() {
@@ -81,8 +81,8 @@ class CommonTest {
                 .anyMatch(s -> s.contains("size"));
         assertThat(Validator.validate(new TickRecord(1, null, null, null, null, 1, null)))
                 .contains("eventTime is required", "ingestTime is required", "ticker is required");
-        assertThat(Validator.validate(new PostRecord(1, T, T, " ", "p", "a", null, "")))
-                .contains("source is required", "text is required");
+        assertThat(Validator.validate(new PostRecord(2, T, T, " ", "p", "a", null, List.of(), 0L, null)))
+                .contains("source is required", "tickers is required");
     }
 
     @Test

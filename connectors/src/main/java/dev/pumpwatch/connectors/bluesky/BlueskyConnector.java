@@ -4,8 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pumpwatch.common.Json;
 import dev.pumpwatch.common.Keys;
+import dev.pumpwatch.common.PostDeletion;
 import dev.pumpwatch.common.PostRecord;
 import dev.pumpwatch.common.SchemaVersions;
+import dev.pumpwatch.common.SimHash;
+import dev.pumpwatch.common.SymbolList;
+import dev.pumpwatch.common.TickerLinker;
 import dev.pumpwatch.common.Topics;
 import dev.pumpwatch.connectors.core.Connector;
 import dev.pumpwatch.connectors.core.ConnectorPublisher;
@@ -22,6 +26,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +47,8 @@ public class BlueskyConnector implements Connector {
 
     private final BlueskyProperties props;
     private final PostFilter filter;
+    private final Set<String> watchlist;
+    private final SymbolList symbols = SymbolList.load();
     private final ConnectorPublisher publisher;
     private final SeenItems seen;
     private final ConnectorPositions positions;
@@ -51,6 +58,7 @@ public class BlueskyConnector implements Connector {
     private final Duration maxBackoff;
     private final Counter unparseable;
     private final Counter kept;
+    private final Counter purged;
     private volatile long lastTimeUs;
     private volatile long lastSavedMs;
     private volatile boolean running;
@@ -68,6 +76,7 @@ public class BlueskyConnector implements Connector {
                      SeenItems seen, ConnectorPositions positions, JetstreamClient client, MeterRegistry meters, Clock clock,
                      Duration initialBackoff, Duration maxBackoff) {
         this.props = props;
+        this.watchlist = Set.copyOf(watchlist.stream().map(Keys::tickerKey).toList());
         this.filter = new PostFilter(watchlist, props.financeTerms());
         this.publisher = publisher;
         this.seen = seen;
@@ -78,6 +87,7 @@ public class BlueskyConnector implements Connector {
         this.maxBackoff = maxBackoff;
         this.unparseable = Counter.builder("pumpwatch.bluesky.unparseable").register(meters);
         this.kept = Counter.builder("pumpwatch.bluesky.kept").register(meters);
+        this.purged = Counter.builder("pumpwatch.bluesky.deleted").register(meters);
     }
 
     @Override public String name() { return SOURCE; }
@@ -160,6 +170,9 @@ public class BlueskyConnector implements Connector {
         if ("commit".equals(e.path("kind").asText()) && "create".equals(commit.path("operation").asText())
                 && "app.bsky.feed.post".equals(commit.path("collection").asText())) {
             handlePost(e, commit);
+        } else if ("commit".equals(e.path("kind").asText()) && "delete".equals(commit.path("operation").asText())
+                && "app.bsky.feed.post".equals(commit.path("collection").asText())) {
+            handleDelete(e, commit);
         }
         lastTimeUs = Math.max(lastTimeUs, e.path("time_us").asLong(0));
         savePosition(false);
@@ -173,19 +186,35 @@ public class BlueskyConnector implements Connector {
         var rkey = commit.path("rkey").asText(null);
         var postId = did == null || rkey == null ? null : did + "/" + rkey;
         if (postId != null && seen.isSeen(SOURCE, postId)) return;
-        var post = new PostRecord(SchemaVersions.POST, parseTime(record.path("createdAt").asText(null)),
-                clock.instant(), SOURCE, postId, did, null, text);
-        var key = Keys.postKey(SOURCE, postId);
+        var tickers = TickerLinker.link(text, symbols, watchlist);
+        if (tickers.isEmpty()) return; // nothing derived to keep
+        var created = parseTime(record.path("createdAt").asText(null));
+        var post = new PostRecord(SchemaVersions.POST, created, clock.instant(), SOURCE, postId,
+                did == null ? null : Keys.authorKey(did), null, List.copyOf(tickers), SimHash.of(text),
+                props.retainText() ? text : null);
+        if (publish(Keys.postKey(SOURCE, postId), post) && postId != null) seen.markNew(SOURCE, postId);
+    }
+
+    /** A deleted post we published: tell downstream to purge it. Deletes of posts we never kept are ignored. */
+    private void handleDelete(JsonNode e, JsonNode commit) {
+        var did = e.path("did").asText(null);
+        var rkey = commit.path("rkey").asText(null);
+        if (did == null || rkey == null) return;
+        var postId = did + "/" + rkey;
+        if (!seen.isSeen(SOURCE, postId)) return;
+        if (publish(Keys.postKey(SOURCE, postId), new PostDeletion(clock.instant(), SOURCE, postId))) purged.increment();
+    }
+
+    private boolean publish(String key, Object record) {
         boolean offered = false;
         try {
-            while (running && !(offered = publisher.offer(Topics.RAW_POSTS, key, post))) Thread.sleep(50); // buffer full: wait
+            while (running && !(offered = publisher.offer(Topics.RAW_POSTS, key, record))) Thread.sleep(50); // buffer full: wait
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("interrupted", ex);
         }
-        if (!offered) return; // stopped while waiting: leave it unseen
-        if (postId != null) seen.markNew(SOURCE, postId);
-        kept.increment();
+        if (offered && record instanceof PostRecord) kept.increment();
+        return offered; // false: stopped while waiting, leave it unseen
     }
 
     private static Instant parseTime(String s) {
