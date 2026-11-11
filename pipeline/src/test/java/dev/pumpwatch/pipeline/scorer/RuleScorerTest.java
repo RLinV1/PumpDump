@@ -88,14 +88,23 @@ class RuleScorerTest {
     void aCatalystLowersTheScoreByTierAndNeverBelowZero() {
         Map<String, Double> pump = Map.of("mentionRatio", 10.0, "return", 0.2); // 70
         assertThat(scorer.score(with(pump)).score()).isEqualTo(70);
-        assertThat(scorer.score(with(merge(pump, "newsOutlets6h", 1.0))).score()).isEqualTo(60);
-        assertThat(scorer.score(with(merge(pump, "newsOutlets6h", 3.0))).score()).isEqualTo(50);
+        assertThat(scorer.score(with(merge(pump, "newsOutlets6h", 1.0))).score()).isEqualTo(50);
+        assertThat(scorer.score(with(merge(pump, "newsOutlets6h", 3.0))).score()).isEqualTo(40);
         assertThat(scorer.score(with(merge(pump, "filings24h", 1.0))).score()).isEqualTo(50);
         assertThat(scorer.score(with(merge(pump, "catalystPrecededMove", 1.0))).score()).isEqualTo(55);
         Map<String, Double> all = Map.of("mentionRatio", 10.0, "return", 0.2, "newsOutlets6h", 3.0, "filings24h", 2.0,
                 "catalystPrecededMove", 1.0);
-        assertThat(scorer.score(with(all)).score()).isEqualTo(15);
+        assertThat(scorer.score(with(all)).score()).isEqualTo(5);
         assertThat(scorer.score(with(Map.of("filings24h", 1.0, "newsOutlets6h", 5.0))).score()).isZero();
+    }
+
+    @Test
+    void aMatchingNewsItemKeepsAnOtherwiseFlaggableSpikeBelowTheFlagLevel() {
+        Map<String, Double> spike = Map.of("mentionRatio", 3.0, "distinctAuthors", 5.0, "newAccountShare", 0.3,
+                "return", 0.15, "volume", 100_000.0); // 30 social + 45 market
+        assertThat(scorer.score(with(spike)).score()).isGreaterThanOrEqualTo(60);
+        assertThat(scorer.score(with(merge(spike, "newsOutlets6h", 1.0))).score()).isLessThan(60);
+        assertThat(scorer.score(with(merge(spike, "filings24h", 1.0))).score()).isLessThan(60);
     }
 
     private static Map<String, Double> merge(Map<String, Double> base, String k, double v) {
