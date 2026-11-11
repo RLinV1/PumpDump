@@ -80,7 +80,7 @@ const validCount = (n: number) => Number.isSafeInteger(n) && n >= 0;
 const strings = (v: string[]) => Array.isArray(v) && v.every((s) => typeof s === "string");
 
 // Scores, flags and timelines carry counts only. A payload with post text or author keys is rejected, never rendered.
-const RAW_KEY = /text|author|handle|^did$|body|snippet|username|displayname/i;
+const RAW_KEY = /^(text|raw_?text|body|snippet|handle|did|username|display_?name|author\w*)$/i;
 export function hasRawContent(v: unknown): boolean {
   if (Array.isArray(v)) return v.some(hasRawContent);
   if (v && typeof v === "object") return Object.entries(v).some(([k, x]) => RAW_KEY.test(k) || hasRawContent(x));
