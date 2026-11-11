@@ -1,4 +1,4 @@
-"""python -m pumpml train|evaluate|vol-baseline|vol-train   (add --synthetic to use the fixture data)"""
+"""python -m pumpml train|evaluate|vol-baseline|vol-train|vol-evaluate   (add --synthetic to use the fixture data)"""
 import argparse
 import json
 from pathlib import Path

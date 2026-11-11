@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from pumpml import vol, vol_eval as V
+from pumpml.card import MODEL_LICENSE
 
 
 def test_metrics_by_hand():
@@ -52,7 +53,8 @@ def test_evaluate_writes_report_flag_and_card(tmp_path, monkeypatch):
     assert set(r["periods"]) == {"calm", "stressed"}
     assert json.loads((d / "report.json").read_text())["gate"] == r["gate"]
     assert (d / "promoted").exists() == r["gate"]["promoted"]
-    assert (d / "model-card-vol.md").exists()
+    card = (d / "model-card-vol.md").read_text()
+    assert "## Licenses" in card and f"- model vol-t: {MODEL_LICENSE}" in card and "- lightgbm " in card  # license-gate.sh cards
     monkeypatch.setattr(V, "gate", lambda rep: {"promoted": False, "reasons": ["x"], "serving": "har_rv baseline"})
     V.evaluate(bars, d, n_boot=5)
     assert not (d / "promoted").exists()

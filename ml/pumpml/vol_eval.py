@@ -9,8 +9,10 @@ from pathlib import Path
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+from importlib.metadata import version
 
 from . import vol
+from .card import LICENSES, MODEL_LICENSE
 
 CALM_MAX_PCT = 50.0      # calm: test days at or below this percentile of daily mean log range
 STRESSED_MIN_PCT = 80.0  # stressed: test days at or above this percentile
@@ -114,4 +116,5 @@ def _write_card(model_dir: Path, report: dict):
         lines += [f"| {n} | {cell(r[n]['qlike'])} | {cell(r[n]['mae_log_range'])} |" for n in ("model", "har_rv", "naive_last_hour")]
         lines.append(f"\nUpper band coverage (target 90%): {cell(r['model']['coverage'])}")
     lines += ["", "Values show the estimate with a 95% bootstrap interval over days. Size of move, not direction; not investment advice."]
+    lines += ["", "## Licenses", f"- model {model_dir.name}: {MODEL_LICENSE}", *[f"- {n} {version(n)}: {lic}" for n, lic in LICENSES.items()]]
     (model_dir / "model-card-vol.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
