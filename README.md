@@ -212,6 +212,39 @@ Users can select stocks from gainers, losers or intraday swings, and add/remove 
 they show **No risk score yet** if the backend has no coverage. Personal edits do not
 change the shared market-data subscription.
 
+## News sources: storage terms and rate limits
+
+All news and filing sources are off by default. Rate limits are the values configured in
+`connectors/src/main/resources`; terms status is copied from [docs/data-sources.md](docs/data-sources.md).
+
+| Source | Env flag | Configured limit | Terms status |
+| --- | --- | --- | --- |
+| Alpaca News | `ALPACA_NEWS_ENABLED` | 150 requests/min (`alpaca-news.yml`) | plan, terms, storage and training all unverified |
+| SEC EDGAR 8-K | `SEC_ENABLED` | 300 requests/min (`application.yml`; SEC publishes 10 requests/s) | terms and storage unverified |
+| Finnhub | `FINNHUB_ENABLED` | 50 calls/min (`finnhub.yml`; free plan reported at 60) | terms and storage unverified |
+| Press-release RSS | `RSS_ENABLED` | 30 requests/min shared across feeds (`rss.yml`) | feed terms, limits and storage unverified |
+
+Terms for storing these items for replay are unverified. The owner must confirm them
+before replaying recorded news publicly; until then keep recorded news local.
+
+### Runbook: end-to-end news demo (owner, needs live keys and Docker)
+
+```sh
+# 1. In .env: ALPACA_KEY_ID/ALPACA_SECRET_KEY, ALPACA_NEWS_ENABLED=true, SEC_ENABLED=true,
+#    SEC_USER_AGENT="Name email", FINNHUB_ENABLED=true, FINNHUB_TOKEN=..., RSS_ENABLED=true,
+#    RSS_FEEDS=<comma-separated feed URLs>, plus ALPACA_ENABLED=true for ticks.
+docker compose --profile apps up -d --build --wait
+# 2. Let it run for a while; the recorder (replay service) stores raw-news, raw-filings, raw-posts and ticks.
+curl -s http://127.0.0.1:8080/actuator/health   # connectors
+# 3. Replay the recorded window at 10x (replace the range with the recorded one).
+curl -s -X POST http://127.0.0.1:8081/replays -H "Content-Type: application/json" \
+  -d '{"from":"2026-01-01T14:00:00Z","to":"2026-01-01T15:00:00Z","speed":10,"isolated":false}'
+```
+
+Check that news, filings, posts and ticks arrive interleaved in event-time order. Replayed
+records carry the replay header and are not re-recorded. Use `"isolated":true` to publish to
+`replay.<runId>.<topic>` instead.
+
 ## Stack
 
 | Layer | Technologies |
