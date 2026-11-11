@@ -8,4 +8,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("pumpwatch.sources.bluesky")
 public record BlueskyProperties(@DefaultValue("false") boolean enabled,
                                 @DefaultValue("wss://jetstream2.us-east.bsky.network/subscribe") String url,
-                                @DefaultValue List<String> financeTerms) {}
+                                @DefaultValue List<String> financeTerms,
+                                /** Opt-in: keep raw post text on the record. Off by default (docs/data-sources.md). */
+                                @DefaultValue("false") boolean retainText) {}

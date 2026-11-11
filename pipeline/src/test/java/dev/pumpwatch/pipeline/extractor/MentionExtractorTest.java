@@ -45,7 +45,13 @@ class MentionExtractorTest {
         assertThat(out.get(0).value).doesNotContain("secret-phrase-xyz");
         Mention m = Json.fromJson(out.get(0).value, Mention.class);
         assertThat(m.newAccount()).isTrue(); // Fx.post accounts are a day old
-        assertThat(m.simhash()).isEqualTo(SimHash.of("$GME secret-phrase-xyz"));
+        assertThat(m.simhash()).isEqualTo(dev.pumpwatch.common.SimHash.of("$GME secret-phrase-xyz"));
+    }
+
+    @Test
+    void deletionMarkerIsNotAMention() {
+        var del = Json.toJson(new dev.pumpwatch.common.PostDeletion(at(1, 0), "bluesky", "did:plc:a/3k"));
+        assertThat(run(del)).isEmpty();
     }
 
     @Test

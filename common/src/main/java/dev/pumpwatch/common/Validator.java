@@ -20,7 +20,16 @@ public final class Validator {
         text(p, "source", r.source());
         text(p, "postId", r.postId());
         text(p, "authorId", r.authorId());
-        text(p, "text", r.text());
+        if (r.tickers().isEmpty()) p.add("tickers is required");
+        return p;
+    }
+
+    public static List<String> validate(PostDeletion r) {
+        var p = new ArrayList<String>();
+        version(p, r.schemaVersion(), SchemaVersions.POST);
+        text(p, "source", r.source());
+        text(p, "postId", r.postId());
+        if (!r.deleted()) p.add("deleted must be true");
         return p;
     }
 

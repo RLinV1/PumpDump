@@ -17,9 +17,9 @@
 
 ## 4. Storage and public output
 
-- [ ] 4.1 Reduce social content at ingestion to the derived fields and drop raw text by default
-- [ ] 4.2 Purge stored records when a source reports a deletion
-- [ ] 4.3 Add API and page tests that no raw post text or author names are returned or shown
+- [x] 4.1 Reduce social content at ingestion to the derived fields and drop raw text by default
+- [x] 4.2 Purge stored records when a source reports a deletion
+- [x] 4.3 Add API and page tests that no raw post text or author names are returned or shown
 
 ## 5. License gate
 

@@ -1,6 +1,5 @@
-package dev.pumpwatch.pipeline.extractor;
+package dev.pumpwatch.common;
 
-import dev.pumpwatch.common.Keys;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;

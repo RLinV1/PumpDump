@@ -29,9 +29,22 @@ public class Recorder {
             Topics.FEATURES, Topics.SCORES, Topics.FLAGS},
             groupId = "pumpwatch-recorder")
     public void onBatch(List<ConsumerRecord<String, String>> records) {
-        List<RecordedEvent> events = toEvents(records);
+        List<ConsumerRecord<String, String>> deletions = records.stream().filter(Recorder::isDeletion).toList();
+        List<RecordedEvent> events = toEvents(records.stream().filter(r -> !isDeletion(r)).toList());
         if (!events.isEmpty()) {
             store.insertAll(events);
+        }
+        // after the insert, so a post created and deleted in one batch is gone too
+        deletions.forEach(r -> store.deleteByKey(r.topic(), r.key()));
+    }
+
+    /** A source-reported deletion marker ({@code "deleted":true}): purge the post instead of recording it. */
+    static boolean isDeletion(ConsumerRecord<String, String> r) {
+        if (r.key() == null || r.headers().lastHeader(Headers.REPLAY) != null) return false;
+        try {
+            return MAPPER.readTree(r.value()).path("deleted").asBoolean(false);
+        } catch (Exception e) {
+            return false;
         }
     }
 
