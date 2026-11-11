@@ -46,7 +46,7 @@ class ReadRepositoryDbTest {
     }
 
     static Score score(String ticker, Instant at, double score) {
-        return new Score(SchemaVersions.SCORE, at, at, ticker, at, score, "rules-1", Set.of("news"));
+        return new Score(SchemaVersions.SCORE, at, at, ticker, at, score, "rules-1", Set.of("news"), null);
     }
 
     @Test

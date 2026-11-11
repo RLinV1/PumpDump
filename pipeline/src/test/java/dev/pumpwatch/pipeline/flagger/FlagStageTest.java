@@ -34,7 +34,7 @@ class FlagStageTest {
         @Override
         public Score score(Features f) {
             return new Score(1, f.eventTime(), f.eventTime(), f.ticker(), f.windowEnd(), f.values().getOrDefault("s", 0.0),
-                    "rules-v1", null);
+                    "rules-v1", null, null);
         }
 
         @Override
@@ -70,7 +70,7 @@ class FlagStageTest {
         Features f = new Features(1, end, end, "GME", end.minusSeconds(windowMinutes * 60L), end, windowMinutes,
                 Map.of("mentions", 40.0, "trades", 12.0, "s", score), null);
         features.pipeInput("GME", Json.toJson(f));
-        scores.pipeInput("GME", Json.toJson(new Score(SchemaVersions.SCORE, end, end, "GME", end, score, "rules-v1", null)));
+        scores.pipeInput("GME", Json.toJson(new Score(SchemaVersions.SCORE, end, end, "GME", end, score, "rules-v1", null, null)));
     }
 
     void window(Instant end, double score) {
@@ -111,7 +111,7 @@ class FlagStageTest {
         var values = new java.util.HashMap<>(extra);
         values.putAll(Map.of("mentions", 40.0, "trades", 12.0, "s", 70.0, "minutesSinceCatalyst", minutesSince));
         features.pipeInput("GME", Json.toJson(new Features(1, end, end, "GME", end.minusSeconds(300), end, 5, values, null)));
-        scores.pipeInput("GME", Json.toJson(new Score(SchemaVersions.SCORE, end, end, "GME", end, 70, "rules-v1", null)));
+        scores.pipeInput("GME", Json.toJson(new Score(SchemaVersions.SCORE, end, end, "GME", end, 70, "rules-v1", null, null)));
     }
 
     @Test

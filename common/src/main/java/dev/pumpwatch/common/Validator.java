@@ -89,6 +89,14 @@ public final class Validator {
         else if (r.eventTime() != null && !r.eventTime().equals(r.windowEnd())) p.add("eventTime must equal windowEnd");
         finite(p, "score", r.score());
         text(p, "modelVersion", r.modelVersion());
+        var s = r.swing();
+        if (s != null) {
+            finite(p, "swing.median", s.median());
+            finite(p, "swing.upperBand", s.upperBand());
+            if (s.median() < 0) p.add("swing.median must be >= 0");
+            if (s.upperBand() < s.median()) p.add("swing.upperBand must be >= swing.median");
+            if (s.regime() == null) p.add("swing.regime is required");
+        }
         return p;
     }
 

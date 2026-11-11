@@ -78,7 +78,7 @@ consumers need the relevant key/offset deduplication.
 | `ingest-dlq` | Invalid records and validation failures | Operational inspection |
 | `mentions` | Ticker-linked social features | Feature stage |
 | `features` | Per-ticker event-time windows | Scorer, recorder |
-| `scores` | Versioned risk scores and stale-source markers | Flagger, API, recorder |
+| `scores` | Versioned (v2) risk scores, stale-source markers and an optional `swing` forecast (median and upper band in percent, regime calm/elevated/extreme) | Flagger, API, recorder |
 | `flags` | Threshold crossings and evidence | API, recorder; alerts read the API tables |
 
 ### Extract, aggregate, score and flag

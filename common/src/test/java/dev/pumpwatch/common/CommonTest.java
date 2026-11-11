@@ -45,7 +45,9 @@ class CommonTest {
             post(), tick(), article(), filing(),
             new DeadLetter("raw-posts", "bad", "{}", T, T, 1),
             new Features(1, T, T, "GME", T.minusSeconds(60), T, 1, Map.of("posts", 3.0), Set.of("social")),
-            new Score(1, T, T, "GME", T, 0.5, "rule-1", Set.of("social")),
+            new Score(SchemaVersions.SCORE, T, T, "GME", T, 0.5, "rule-1", Set.of("social"), null),
+            new Score(SchemaVersions.SCORE, T, T, "GME", T, 0.5, "rule-1", Set.of(),
+                    new Swing(2.5, 6.0, Swing.Regime.ELEVATED)),
             flag()
         };
         for (Object o : all) {
@@ -95,17 +97,46 @@ class CommonTest {
         var other = T.plusSeconds(1);
         var f = new Features(1, other, T, "GME", T.minusSeconds(60), T, 1, Map.of(), Set.of());
         assertThat(Validator.validate(f)).containsExactly("eventTime must equal windowEnd");
-        assertThat(Validator.validate(new Score(1, other, T, "GME", T, 0.5, "m", Set.of())))
+        assertThat(Validator.validate(new Score(SchemaVersions.SCORE, other, T, "GME", T, 0.5, "m", Set.of(), null)))
                 .containsExactly("eventTime must equal windowEnd");
         var ev = flag().evidence();
         assertThat(Validator.validate(new Flag(1, other, T, "GME", T, ev)))
                 .containsExactly("eventTime must equal raisedAt");
     }
 
+    private static List<String> swingProblems(Swing s) {
+        return Validator.validate(new Score(SchemaVersions.SCORE, T, T, "GME", T, 0.5, "m", Set.of(), s));
+    }
+
+    @Test
+    void validatesSwing() {
+        assertThat(SchemaVersions.SCORE).isEqualTo(2);
+        assertThat(swingProblems(null)).isEmpty();
+        assertThat(swingProblems(new Swing(2.0, 5.0, Swing.Regime.CALM))).isEmpty();
+        assertThat(swingProblems(new Swing(3.0, 3.0, Swing.Regime.EXTREME))).isEmpty();
+        assertThat(swingProblems(new Swing(5.0, 2.0, Swing.Regime.CALM)))
+                .containsExactly("swing.upperBand must be >= swing.median");
+        assertThat(swingProblems(new Swing(-1.0, 2.0, Swing.Regime.CALM)))
+                .containsExactly("swing.median must be >= 0");
+        assertThat(swingProblems(new Swing(Double.NaN, 2.0, Swing.Regime.CALM)))
+                .contains("swing.median must be a finite number");
+        assertThat(swingProblems(new Swing(1.0, Double.POSITIVE_INFINITY, Swing.Regime.CALM)))
+                .containsExactly("swing.upperBand must be a finite number");
+        assertThat(swingProblems(new Swing(1.0, 2.0, null))).containsExactly("swing.regime is required");
+    }
+
+    @Test
+    void swingRegimeUsesSpecNamesInJson() {
+        var json = Json.toJson(new Swing(1.0, 2.0, Swing.Regime.ELEVATED));
+        assertThat(json).contains("\"regime\":\"elevated\"");
+        assertThatThrownBy(() -> Json.fromJson(json.replace("elevated", "wild"), Swing.class))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Test
     void rejectsNonFiniteNumbers() {
         for (double bad : new double[] {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
-            assertThat(Validator.validate(new Score(1, T, T, "GME", T, bad, "m", Set.of())))
+            assertThat(Validator.validate(new Score(SchemaVersions.SCORE, T, T, "GME", T, bad, "m", Set.of(), null)))
                     .containsExactly("score must be a finite number");
             assertThat(Validator.validate(new Features(1, T, T, "GME", T.minusSeconds(60), T, 1,
                     Map.of("posts", bad), Set.of()))).containsExactly("values.posts must be a finite number");
