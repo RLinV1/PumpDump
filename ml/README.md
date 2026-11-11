@@ -22,4 +22,13 @@ Use `--data labels.csv` (columns: `episode_id, ticker, kind, label, window_end, 
 `--synthetic` data is made up: it proves the code runs, not that a model works. Outputs go to `models/` (gitignored).
 The model card is written only when the promotion gate passes.
 
-Not here yet: promotional-language classifier (needs social text), ONNX export, volatility model and evaluation.
+Promotional-language classifier (offline only, nothing serves it yet):
+
+```
+pip install -r requirements-embed.txt
+# download the MIT-licensed PumpSense corpus yourself (github.com/AhmedMahrous00/icbc_2026_reproducibility, chat_data/), keep it out of git
+python -m pumpml promo-train --data <chat_data folder> --version v1   # -> models/promo-v1/{model.json,model-card.md}
+```
+
+It separates pump-announcement messages from other chatter in crypto pump groups, with a time split and bootstrap intervals. It is not
+validated on stock posts. Raw text is never written; the model is 384 coefficients. See the model card for licenses.

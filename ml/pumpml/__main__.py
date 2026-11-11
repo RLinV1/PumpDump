@@ -19,6 +19,10 @@ def main(argv=None):
         s.add_argument("--version", default="dev")
         if name == "evaluate":
             s.add_argument("--current", help="model dir of the currently promoted model")
+    pr = sub.add_parser("promo-train", help="promotional-language classifier; needs requirements-embed.txt")
+    pr.add_argument("--data", required=True, help="folder of PumpSense chat_data CSVs (date, text, Pump); stays local")
+    pr.add_argument("--out", default="models")
+    pr.add_argument("--version", default="dev")
     v = sub.add_parser("vol-baseline")
     v.add_argument("--bars", help="one-minute bars CSV")
     v.add_argument("--synthetic", action="store_true")
@@ -38,6 +42,11 @@ def main(argv=None):
     e.add_argument("--calm", nargs=2, metavar=("START", "END"), help="explicit calm dates (default: percentile rule)")
     e.add_argument("--stressed", nargs=2, metavar=("START", "END"), help="explicit stressed dates")
     a = p.parse_args(argv)
+
+    if a.cmd == "promo-train":
+        from . import promo
+        print(json.dumps(promo.train(Path(a.data), Path(a.out), a.version)["metrics"], indent=2))
+        return
 
     if a.cmd == "vol-evaluate":
         if a.synthetic == bool(a.bars):
