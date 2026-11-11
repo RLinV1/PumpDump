@@ -219,3 +219,18 @@ test("paper and assistant reuse the session account when storage is blocked", as
     else delete globalThis.localStorage;
   }
 });
+
+test("swing is optional and validated: finite, non-negative, band at least median, known regime", () => {
+  const ok = { median: 1.5, upperBand: 4, regime: "elevated" };
+  for (const w of [undefined, null, ok, { ...ok, upperBand: 1.5 }, { ...ok, regime: "CALM" }]) assert.equal(api.validSwing(w), true);
+  for (const w of [{ ...ok, median: -1 }, { ...ok, upperBand: 1 }, { ...ok, median: Infinity, upperBand: Infinity },
+    { ...ok, median: "1" }, { ...ok, regime: "wild" }, { median: 1, upperBand: 2 }, "calm"]) assert.equal(api.validSwing(w), false);
+});
+
+test("the landing score carries swing through, and a bad swing rejects the score", async () => {
+  const swing = { median: 1.5, upperBand: 4, regime: "calm" };
+  serve([{ ...score, swing }]);
+  assert.deepEqual((await api.loadLandingData()).score.swing, swing);
+  serve([{ ...score, swing: { ...swing, upperBand: 0.1 } }]);
+  assert.notEqual((await api.loadLandingData())?.score?.swing?.upperBand, 0.1);
+});

@@ -69,3 +69,17 @@ def test_shift_fitted_on_validation_only():
 
 def test_qlike_zero_for_perfect_forecast():
     assert vol.qlike([0.1, 0.2], [0.1, 0.2]) == 0.0
+
+
+def test_onnx_export_matches_boosters_and_reference(tmp_path):
+    import onnxruntime as ort
+
+    info = vol.train(vol.synth_bars(days=30), tmp_path / "vol-t", "t")
+    d = tmp_path / "vol-t"
+    ref = json.loads((d / "reference.json").read_text())
+    x = np.array([[ref["features"][f] for f in vol.FEATURES]], dtype=np.float32)
+    med = ort.InferenceSession(str(d / "median.onnx")).run(None, {"input": x})[0].ravel()[0]
+    up = ort.InferenceSession(str(d / "upper.onnx")).run(None, {"input": x})[0].ravel()[0]
+    assert abs(med - ref["expected_median"]) < 1e-4
+    assert abs(max(max(up, med) + info["coverage_shift"], med) - ref["expected_upper"]) < 1e-4
+    assert len(info["har_coef"]) == 4 and np.isfinite(info["har_band_shift"])

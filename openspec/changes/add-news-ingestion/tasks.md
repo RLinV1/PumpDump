@@ -9,7 +9,7 @@
 
 - [x] 2.1 Define a `NewsSource` interface and per-source scheduling with independent health reporting
 - [x] 2.2 Add shared token-bucket rate limiter configurable per source
-- [ ] 2.3 Extend the `seen` table dedup to cover news item ids and accession numbers
+- [x] 2.3 Extend the `seen` table dedup to cover news item ids and accession numbers
 - [x] 2.4 Test: one failing source does not stop the others
 
 ## 3. Alpaca News
