@@ -8,6 +8,8 @@ python -m pytest
 python -m pumpml train --synthetic --out models --version v1      # LightGBM + isotonic calibration + flag level
 python -m pumpml evaluate --synthetic --out models --version v1   # time split, CIs, baselines, gate, model card
 python -m pumpml vol-baseline --synthetic                         # HAR-RV and naive last-hour baselines
+python -m pumpml vol-train --synthetic                            # quantile models + coverage shift -> models/vol-dev/
+# owner, real bars (stays local): python -m pumpml vol-train --bars bars.csv --watchlist A B --version 1
 ```
 
 Use `--data labels.csv` (columns: `episode_id, ticker, kind, label, window_end, peak_time`, then the feature names in

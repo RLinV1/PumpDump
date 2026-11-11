@@ -6,8 +6,8 @@
 
 ## 2. Model
 
-- [ ] 2.1 Train LightGBM quantile models at the 50th and 90th percentiles on the feature set
-- [ ] 2.2 Fit the coverage correction on the validation period
+- [x] 2.1 Train LightGBM quantile models at the 50th and 90th percentiles on the feature set. Version 1 trains on HAR terms, volume ratio, time of day and gap only; spread, pump score, chatter ratio, new-account share and the filing/news flag have no free history and are added once it exists. Owner command, from `ml/`: `python -m pumpml vol-train --bars bars.csv --watchlist A B --version 1` (writes `models/vol-1/`, gitignored)
+- [x] 2.2 Fit the coverage correction on the validation period (log-space shift, stored in `model.json` as `coverage_shift`)
 - [ ] 2.3 Export to ONNX and add a `VolatilityScorer` to the JVM scorer module, with the baseline as fallback
 
 ## 3. Evaluation
