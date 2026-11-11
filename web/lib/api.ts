@@ -3,6 +3,8 @@ export const API_URL = "";
 
 export const NOTICE = "Risk signal only. Not investment advice. Pumpwatch is a non-commercial project.";
 
+// Size of a possible next-hour move in percent of price, never a direction. regime arrives lowercase from the API.
+export type Swing = { median: number; upperBand: number; regime: "calm" | "elevated" | "extreme" };
 export type Score = {
   ticker: string;
   score: number;
@@ -10,12 +12,14 @@ export type Score = {
   windowEnd: string;
   computedAt: string;
   staleSources: string[];
+  swing?: Swing | null;
 };
 export type Contributor = { featureGroup: string; delta: number };
 export type Flag = {
   id: number;
   ticker: string;
   raisedAt: string;
+  swing?: Swing | null;
   evidence: {
     score: number;
     modelVersion: string;
@@ -89,13 +93,21 @@ export function hasRawContent(v: unknown): boolean {
   return false;
 }
 
+// Optional: null or absent means no forecast yet.
+export function validSwing(w: Swing | null | undefined): boolean {
+  if (w === undefined || w === null) return true;
+  const ok = (n: number) => typeof n === "number" && Number.isFinite(n) && n >= 0;
+  return typeof w === "object" && ok(w.median) && ok(w.upperBand) && w.upperBand >= w.median
+    && /^(calm|elevated|extreme)$/i.test(String(w.regime));
+}
+
 function validScoreView(s: Score): boolean {
-  return !!(s && !hasRawContent(s) && validTicker(s.ticker) && validScore(s.score) && validDate(s.windowEnd)
+  return !!(s && validSwing(s.swing) && !hasRawContent(s) && validTicker(s.ticker) && validScore(s.score) && validDate(s.windowEnd)
     && validDate(s.computedAt) && typeof s.modelVersion === "string" && strings(s.staleSources));
 }
 
 function validFlag(f: Flag): boolean {
-  return !!(f && !hasRawContent(f) && validTicker(f.ticker) && validCount(f.id) && validDate(f.raisedAt)
+  return !!(f && validSwing(f.swing) && !hasRawContent(f) && validTicker(f.ticker) && validCount(f.id) && validDate(f.raisedAt)
     && f.evidence && validScore(f.evidence.score) && typeof f.evidence.modelVersion === "string"
     && validCount(f.evidence.postCount) && validCount(f.evidence.tradeCount)
     && Array.isArray(f.evidence.topContributors) && f.evidence.topContributors.every((c) => c

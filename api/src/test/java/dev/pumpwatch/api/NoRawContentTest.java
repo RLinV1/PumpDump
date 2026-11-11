@@ -36,7 +36,7 @@ class NoRawContentTest {
     void noPublicResponseTypeHasATextOrAuthorField() {
         var seen = new HashSet<Class<?>>();
         var offenders = new ArrayList<String>();
-        for (Class<?> c : List.of(Envelope.class, Views.ScoreView.class, Views.FlagView.class, Views.Timeline.class,
+        for (Class<?> c : List.of(Envelope.class, Views.ScoreView.class, Views.FlagView.class, dev.pumpwatch.common.Swing.class, Views.Timeline.class,
                 Score.class, Flag.class)) walk(c, seen, offenders);
         assertThat(seen).contains(Flag.Evidence.class, Views.ScorePoint.class, Views.FlagMarker.class);
         assertThat(offenders).isEmpty();
@@ -59,8 +59,9 @@ class NoRawContentTest {
         var ingest = new Ingest(repo);
         var evidence = new Flag.Evidence(70, "rules-1", List.of(new Flag.Contributor("chatter", 30)), 5, 2,
                 new Flag.CatalystCheck(false, T, T, List.of()));
+        var swing = new dev.pumpwatch.common.Swing(1.5, 4.0, dev.pumpwatch.common.Swing.Regime.CALM);
         String flagJson = pollute(Json.toJson(new Flag(1, T, T, "GME", T, evidence)));
-        String scoreJson = pollute(Json.toJson(new Score(SchemaVersions.SCORE, T, T, "GME", T, 55, "rules-1", Set.of("news"), null)));
+        String scoreJson = pollute(Json.toJson(new Score(SchemaVersions.SCORE, T, T, "GME", T, 55, "rules-1", Set.of("news"), swing)));
         ingest.handle(new ConsumerRecord<>("flags", 0, 1L, "GME", flagJson));
         ingest.handle(new ConsumerRecord<>("scores", 0, 1L, "GME", scoreJson));
         var f = ArgumentCaptor.forClass(Flag.class);
@@ -68,11 +69,12 @@ class NoRawContentTest {
         verify(repo).saveFlag(anyString(), anyString(), anyInt(), anyLong(), f.capture());
         verify(repo).saveScore(anyString(), anyString(), anyInt(), anyLong(), s.capture());
 
-        var flagView = new Views.FlagView(1, f.getValue().ticker(), f.getValue().raisedAt(), f.getValue().evidence());
+        var flagView = new Views.FlagView(1, f.getValue().ticker(), f.getValue().raisedAt(), f.getValue().evidence(), s.getValue().swing());
         var scoreView = new Views.ScoreView(s.getValue().ticker(), s.getValue().score(), s.getValue().modelVersion(),
-                s.getValue().windowEnd(), s.getValue().ingestTime(), s.getValue().staleSources());
+                s.getValue().windowEnd(), s.getValue().ingestTime(), s.getValue().staleSources(), s.getValue().swing());
         var timeline = new Views.Timeline("GME", T.minusSeconds(60), T, List.of(new Views.ScorePoint(T, 55, "rules-1")),
                 List.of(new Views.FlagMarker(1, T, 70)));
+        assertThat(scoreView.swing()).isEqualTo(swing);
         // watchlist, flags and timeline bodies, and the SSE event (an Envelope of one FlagView)
         for (Object body : List.of(Envelope.of(List.of(scoreView)), Envelope.of(List.of(flagView)),
                 Envelope.of(timeline), Envelope.of(flagView))) {

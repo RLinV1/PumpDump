@@ -78,3 +78,10 @@ test("mock SSE sends labeled aggregate flags and supports event-id resume", asyn
     finally { await resumedReader.cancel(); }
   } finally { await reader.cancel(); }
 });
+
+test("mock scores and flags carry a valid mock swing", async () => {
+  const { validSwing } = await import("../lib/api.ts");
+  const scores = (await (await fetch(`${base}/api/v1/watchlist`)).json()).data;
+  const flags = (await (await fetch(`${base}/api/v1/flags`)).json()).data;
+  for (const row of [...scores, ...flags]) assert.ok(row.swing && validSwing(row.swing));
+});

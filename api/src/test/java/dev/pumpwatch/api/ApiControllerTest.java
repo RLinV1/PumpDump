@@ -55,6 +55,18 @@ class ApiControllerTest {
     }
 
     @Test
+    void watchlistCarriesSwingAndNullWhenNoForecast() throws Exception {
+        var swing = new dev.pumpwatch.common.Swing(1.5, 4.0, dev.pumpwatch.common.Swing.Regime.ELEVATED);
+        when(repo.latestScores("live")).thenReturn(List.of(
+                new ScoreView("GME", 55, "rules-1", T, T, Set.of(), swing), new ScoreView("AMC", 40, "rules-1", T, T, Set.of())));
+        mvc.perform(get("/api/v1/watchlist"))
+                .andExpect(jsonPath("$.data[0].swing.median").value(1.5))
+                .andExpect(jsonPath("$.data[0].swing.upperBand").value(4.0))
+                .andExpect(jsonPath("$.data[0].swing.regime").value("elevated"))
+                .andExpect(jsonPath("$.data[1].swing").doesNotExist());
+    }
+
+    @Test
     void liveEndpointsNeverReadAReplayRun() throws Exception {
         mvc.perform(get("/api/v1/flags")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/watchlist")).andExpect(status().isOk());
