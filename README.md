@@ -268,6 +268,19 @@ Reddit ingestion, a curated labeled dataset, learned pump-model serving, learned
 volatility surfaces and the cloud proof remain incomplete. The Python training
 workflow exists; synthetic training does not establish predictive performance.
 
+Milestone status, following [docs/roadmap.md](docs/roadmap.md) (checked 2026-11-10 against the GitHub milestones):
+
+| Milestone | Status |
+| --- | --- |
+| M1 Skeleton and contracts | Done |
+| M2 Ingestion and replay | Nearly done: only #23 week-1 checks and wrap-up is open |
+| M3 News and filings | Nearly done: only #30 wrap-up is open (source terms and the end-to-end demo) |
+| M4 Rules pipeline end to end | In progress: #33, #43 and #44 are open |
+| M5 Labels and first model | Not done: dataset, training and serving open |
+| M6 Volatility forecast | In progress: baseline done, model and evaluation open |
+| M7 API, alerts and live web | Mostly done: #6 web and #40 surfaces are open |
+| M8 Cloud smoke test | Not started (owner runs any cloud step) |
+
 This documentation describes the current checkout, including work submitted in open
 PRs. The [OpenSpec](https://github.com/Fission-AI/OpenSpec) plans live in `openspec/changes/`:
 
