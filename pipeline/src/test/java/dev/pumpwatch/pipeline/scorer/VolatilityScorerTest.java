@@ -68,8 +68,9 @@ class VolatilityScorerTest {
         assertThat(s.modelVersion()).isEqualTo("har-default");
         Swing sw = s.swing(refFeatures());
         double median = VolatilityScorer.DEFAULT_HAR[3] * refFeatures().values().get("rvd");
-        assertThat(sw.median()).isCloseTo(pct(Math.log(median)), EPS);
-        assertThat(sw.upperBand()).isCloseTo(pct(Math.log(median) + VolatilityScorer.DEFAULT_BAND_SHIFT), EPS);
+        assertThat(sw.median()).isCloseTo(pct(median), EPS);
+        assertThat(sw.upperBand()).isCloseTo(pct(median * VolatilityScorer.DEFAULT_BAND_FACTOR), EPS);
+        assertThat(sw.median()).isPositive();
     }
 
     @Test
@@ -97,15 +98,24 @@ class VolatilityScorerTest {
     private static void assertFittedBaseline(Path dir) throws IOException {
         VolatilityScorer s = VolatilityScorer.orBaseline(dir.toString());
         assertThat(s.modelVersion()).startsWith("har-").isNotEqualTo("har-default");
-        JsonNode info = json(dir, "model.json");
-        Features f = refFeatures();
-        double h = info.get("har_coef").get(0).asDouble();
-        String[] cols = {"rv5", "rv30", "rvd"};
-        for (int i = 0; i < 3; i++) h += info.get("har_coef").get(i + 1).asDouble() * f.values().get(cols[i]);
-        double m = Math.log(Math.max(h, 1e-6));
-        Swing sw = s.swing(f);
-        assertThat(sw.median()).isCloseTo(pct(m), EPS);
-        assertThat(sw.upperBand()).isCloseTo(pct(m + info.get("har_band_shift").asDouble()), EPS);
+        JsonNode ref = json(dir, "reference.json");
+        Swing sw = s.swing(refFeatures());
+        // expected values come from vol.py HarRV.predict (make_vol_fixture.py), in log(high/low) like the target
+        assertThat(sw.median()).isCloseTo(pct(ref.get("expected_har_median").asDouble()), EPS);
+        assertThat(sw.upperBand()).isCloseTo(pct(ref.get("expected_har_upper").asDouble()), EPS);
+        assertThat(sw.median()).isPositive();
+        assertThat(sw.upperBand()).isGreaterThanOrEqualTo(sw.median());
+    }
+
+    @Test
+    void modelAndFallbackSwingsArePositivePercentOfPriceInTheSameUnit() throws Exception {
+        Swing onnx = VolatilityScorer.orBaseline(FIXTURE.toString()).swing(refFeatures());
+        Swing har = VolatilityScorer.orBaseline("").swing(refFeatures());
+        for (Swing sw : new Swing[] {onnx, har}) {
+            assertThat(sw.median()).isPositive().isLessThan(10); // percent of price, a fraction of a percent here
+            assertThat(sw.upperBand()).isGreaterThanOrEqualTo(sw.median());
+        }
+        assertThat(har.median() / onnx.median()).isBetween(0.1, 10.0);
     }
 
     @Test

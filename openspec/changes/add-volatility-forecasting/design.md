@@ -31,6 +31,14 @@ Interim rule in the JVM (`VolatilityScorer`): the pipeline holds no per-ticker h
 ### Serving and fallback
 Both boosters are exported to `median.onnx` and `upper.onnx` with a `reference.json` self-check; the coverage shift is applied in the JVM (`max(max(upper, median) + shift, median)`). If the directory is absent, corrupt or fails the self-check, the JVM serves the HAR-RV baseline: fitted coefficients and a 90 percent band shift from `model.json` when readable, otherwise a documented default (hourly Brownian range at the day's volatility, band x1.5). With no one-day realized volatility available there is no forecast (`swing` is null), which is the "not enough history" case.
 
+### Live features
+The pipeline builds the six model inputs exactly as `ml/pumpml/vol.py build()` defines them, from one-minute bars (`Bars`, kept per ticker in the `vol-bars` store and fed by closed 15 second panes). `rv5`, `rv30` and `rvd` are square roots (volatilities, not variances) of the summed squared one-bar log-close returns over the last 5, 30 and 390 bars; `vol_ratio` is the mean volume of the last 30 bars over the last 390 (not the window-vs-baseline `volumeRatio`, which only the rule scorer and pump model use); `tod` is the start minute of the latest complete bar in New York time; `gap` is `log(first open of the day / previous day's last close)`, 0 when there is no previous day. Decisions:
+- Windows count bars, not clock minutes, as vol.py does (a minute with no trade has no bar), so a thin ticker needs more than 6.5 hours of wall time to fill 390 bars.
+- `rv5`/`rv30` appear after 6/31 bars, `rvd` and `vol_ratio` after 391 bars. Until `rvd` exists `swing` is null, which is the "not enough history" case.
+- Day boundaries are America/New_York calendar dates; the previous close is the last bar close of the prior date with bars.
+- A bar's open is the last trade of its first traded second (panes keep one price per second), so it can differ slightly from the exact first trade; the close is exact to the second.
+- The features are added to every window length's output; the scorer reads the 5 minute scoring window's copy.
+
 ### Calibration
 Quantile outputs are checked by coverage: the 90th percentile band must contain the realized range about 90 percent of the time on held-out data. If it does not, the displayed band is widened by a fitted factor.
 

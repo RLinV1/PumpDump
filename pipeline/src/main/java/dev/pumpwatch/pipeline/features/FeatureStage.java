@@ -40,6 +40,9 @@ import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.processor.api.FixedKeyProcessor;
 import org.apache.kafka.streams.processor.api.FixedKeyProcessorContext;
 import org.apache.kafka.streams.processor.api.FixedKeyRecord;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.kafka.streams.state.TimestampedKeyValueStore;
@@ -65,6 +68,7 @@ public final class FeatureStage {
     public static final Duration GRACE = Duration.ofMinutes(2);
     static final String CTX_STORE = "ctx";
     static final String ANOMALY_STORE = "anomaly-history";
+    static final String BARS_STORE = "vol-bars";
     private static final Logger log = LoggerFactory.getLogger(FeatureStage.class);
     private static final Serde<Agg> AGG = jsonSerde(Agg.class);
     private static final Serde<Ctx> CTX = jsonSerde(Ctx.class);
@@ -87,6 +91,8 @@ public final class FeatureStage {
         Consumed<String, String> consumed =
                 Consumed.with(Serdes.String(), Serdes.String()).withTimestampExtractor(new EventTime());
         b.addStateStore(Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(ANOMALY_STORE), Serdes.String(),
+                Serdes.String()).withLoggingEnabled(Map.of()));
+        b.addStateStore(Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(BARS_STORE), Serdes.String(),
                 Serdes.String()).withLoggingEnabled(Map.of()));
         KStream<String, Agg> m = input(b, Topics.MENTIONS, consumed, meters).flatMapValues(FeatureStage::mentionDelta);
         KStream<String, Agg> t = input(b, Topics.TICKS, consumed, meters).flatMapValues(FeatureStage::tickDelta);
@@ -114,6 +120,7 @@ public final class FeatureStage {
                 .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()).withName("final-pane"))
                 .toStream((w, agg) -> w.key())
                 .repartition(Repartitioned.<String, Agg>with(Serdes.String(), AGG).withName("panes"));
+        panes.process(BarBuilder::new, BARS_STORE);
         for (int minutes : windowMinutes) {
             // no grace here: panes already waited for late data, and they close in event-time order
             panes.groupByKey(Grouped.with(Serdes.String(), AGG))
@@ -124,7 +131,7 @@ public final class FeatureStage {
                     .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded())
                             .withName("final-" + minutes + "m"))
                     .toStream()
-                    .processValues(() -> new WithContext(minutes, baselineMentionsPerMinute), CTX_STORE, ANOMALY_STORE)
+                    .processValues(() -> new WithContext(minutes, baselineMentionsPerMinute), CTX_STORE, ANOMALY_STORE, BARS_STORE)
                     .map((w, f) -> KeyValue.pair(w.key(), Json.toJson(f)))
                     .to(Topics.FEATURES, Produced.with(Serdes.String(), Serdes.String()));
         }
@@ -142,7 +149,7 @@ public final class FeatureStage {
         private final double baselinePerMinute;
         private FixedKeyProcessorContext<Windowed<String>, Features> context;
         private TimestampedKeyValueStore<String, Ctx> store;
-        private KeyValueStore<String, String> anomaly;
+        private KeyValueStore<String, String> anomaly, barStore;
 
         WithContext(int minutes, double baselinePerMinute) {
             this.minutes = minutes;
@@ -154,6 +161,7 @@ public final class FeatureStage {
             this.context = context;
             this.store = context.getStateStore(CTX_STORE);
             this.anomaly = context.getStateStore(ANOMALY_STORE);
+            this.barStore = context.getStateStore(BARS_STORE);
         }
 
         @Override
@@ -169,8 +177,28 @@ public final class FeatureStage {
             Map<String, Double> values = new HashMap<>(f.values());
             values.putAll(h.zScores(f.values()));
             anomaly.put(key, Json.toJson(h.observe(f.values())));
+            String bars = barStore.get(r.key().key());
+            if (bars != null) values.putAll(Json.fromJson(bars, Bars.class).features(r.key().window().endTime()));
             context.forward(r.withValue(new Features(f.schemaVersion(), f.eventTime(), f.ingestTime(), f.ticker(),
                     f.windowStart(), f.windowEnd(), f.windowMinutes(), values, f.staleSources())));
+        }
+    }
+
+    /** Folds each closed pane into the ticker's one-minute bars, which the window stage reads for the volatility inputs. */
+    private static final class BarBuilder implements Processor<String, Agg, Void, Void> {
+        private KeyValueStore<String, String> store;
+
+        @Override
+        public void init(ProcessorContext<Void, Void> context) {
+            this.store = context.getStateStore(BARS_STORE);
+        }
+
+        @Override
+        public void process(Record<String, Agg> r) {
+            String stored = store.get(r.key());
+            Bars before = stored == null ? Bars.EMPTY : Json.fromJson(stored, Bars.class);
+            Bars after = before.add(r.value());
+            if (after != before) store.put(r.key(), Json.toJson(after));
         }
     }
 

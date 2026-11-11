@@ -162,14 +162,14 @@ def train(bars: pd.DataFrame, out_dir: Path, version: str = "dev") -> dict:
     med_b, up_b = (_fit_q(tr, a) for a in QUANTILES.values())
     shift = fit_shift(med_b, up_b, va)
     har = HarRV().fit(tr)  # the JVM fallback when the ONNX models cannot be served
-    har_resid = np.sort(va["target"].to_numpy() - np.log(har.predict(va)))
+    har_resid = np.sort(va["target"].to_numpy() - har.predict(va))  # both in log-range units
     har_shift = float(har_resid[min(int(np.ceil((len(har_resid) + 1) * COVERAGE)), len(har_resid)) - 1])
     out_dir.mkdir(parents=True, exist_ok=True)
     med_b.save_model(str(out_dir / "median.txt"))
     up_b.save_model(str(out_dir / "upper.txt"))
     info = {"version": version, "features": FEATURES, "quantiles": QUANTILES, "target": "log(high/low) over next 60 min",
             "coverage_shift": shift, "coverage_level": COVERAGE,
-            "har_coef": har.coef.tolist(), "har_band_shift": har_shift,  # [intercept, rv5, rv30, rvd]; band = exp(log(har) + shift)
+            "har_coef": har.coef.tolist(), "har_band_shift": har_shift,  # [intercept, rv5, rv30, rvd]; band = max(har + shift, har), same units as the boosters
             "validation_coverage_raw": coverage(va["target"], predict_band(med_b, up_b, 0.0, va)[1]),
             "validation_coverage_corrected": coverage(va["target"], predict_band(med_b, up_b, shift, va)[1]),
             "rows": {"train": len(tr), "validation": len(va), "test": len(te)},

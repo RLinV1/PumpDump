@@ -83,3 +83,4 @@ def test_onnx_export_matches_boosters_and_reference(tmp_path):
     assert abs(med - ref["expected_median"]) < 1e-4
     assert abs(max(max(up, med) + info["coverage_shift"], med) - ref["expected_upper"]) < 1e-4
     assert len(info["har_coef"]) == 4 and np.isfinite(info["har_band_shift"])
+    assert abs(info["har_band_shift"]) < 1  # a log-range shift (the old log(log-range) residual gave about 5)
