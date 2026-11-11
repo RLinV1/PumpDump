@@ -26,6 +26,11 @@ LightGBM quantile regression at the 50th and 90th percentiles, giving a median s
 ### Regime
 The regime compares the median forecast with the ticker's own trailing 20-day distribution of hourly ranges: below the 50th percentile is calm, 50th to 90th is elevated, above the 90th is extreme. This keeps a penny stock and a large-cap from sharing one absolute scale.
 
+Interim rule in the JVM (`VolatilityScorer`): the pipeline holds no per-ticker history of hourly ranges yet, so the regime compares the median forecast with the range a driftless random walk would show at the ticker's own one-day realized volatility (`sigma_hour = rvd * sqrt(60/390)`). Below 1.5 `sigma_hour` (the median of that range) is calm, 1.5 to 2.3 (its 90th percentile) is elevated, above is extreme. Replace it with the trailing 20-day distribution above once that history is available.
+
+### Serving and fallback
+Both boosters are exported to `median.onnx` and `upper.onnx` with a `reference.json` self-check; the coverage shift is applied in the JVM (`max(max(upper, median) + shift, median)`). If the directory is absent, corrupt or fails the self-check, the JVM serves the HAR-RV baseline: fitted coefficients and a 90 percent band shift from `model.json` when readable, otherwise a documented default (hourly Brownian range at the day's volatility, band x1.5). With no one-day realized volatility available there is no forecast (`swing` is null), which is the "not enough history" case.
+
 ### Calibration
 Quantile outputs are checked by coverage: the 90th percentile band must contain the realized range about 90 percent of the time on held-out data. If it does not, the displayed band is widened by a fitted factor.
 

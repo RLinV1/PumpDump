@@ -161,14 +161,36 @@ def train(bars: pd.DataFrame, out_dir: Path, version: str = "dev") -> dict:
         raise SystemExit("not enough bars for a train / validation / test split")
     med_b, up_b = (_fit_q(tr, a) for a in QUANTILES.values())
     shift = fit_shift(med_b, up_b, va)
+    har = HarRV().fit(tr)  # the JVM fallback when the ONNX models cannot be served
+    har_resid = np.sort(va["target"].to_numpy() - np.log(har.predict(va)))
+    har_shift = float(har_resid[min(int(np.ceil((len(har_resid) + 1) * COVERAGE)), len(har_resid)) - 1])
     out_dir.mkdir(parents=True, exist_ok=True)
     med_b.save_model(str(out_dir / "median.txt"))
     up_b.save_model(str(out_dir / "upper.txt"))
     info = {"version": version, "features": FEATURES, "quantiles": QUANTILES, "target": "log(high/low) over next 60 min",
             "coverage_shift": shift, "coverage_level": COVERAGE,
+            "har_coef": har.coef.tolist(), "har_band_shift": har_shift,  # [intercept, rv5, rv30, rvd]; band = exp(log(har) + shift)
             "validation_coverage_raw": coverage(va["target"], predict_band(med_b, up_b, 0.0, va)[1]),
             "validation_coverage_corrected": coverage(va["target"], predict_band(med_b, up_b, shift, va)[1]),
             "rows": {"train": len(tr), "validation": len(va), "test": len(te)},
             "trained_on": datetime.date.today().isoformat()}
     (out_dir / "model.json").write_text(json.dumps(info, indent=2))
+    export_onnx(med_b, up_b, shift, va, out_dir)
     return info
+
+
+def export_onnx(median_b, upper_b, shift: float, sample: pd.DataFrame, out_dir: Path) -> None:
+    """median.onnx and upper.onnx = the raw boosters (log range). The corrected band, max(max(upper, median) + shift,
+    median), is applied in the JVM from model.json, like the pump model's calibration. reference.json = one input and
+    the expected log-space median and corrected upper band for the startup self-check."""
+    from onnxmltools import convert_lightgbm
+    from onnxmltools.convert.common.data_types import FloatTensorType
+
+    for name, b in (("median", median_b), ("upper", upper_b)):
+        m = convert_lightgbm(b, initial_types=[("input", FloatTensorType([None, len(FEATURES)]))], target_opset=15)
+        (out_dir / f"{name}.onnx").write_bytes(m.SerializeToString())
+    row = sample.iloc[[len(sample) // 2]]
+    med, up = predict_band(median_b, upper_b, shift, row)
+    ref = {"features": {f: float(row[f].iloc[0]) for f in FEATURES},
+           "expected_median": float(med[0]), "expected_upper": float(up[0])}
+    (out_dir / "reference.json").write_text(json.dumps(ref, indent=2))
