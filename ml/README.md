@@ -25,17 +25,18 @@ The model card is written only when the promotion gate passes.
 Promotional-language classifier (offline only, nothing serves it yet):
 
 ```
-pip install -r requirements-embed.txt
+pip install -r requirements-embed.txt   # default and --finetune; --tfidf needs only requirements.txt
 # download the MIT-licensed PumpSense corpus yourself (github.com/AhmedMahrous00/icbc_2026_reproducibility, chat_data/), keep it out of git
 python -m pumpml promo-train --data <chat_data folder> --version v1   # -> models/promo-v1/{model.json,model-card.md}
 ```
 
 It separates pump-announcement messages from other chatter in crypto pump groups, with a time split and bootstrap intervals. It is not
-validated on stock posts. Raw text is never written; the default model is 384 coefficients. See the model card for licenses.
+validated on stock posts. The default model is 384 coefficients and stores no text. See the model card for licenses.
 
-Add `--tfidf` for TF-IDF word 1-2 grams + logistic regression instead (CPU, no embedding model; vocabulary saved as JSON). It excludes `--finetune`.
+Add `--tfidf` for TF-IDF word 1-2 grams + logistic regression instead (CPU, base `requirements.txt` only; vocabulary saved as JSON).
+That vocabulary can hold one- or two-word messages verbatim, so keep the TF-IDF `model.json` local like the corpus. It excludes `--finetune`.
 
-Add `--finetune` to fine-tune the MiniLM encoder with a linear head instead (needs a CUDA GPU; it exits rather than fall back to CPU).
+Add `--finetune` to fine-tune the MiniLM encoder with a linear head instead (training needs a CUDA GPU and exits rather than fall back to CPU; scoring uses CPU when no GPU is present).
 It saves the weights under `models/promo-<v>/encoder/` (gitignored) and `model.json` gets `"kind": "finetuned"`; `score()` loads either kind.
 
 Embedding 170k messages takes about 40 minutes on CPU. sentence-transformers uses the GPU when PyTorch sees one, so install the

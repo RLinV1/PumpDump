@@ -19,7 +19,7 @@ def main(argv=None):
         s.add_argument("--version", default="dev")
         if name == "evaluate":
             s.add_argument("--current", help="model dir of the currently promoted model")
-    pr = sub.add_parser("promo-train", help="promotional-language classifier; needs requirements-embed.txt")
+    pr = sub.add_parser("promo-train", help="promotional-language classifier; default and --finetune need requirements-embed.txt, --tfidf needs only requirements.txt")
     pr.add_argument("--data", required=True, help="folder of PumpSense chat_data CSVs (date, text, Pump); stays local")
     pr.add_argument("--out", default="models")
     pr.add_argument("--version", default="dev")

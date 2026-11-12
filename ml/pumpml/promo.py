@@ -5,7 +5,8 @@ message, 0 = every other message in the same pump-organising groups (countdowns,
 pump-announcement language in crypto groups, not equity promotion in general; see LIMITS.
 
 Raw text is read, embedded and dropped. Only the 384 coefficients, the metrics and the card are written, under
-the gitignored models/ directory. Nothing here stores or prints a message.
+the gitignored models/ directory. The --tfidf model is the exception: its vocabulary of word 1-2 grams can hold
+short messages verbatim, so treat its model.json like the corpus and keep it local.
 """
 import ast
 import datetime
@@ -276,7 +277,9 @@ def write_card(out: Path, name: str, info: dict) -> Path:
             f"The encoder {EMBED_MODEL} was fine-tuned end to end with a linear head on mean-pooled tokens."
             if "epoch" in info else "Logistic regression on TF-IDF word 1-2 grams; no pretrained model is used."
             if info.get("kind") == "tfidf" else f"Logistic regression on sentence embeddings; embeddings come from {EMBED_MODEL}."), "",
-        "## Data", f"- {DATASET}; raw text is not stored or committed.",
+        "## Data", f"- {DATASET}; raw text is not committed." + (
+            " The TF-IDF model.json stores word 1-2 grams, so it can contain short messages verbatim; keep it local like the corpus."
+            if info.get("kind") == "tfidf" else " Raw text is not stored."),
         *[f"- {k}: {s[k]} messages ({pos[k]} pump announcements), {per[k][0]} to {per[k][1]}" for k in s],
         (f"- Fine-tuning: up to {info['epochs']} epochs, lr {info['lr']}, batch {info['batch']}, max length {info['max_len']}, "
          f"{info['neg_per_pos']} sampled negatives per positive each epoch; epoch {info['epoch']} kept (best validation PR-AUC), "
@@ -286,8 +289,9 @@ def write_card(out: Path, name: str, info: dict) -> Path:
         "| precision | recall | PR-AUC |", "| --- | --- | --- |", f"| {cell('precision')} | {cell('recall')} | {cell('pr_auc')} |", "",
         "Values show the estimate with a 95% bootstrap interval over messages.", "",
         "## Known limits", *[f"- {x}" for x in LIMITS],
-        *(["- The saved vocabulary holds word n-grams from the corpus (min_df=2), not whole messages. The model keys on crypto "
-           "exchange words, so it will likely transfer worse to stock posts."] if info.get("kind") == "tfidf" else []), "",
+        *(["- The saved vocabulary holds word 1-2 grams seen in at least two training messages; a one- or two-word message can "
+           "appear in it verbatim. The model keys on crypto exchange words, so it will likely transfer worse to stock posts."]
+          if info.get("kind") == "tfidf" else []), "",
         "## Licenses", f"- model {name}: {MODEL_LICENSE}", *([] if info.get("kind") == "tfidf" else [f"- embedding model {EMBED_MODEL.split('/')[-1]}: {EMBED_LICENSE}"]),
         f"- dataset PumpSense Telegram corpus: {DATASET_LICENSE}",
         *[f"- {n} {_ver(n)}: {lic}" for n, lic in DEPS.items()],
@@ -324,7 +328,9 @@ def score(model_json: Path, texts, embed=embed_texts, device=None) -> np.ndarray
         return 1 / (1 + np.exp(-z))
     if m.get("kind") == "finetuned":
         from transformers import AutoTokenizer
-        d, enc_dir = _device(device), Path(model_json).parent / m["encoder"]
+        import torch
+        d = device or ("cuda" if torch.cuda.is_available() else "cpu")  # only training requires the GPU
+        enc_dir = Path(model_json).parent / m["encoder"]
         return _predict(_load_net(enc_dir, m["coef"], m["intercept"], d), AutoTokenizer.from_pretrained(enc_dir), texts, d, m["max_length"])
     z = embed(texts) @ np.array(m["coef"]) + m["intercept"]
     return 1 / (1 + np.exp(-z))
