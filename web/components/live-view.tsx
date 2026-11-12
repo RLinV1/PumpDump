@@ -286,7 +286,8 @@ export function LiveView() {
   const savedRaw = useSyncExternalStore(subscribeWatchlist, readWatchlist, () => null);
   const saved = useMemo(() => parseWatchlist(savedRaw), [savedRaw]);
   const symbols = useMemo(() => saved ?? (w.data ?? []).map((score) => score.ticker), [saved, w.data]);
-  const quotePath = symbols.length ? `/api/v1/quotes?symbols=${[...symbols].sort().join(",")}` : "";
+  // The quotes endpoint takes at most 30 symbols (MAX_QUOTE_SYMBOLS); keep the first 30 in watchlist order.
+  const quotePath = symbols.length ? `/api/v1/quotes?symbols=${symbols.slice(0, 30).sort().join(",")}` : "";
   const q = useApi<Quotes>(quotePath, 15000, 0, undefined, refreshKey);
   const movers = useApi<MarketMovers>("/api/v1/market-movers", 60000, 0, undefined, refreshKey);
   const lookup = useLookup();
