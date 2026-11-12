@@ -91,4 +91,33 @@ class SseHubTest {
         assertThat(timed.clientCount()).isEqualTo(1);
         assertThat(emitter).isNotNull();
     }
+
+    @Test
+    void viewersOfOneRunShareOneQueryPerTick() {
+        var wide = new SseHub(repo, new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 100, 50));
+        for (int i = 0; i < 20; i++) wide.subscribe("live", 5L, "c");
+        wide.tick();
+        verify(repo, org.mockito.Mockito.times(1)).flagsAfter("live", 5, SseHub.BATCH);
+    }
+
+    @Test
+    void sharedQueryStartsAtTheSlowestCursorAndEachViewerKeepsItsOwn() {
+        when(repo.flagsAfter("live", 5, SseHub.BATCH)).thenReturn(List.of(flag(6), flag(7)));
+        when(repo.flagsAfter("live", 7, SseHub.BATCH)).thenReturn(List.of());
+        hub.subscribe("live", 5L, "a");
+        hub.subscribe("live", 6L, "b");
+        hub.tick();
+        hub.tick(); // both cursors are now 7: the next shared query starts there
+        verify(repo).flagsAfter("live", 5, SseHub.BATCH);
+        verify(repo).flagsAfter("live", 7, SseHub.BATCH);
+    }
+
+    @Test
+    void differentRunsGetOneQueryEach() {
+        hub.subscribe("live", 0L, "a");
+        hub.subscribe("r2", 0L, "b");
+        hub.tick();
+        verify(repo).flagsAfter("live", 0, SseHub.BATCH);
+        verify(repo).flagsAfter("r2", 0, SseHub.BATCH);
+    }
 }

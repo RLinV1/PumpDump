@@ -28,7 +28,7 @@ api:
   burst: 30
   heartbeat: PT15S
   poll-interval: PT1S
-  max-streams: 100
+  max-streams: 1000
 alerts:
   enabled: ${ALERTS_ENABLED:false}
   webhook-urls: ${ALERTS_WEBHOOK_URLS:}
