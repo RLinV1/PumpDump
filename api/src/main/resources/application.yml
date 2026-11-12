@@ -1,4 +1,8 @@
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 4 # a hung webhook must not stall the SSE tick
   application:
     name: pumpwatch-api
   kafka:
