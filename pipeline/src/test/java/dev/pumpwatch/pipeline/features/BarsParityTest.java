@@ -111,7 +111,7 @@ class BarsParityTest {
 
     private static Score lastScore(boolean history) {
         PipelineProperties props = new PipelineProperties(List.of("GME"), 5, 0.1, 60, Duration.ofMinutes(30), 50,
-                Duration.ofHours(1), "rules", Duration.ofMinutes(5), "", "");
+                Duration.ofHours(1), "rules", Duration.ofMinutes(5), "", "", List.of(5));
         StreamsBuilder b = new StreamsBuilder();
         PipelineApplication.build(b, props, VolatilityScorer.orBaseline("").on(new RuleScorer()), List.of(5));
         try (var d = Fx.driver(b.build())) {

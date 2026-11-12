@@ -51,7 +51,7 @@ public class PipelineApplication {
     @Bean
     Topology topology(StreamsBuilder builder, PipelineProperties p, Scorer scorer, ScorerHealth health,
                       MeterRegistry registry) {
-        build(builder, p, scorer, FeatureStage.WINDOW_MINUTES, registry, health);
+        build(builder, p, scorer, p.windowMinutes(), registry, health);
         return builder.build();
     }
 
@@ -62,7 +62,7 @@ public class PipelineApplication {
     }
 
     public static void build(StreamsBuilder b, PipelineProperties p, Scorer scorer) {
-        build(b, p, scorer, FeatureStage.WINDOW_MINUTES);
+        build(b, p, scorer, p.windowMinutes());
     }
 
     public static void build(StreamsBuilder b, PipelineProperties p, Scorer scorer, List<Integer> windowMinutes) {
