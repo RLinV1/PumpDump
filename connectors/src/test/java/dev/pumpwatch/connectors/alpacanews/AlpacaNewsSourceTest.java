@@ -189,6 +189,17 @@ class AlpacaNewsSourceTest {
     }
 
     @Test
+    void malformedArticleIsSkippedWithoutClosingTheConnection() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[{\"T\":\"n\",\"id\":9,\"headline\":\"x\",\"created_at\":\"bad\",\"symbols\":[]},"
+                + news(2, "Two", "2026-01-02T15:00:02Z", "GME") + "]"));
+        source(s, NO_HISTORY, true, List.of()).run(sink);
+        assertThat(s.closes).isEqualTo(1); // only the run's own cleanup close after the script ended
+        assertThat(articles()).extracting(ArticleRecord::itemId).containsExactly("2");
+    }
+
+    @Test
     void gapFillFollowsPagination() throws Exception {
         var s = new FakeStream();
         s.connections.add(List.of());

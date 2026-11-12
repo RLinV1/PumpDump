@@ -196,7 +196,14 @@ public final class AlpacaConnector implements Connector {
         for (JsonNode m : root.isArray() ? root : List.of(root)) {
             switch (m.path("T").asText()) {
                 case "t" -> {
-                    publish(Trade.parse(m, m.get("S").asText()));
+                    Trade t;
+                    try {
+                        t = Trade.parse(m, m.get("S").asText());
+                    } catch (RuntimeException e) {
+                        log.warn("Alpaca trade skipped: {}", e.toString());
+                        continue;
+                    }
+                    publish(t);
                     publisher.markFetched();
                 }
                 case "success" -> {

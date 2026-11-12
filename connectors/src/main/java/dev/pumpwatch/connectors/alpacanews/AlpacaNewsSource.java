@@ -188,7 +188,13 @@ public final class AlpacaNewsSource implements NewsSource {
     }
 
     private void publish(NewsSink sink, JsonNode n) {
-        var a = normalize(n, clock.instant());
+        ArticleRecord a;
+        try {
+            a = normalize(n, clock.instant());
+        } catch (RuntimeException e) {
+            log.warn("Alpaca News article skipped: {}", e.toString());
+            return;
+        }
         sink.publish(a);
         if (lastSeen == null || a.eventTime().isAfter(lastSeen)) lastSeen = a.eventTime(); // only after a successful publish
     }

@@ -201,6 +201,17 @@ class AlpacaConnectorTest {
     }
 
     @Test
+    void malformedTradeIsSkippedWithoutClosingTheConnection() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[{\"T\":\"t\",\"S\":\"GME\",\"s\":1,\"t\":\"bad\"}," // no price, bad time
+                + trade("GME", "2", 1, "2026-01-02T15:00:02Z", 2) + "]"));
+        connector(s, NO_HISTORY, List.of("GME")).session();
+        assertThat(s.closes).isEqualTo(1); // only the session's own cleanup close after the script ended
+        assertThat(ticks()).extracting(x -> x.eventTime().toString()).containsExactly("2026-01-02T15:00:02Z");
+    }
+
+    @Test
     void savedPositionStartsAGapFillAndItIsBoundedTo24Hours() throws Exception {
         var s = new FakeStream();
         s.connections.add(List.of());
