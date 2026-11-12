@@ -21,6 +21,8 @@ terraform -chdir=infra init && terraform -chdir=infra apply
 deploy/up.sh                                                # copies repo and .env, starts compose, waits for ready
 ```
 
+SSH and RDP are denied from everywhere except your `/32`. GCP's default network ships rules that allow them from the whole internet, so Terraform adds a deny rule that overrides those; GCP's browser SSH button does not work as a result. Plain `ssh` (and `deploy/up.sh`) from your address does.
+
 Add `billing_account` to `terraform.tfvars` to create the budget alarm (default 25 USD).
 
 ## Verify

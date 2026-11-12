@@ -102,9 +102,9 @@ flowchart LR
     Flagger --> Flags[flags]
 ```
 
-The feature stage uses 1-, 5- and 30-minute event-time hopping windows, advancing
-every 15 seconds with a two-minute grace period. The default scorer reads five-minute
-features. Social features describe chatter/duplication, market features describe
+The feature stage builds event-time hopping windows of the lengths in
+`pipeline.window-minutes` (default `[5]`), advancing every 15 seconds with a two-minute
+grace period. The default scorer reads five-minute features. Social features describe chatter/duplication, market features describe
 returns/trading activity, and catalysts describe news/filings. Stream progress and
 late arrivals affect when windows update.
 
@@ -120,11 +120,20 @@ Streams; it does not mean every external fetch or webhook happens exactly once.
 ### Store and serve results
 
 The API's `Ingest` listener validates scores/flags and inserts into `api_scores` and
-`api_flags`. Topic/partition/offset identities make repeated delivery idempotent
-at this boundary. Latest-score queries order by the event window, not arrival time.
+`api_flags`. Rows are unique by their data, (run, ticker, window end, model) for scores
+and (run, ticker, raised at) for flags, so repeated delivery is idempotent at this
+boundary even after Kafka offsets restart. Latest-score queries order by the event window,
+not arrival time, and read only the run's last day of scores.
 
-REST serves latest scores, timelines and recent flags. `SseHub` polls stored flags,
-emits SSE events/heartbeats and supports `Last-Event-ID` resume. The browser also
+REST serves latest scores, timelines and recent flags. `SseHub` polls stored flags once a
+second with one query per run and cursor shared by every viewer at that cursor, emits SSE
+events/heartbeats and supports `Last-Event-ID` resume. `api.max-streams` caps open streams
+(default 1000). Scheduled jobs (SSE polling, alerts, retention) share a four-thread pool, so
+a slow webhook cannot stall the stream.
+
+Daily retention jobs delete live `api_scores` older than 7 days, `seen_items` older than
+7 days and `recorded_events` older than `replay.retention-days` (default 30; 0 keeps all
+recordings). Replay-run scores are kept. The browser also
 refreshes REST history on stream connection/reconnection to recover gaps and retries
 failed reads.
 
@@ -284,8 +293,8 @@ Bluesky connector (`PostRecord` schema 2) to a hashed author key, linked tickers
 dropped unless `pumpwatch.sources.bluesky.retain-text` is set (default off). When Jetstream reports a delete for a post
 the connector already published, it publishes a `PostDeletion` marker on `raw-posts` under the post's key; the recorder
 deletes that post's `recorded_events` rows. Not purged: `mentions` records on Kafka (post id, hashed author, SimHash; no
-text) until topic retention expires, and the `seen_items` dedupe row (post identifier only). Retention is a flag, not a
-number of days. Source retention/training permissions are tracked in the [source register](../data/sources.md).
+text) until topic retention expires, and the `seen_items` dedupe row (post identifier only) until the daily 7-day
+purge. Raw-text retention is a flag, not a number of days. Source retention/training permissions are tracked in the [source register](../data/sources.md).
 
 Compose is a single-broker development setup. Cloud deployment, production availability,
 learned model serving and a persistent historical sentiment archive are not supplied by this architecture.

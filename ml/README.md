@@ -20,7 +20,9 @@ Use `--data labels.csv` (columns: `episode_id, ticker, kind, label, window_end, 
 (one-minute bars: `ticker, timestamp, open, high, low, close, volume`).
 
 `--synthetic` data is made up: it proves the code runs, not that a model works. Outputs go to `models/` (gitignored).
-The model card is written only when the promotion gate passes.
+The model card is written only when the promotion gate passes, and `report.json` is written last. The gate fails when no
+flag level reaches the target precision, and it scores the current model (`model.json` in the current directory) on the
+same test split as the candidate instead of trusting its old report.
 
 Promotional-language classifier (offline only, nothing serves it yet):
 

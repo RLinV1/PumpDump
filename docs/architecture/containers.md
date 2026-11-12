@@ -141,8 +141,8 @@ Notes:
    after Kafka acknowledges it, and a full outbox stops fetching instead of dropping records.
    Invalid records go to `ingest-dlq`.
 3. The record lands on `ticks`, keyed by ticker. Connector health is sent to `source-health` every 15 s.
-4. `pipeline` (Kafka Streams, `exactly_once_v2`) reads `ticks` in the feature stage, building 1-, 5- and
-   30-minute event-time windows into `features`.
+4. `pipeline` (Kafka Streams, `exactly_once_v2`) reads `ticks` in the feature stage, building event-time windows
+   into `features` (`pipeline.window-minutes`, default five minutes only).
 5. The scorer reads `features` plus `source-health` and writes a `scores` record. The default
    `rules-v1` scorer reads the five-minute window.
 6. The flag stage reads `scores` and `features`. When the score reaches `flag-level` (60) and the
