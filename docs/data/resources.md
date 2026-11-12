@@ -16,8 +16,6 @@ Everything you need to build and run Pumpwatch, grouped by what it is, with the 
 | A social data source | Chatter features | See the table below | The hardest resource to get right. |
 | Google Cloud account (owner only) | The public mock-data VM in `infra/` and `docs/operations/gcp.md` | Costs money unless covered by credits | Owner only. The agent never runs `terraform apply` or creates cloud resources. |
 | Vercel account (owner only) | Hosting the web app | Free hobby plan | Owner only: sign in to Vercel yourself. The deployment carries no Alpaca or Gemini key. |
-| AWS account (owner only) | One-off cloud test only | Costs money unless covered by credits | Owner only. Set a budget alarm before creating anything. |
-| LocalStack student license | Rehearsing the AWS setup locally | Free for students | Optional. |
 | Chat webhook URL (`ALERTS_WEBHOOK_URLS`; Slack or Discord) | Alerts | Free | Create it yourself. Keep the URL secret, in `.env` only. Alerts are off by default. |
 
 ## Social data sources

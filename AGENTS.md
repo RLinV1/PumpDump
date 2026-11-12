@@ -12,7 +12,7 @@ Pumpwatch is a real-time pump-and-dump detector. It is the main feature. The ser
 ## Data and secrets
 
 - Real Alpaca data and keys stay on the owner's machine.
-- Public deployments (VM, Vercel, AWS) and README images use labelled mock data and carry no Alpaca or Gemini key.
+- Public deployments (GCP VM, Vercel) and README images use labelled mock data and carry no Alpaca or Gemini key.
 - Never print keys or `.env` values, and never commit `.env`.
 - Do not run `terraform apply` or create cloud resources. The owner does that.
 - The owner signs in to Vercel themselves.

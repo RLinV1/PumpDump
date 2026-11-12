@@ -35,5 +35,3 @@ Fill prices are decided by the service: mock mode uses the mock close the lookup
 ## Upgrading an existing checkout
 
 The service directory, Compose service and configuration use `research` and `RESEARCH_*`.
-
-For an existing optional AWS deployment, review the Terraform rename as a resource migration before applying it; this change does not apply infrastructure or move cloud data.

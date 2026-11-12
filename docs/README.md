@@ -39,7 +39,6 @@ Plans for new behaviour live in [`openspec/changes/`](../openspec/changes/), not
 | [handoff-2026-11-11.md](operations/handoff-2026-11-11.md) | Latest session handoff: what landed, open issues, unfinished work, gotchas |
 | [local-setup.md](operations/local-setup.md) | Run the app locally, with or without Docker; the end-to-end news demo runbook |
 | [gcp.md](operations/gcp.md) | Deploy the public mock-data VM on Google Cloud with Terraform |
-| [aws.md](operations/aws.md) | Deploy the stack on AWS (ECS Fargate, RDS), cost warning and diagram |
 | [load-test.md](operations/load-test.md) | k6 read-API and SSE load tests |
 | [security-review.md](operations/security-review.md) | Security review of the public VM setup and open items |
 

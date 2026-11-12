@@ -26,8 +26,7 @@ host. Without a key it uses the mock agent. For local Gemini use, add your own
 is present. `GEMINI_MODEL` defaults to `gemini-3.6-flash` and can be overridden.
 Set `USE_MOCK_LLM=1` to force mock answers. Restart the service after configuration
 changes. Gemini failures fall back to the mock agent with an explanatory note.
-Public VM deployments remove Gemini settings and force the mock agent; AWS also
-uses mock data and the mock agent without a key.
+Public VM deployments remove Gemini settings and force the mock agent.
 
 The Chroma library embeds the bundled Markdown seed documents with local ONNX
 all-MiniLM-L6-v2. Docker builds both this library and the pinned Financial
