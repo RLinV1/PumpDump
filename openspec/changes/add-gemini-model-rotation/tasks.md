@@ -3,3 +3,4 @@
 - [x] Unit tests for rotation on 404, 429 and 5xx, immediate raise on other errors, last error when all fail, and model ordering.
 - [x] Update README, docs, `.env.example` and compose.
 - [x] Run research tests and the mock eval; one real Gemini run.
+- [x] Per-call timeout (12 s) that rotates, and a 5 s reserve so the mock fallback always has time; tests for both.

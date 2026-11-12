@@ -38,9 +38,11 @@ def use_mock_data() -> bool:
 
 # --- Assistant ---
 # Tried in order; the next one is used when a model is retired (404) or out of quota (429). IDs checked against models.list() 2026-11-12.
-GEMINI_MODELS_DEFAULT = ("gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash")
+GEMINI_MODELS_DEFAULT = ("gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash")
 MAX_TOOL_STEPS = 6           # model turns that may call tools before the loop is cut off
 ASSISTANT_TIMEOUT_SEC = 40   # whole run; the web route allows 45
+GEMINI_CALL_TIMEOUT_SEC = 12  # one generate_content call; a hung model counts as failed and the next is tried
+MOCK_RESERVE_SEC = 5         # kept back from the run deadline so the mock fallback can still answer
 
 
 def gemini_models() -> list[str]:

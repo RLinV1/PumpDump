@@ -20,3 +20,7 @@ The assistant SHALL try Gemini models in order, starting with `GEMINI_MODEL` whe
 #### Scenario: Every model fails
 - **WHEN** all models fail with rotating errors
 - **THEN** the last error is raised and the mock fallback answers
+
+#### Scenario: Hung call
+- **WHEN** a model does not answer within the per-call timeout
+- **THEN** the next model is tried, and if all hang the mock fallback still answers within the run deadline

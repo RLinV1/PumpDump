@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -290,3 +291,32 @@ def test_groundedness_catches_fabricated_citations_and_figures():
     assert groundedness("See [b.md]", calls)["fabricated_citations"] == ["b.md"]
     assert groundedness("It is up 12.5%", calls)["unsupported_figures"] == ["12.5%"]
     assert groundedness("no citation", calls)["uncited"]
+
+
+def test_rotation_moves_on_when_a_call_hangs(monkeypatch):
+    monkeypatch.setattr(config, "GEMINI_CALL_TIMEOUT_SEC", 0.05)
+
+    class Models:
+        async def generate_content(self, model, contents, config):
+            if model == "a":
+                await asyncio.sleep(5)
+            return SimpleNamespace(function_calls=[], text=f"from {model}", candidates=[])
+
+    fake = SimpleNamespace(aio=SimpleNamespace(models=Models()))
+    run = lambda m: agent_client.gemini_loop(fake, [], None, "q", m)  # noqa: E731
+    assert asyncio.run(agent_client.rotate_models(["a", "b"], run)).answer == "from b"
+
+
+def test_all_models_hanging_still_returns_the_mock_answer(monkeypatch, pumpwatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("USE_MOCK_LLM", "0")
+    monkeypatch.setattr(config, "ASSISTANT_TIMEOUT_SEC", 30)
+    monkeypatch.setattr(config, "MOCK_RESERVE_SEC", 20)
+
+    async def hang(question, context):
+        await asyncio.sleep(60)
+
+    monkeypatch.setattr(agent_client, "_run_gemini", hang)
+    start = time.monotonic()
+    result = agent_client.run_agent("Why is AAPL flagged?")
+    assert result.llm == "mock" and time.monotonic() - start < 30
