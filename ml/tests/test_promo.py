@@ -3,6 +3,7 @@ import zlib
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from pumpml import promo
 
@@ -70,6 +71,8 @@ def test_train_writes_card_with_licenses_and_no_raw_text(tmp_path):
 
 
 def test_finetune_roundtrip_offline(tmp_path):
+    pytest.importorskip("torch")  # torch and transformers come from requirements-embed.txt, which CI does not install
+    pytest.importorskip("transformers")
     from transformers import BertConfig, BertModel, BertTokenizerFast
     words = sorted({w for t in ANN + CHAT for w in t.lower().replace("{c}", "coin").replace(".", "").split()} | {"coin"})
     vocab = tmp_path / "vocab.txt"
