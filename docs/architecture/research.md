@@ -23,7 +23,7 @@ read-only: it cannot place orders.
 Docker Compose starts the private Research service and connects its tools to the web
 host. Without a key it uses the mock agent. For local Gemini use, add your own
 `GEMINI_API_KEY` to the root `.env`; `USE_MOCK_LLM=auto` selects Gemini when the key
-is present. `GEMINI_MODEL` defaults to `gemini-3.6-flash` and can be overridden.
+is present. Models are tried in order (`gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.6-flash`); the next one is used on a retired-model (404), quota (429) or server error. `GEMINI_MODEL` is tried first when set.
 Set `USE_MOCK_LLM=1` to force mock answers. Restart the service after configuration
 changes. Gemini failures fall back to the mock agent with an explanatory note.
 Public VM deployments remove Gemini settings and force the mock agent.

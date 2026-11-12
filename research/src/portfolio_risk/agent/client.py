@@ -123,6 +123,26 @@ async def gemini_loop(client, declarations: list, call_tool: CallTool, question:
     return AgentResult(answer=(resp.text or "").strip(), tool_calls=calls, llm="gemini")
 
 
+async def rotate_models(models: list[str], run: Callable[[str], Awaitable[AgentResult]]) -> AgentResult:
+    """Try each model in turn; move on only for a retired model (404), quota (429) or a server error.
+
+    Runs inside the MCP session so the real error is seen before any task group can wrap it.
+    The tool loop restarts from scratch on the next model.
+    """
+    from google.genai import errors
+
+    for i, model in enumerate(models):
+        try:
+            return await run(model)
+        except (errors.ClientError, errors.ServerError) as exc:
+            if isinstance(exc, errors.ClientError) and exc.code not in (404, 429):
+                raise
+            if i == len(models) - 1:
+                raise
+            print(f"gemini model {model} failed ({exc.code}), trying next", file=sys.stderr)
+    raise RuntimeError("no Gemini models configured")
+
+
 async def _run_gemini(question: str, context: str) -> AgentResult:
     from google import genai
     from google.genai import types
@@ -157,7 +177,7 @@ async def _run_gemini(question: str, context: str) -> AgentResult:
             except ValueError:
                 return {"error": text[:200] or "tool failed"}
 
-        return await gemini_loop(client, declarations, call_tool, prompt, config.gemini_model())
+        return await rotate_models(config.gemini_models(), lambda m: gemini_loop(client, declarations, call_tool, prompt, m))
 
 
 def main() -> None:

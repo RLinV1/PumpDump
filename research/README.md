@@ -27,7 +27,7 @@ python -m evals.run_evals --agent mock
 | `RESEARCH_DATA_DIR` | `research/data` | Price cache and database directory. |
 | `USE_MOCK_LLM` | `auto` | Use Gemini when a key is present; `1` forces the mock agent. |
 | `GEMINI_API_KEY` | empty | Local server-side Gemini key. Never sent to the browser. |
-| `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini model identifier. |
+| `GEMINI_MODEL` | empty | Tried first when set; then `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.6-flash`, rotating on 404, 429 or 5xx. |
 | `PUMPWATCH_API_URL` | unset | Web host used by the pump-risk and social-sentiment tools. |
 
 Fill prices are decided by the service: mock mode uses the mock close the lookup shows; live mode needs a quote from the web server's Alpaca read and refuses the order without one.

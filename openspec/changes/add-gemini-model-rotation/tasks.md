@@ -1,0 +1,5 @@
+- [x] Add `gemini_models()` and the default model list to `config.py`.
+- [x] Add `rotate_models()` and use it in `_run_gemini()` inside the MCP session.
+- [x] Unit tests for rotation on 404, 429 and 5xx, immediate raise on other errors, last error when all fail, and model ordering.
+- [x] Update README, docs, `.env.example` and compose.
+- [x] Run research tests and the mock eval; one real Gemini run.
