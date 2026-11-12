@@ -8,10 +8,16 @@ export function sanitizeForwardingHeaders(request, behindProxy = process.env.TRU
   request.headers["x-forwarded-proto"] = request.socket.encrypted ? "https" : "http";
 }
 
+// Origin-form targets keep leading slashes as the path (Node passes "//api/x" through untouched), so collapse them before URL parsing.
+const collapse = (target) => (target.startsWith("/") ? target.replace(/^\/+/, "/") : target);
+
 export function isApiRequest(target) {
   try {
+    target = collapse(target);
     const url = /^https?:/i.test(target) ? new URL(target) : new URL(target, "http://localhost");
-    const path = url.pathname.toLowerCase(); // Next's proxy rule is case-insensitive
+    let path = url.pathname;
+    try { path = decodeURIComponent(path); } catch { /* undecodable: compare the raw path */ }
+    path = path.toLowerCase(); // Next's proxy rule is case-insensitive and may decode first
     return path === "/api" || path.startsWith("/api/");
   }
   catch { return false; }
@@ -19,7 +25,12 @@ export function isApiRequest(target) {
 
 // Next matches /api case-insensitively, so give the door handlers (which match the exact lowercase prefix) the same view.
 export function canonicalApiUrl(target) {
-  return isApiRequest(target) ? target.replace(/^(https?:\/*[^/]+)?\/api(?=[/?]|$)/i, "$1/api") : target;
+  if (!isApiRequest(target)) return target;
+  target = collapse(target);
+  return target.replace(/^(https?:\/*[^/]+)?\/((?:%[0-9a-f]{2}|[^/?#%]){3})(?=[/?#]|$)/i, (all, origin = "", seg) => {
+    let name; try { name = decodeURIComponent(seg).toLowerCase(); } catch { return all; }
+    return name === "api" ? `${origin}/api` : all;
+  });
 }
 
 // Safe-by-default headers for every web response. No CSP script rules: Next injects inline scripts. No HSTS: the site is plain HTTP.
