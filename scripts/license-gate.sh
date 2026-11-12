@@ -19,6 +19,12 @@ flag() {
   done
 }
 
+# Feed a dependency list to flag(); an erroring or empty list fails the gate instead of passing unchecked.
+scan() { # label, list, exit status of the command that produced it
+  if [ "$3" -ne 0 ] || [ -z "$2" ]; then echo "FLAGGED: $1 dependency list is empty or its command failed (exit $3)"; fail=1; return; fi
+  flag <<< "$2"
+}
+
 # Every model card must have a "## Licenses" section with a "- model <name>: LICENSE" line for the model artifact
 # itself plus "- name version: LICENSE" lines for its dependencies. Card licenses must be recognized SPDX ids
 # (or allow-listed); anything unrecognized, non-commercial or share-alike fails.
@@ -91,12 +97,12 @@ if [ "$only" != all ] && [ "$only" != npm ]; then echo "skipped"
 elif [ -d web/node_modules ]; then
   (cd web && npx --yes license-checker@25.0.1 --production --json) > "${TMPDIR:-/tmp}/npm-lic.json" || { echo "license-checker failed"; exit 2; }
   node -e 'const d=JSON.parse(require("fs").readFileSync(0,"utf8")),c={};for(const [k,v] of Object.entries(d)){if(k.startsWith("web@"))continue;const l=[].concat(v.licenses).join(" OR ");c[l]=(c[l]||0)+1}console.log(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([l,n])=>n+" "+l).join(", "))' < "${TMPDIR:-/tmp}/npm-lic.json"
-  flag < <(node -e '
+  out=$(node -e '
     const d=JSON.parse(require("fs").readFileSync(0,"utf8"));
     for (const [k,v] of Object.entries(d)) {
       if (k.startsWith("web@")) continue; // project own package
       console.log(k+"\t"+[].concat(v.licenses).join(" OR "));
-    }' < "${TMPDIR:-/tmp}/npm-lic.json")
+    }' < "${TMPDIR:-/tmp}/npm-lic.json"); scan npm "$out" $?
 else
   echo "web/node_modules missing: run 'npm ci' in web/ first"; exit 2
 fi
@@ -109,7 +115,7 @@ elif [ -f pom.xml ]; then
   f=$(find target/license -name THIRD-PARTY.txt 2>/dev/null | head -1)
   if [ -n "$f" ]; then
     # lines look like: (License) Name (group:artifact:version - url)
-    flag < <(sed -nE 's/^[[:space:]]*(\(.*\)) .*\(([^ :]+:[^ :]+):[^ ]* - .*$/\2\t\1/p' "$f") 
+    out=$(sed -nE 's/^[[:space:]]*(\(.*\)) .*\(([^ :]+:[^ :]+):[^ ]* - .*$/\2\t\1/p' "$f"); scan maven "$out" $?
     grep -qi 'Unknown license' "$f" && { echo "FLAGGED: maven dependency with unknown license (see $f)"; fail=1; }
   else
     echo "no THIRD-PARTY.txt produced"; fail=1
@@ -123,7 +129,7 @@ if [ "$only" != all ] && [ "$only" != python ]; then echo "skipped"
 elif [ -f ml/requirements.txt ]; then
   # reads license metadata of the installed packages named in ml/requirements.txt (pip install -r it first)
   PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
-  flag < <("$PY" - <<'PY'
+  out=$("$PY" - <<'PY'
 import re, sys
 from importlib.metadata import metadata, PackageNotFoundError
 for line in open("ml/requirements.txt"):
@@ -138,7 +144,7 @@ for line in open("ml/requirements.txt"):
     lic = lic or (m.get("License") or "")[:60].split(chr(10))[0] or "UNKNOWN"
     print(name + chr(9) + lic)
 PY
-  )
+  ); scan python "$out" $?
 else
   echo "ml/requirements.txt missing: skipping python license scan"
 fi
@@ -148,7 +154,7 @@ if [ "$only" != all ] && [ "$only" != research ]; then echo "skipped"
 elif [ -f research/pyproject.toml ]; then
   # walks research/pyproject.toml dependencies and everything they pull in (pip install ./research first)
   PY=$(command -v python3 || command -v python) || { echo "python missing"; exit 2; }
-  flag < <("$PY" - <<'PY'
+  out=$("$PY" - <<'PY'
 import re, tomllib
 from importlib.metadata import metadata, requires, PackageNotFoundError
 from packaging.requirements import Requirement
@@ -172,7 +178,7 @@ while todo:
         if not req.marker or req.marker.evaluate({"extra": ""}):  # skip extras and other platforms
             todo.append(norm(req.name))
 PY
-  )
+  ); scan python "$out" $?
 else
   echo "research/pyproject.toml missing: skipping"
 fi
