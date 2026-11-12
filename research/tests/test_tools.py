@@ -10,7 +10,8 @@ import pandas as pd
 import pytest
 
 from evals import fixtures
-from portfolio_risk import config, tools
+from portfolio_risk import tools
+
 
 @pytest.fixture
 def pumpwatch(monkeypatch):

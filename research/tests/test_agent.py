@@ -21,6 +21,7 @@ from portfolio_risk.agent import client as agent_client
 from portfolio_risk.agent import mock_agent
 from portfolio_risk.agent.base import AgentResult
 
+
 @pytest.fixture
 def pumpwatch(monkeypatch):
     server, url = fixtures.serve()
