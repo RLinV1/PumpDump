@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from portfolio_risk import config, tools
+from portfolio_risk import config
 from portfolio_risk.agent import client, mock_agent
 from portfolio_risk.agent.base import AgentResult
 
@@ -22,17 +22,13 @@ def slow_mock(question):
     return AgentResult(answer="too late")
 
 
-def token_mock(question):
-    return AgentResult(answer=tools.get_paper_account().get("error", "account exists"))
-
-
 @pytest.mark.parametrize("fallback", [False, True])
 def test_slow_mock_and_fallback_stop_within_shared_deadline(monkeypatch, tmp_path, fallback):
     monkeypatch.setenv("USE_MOCK_LLM", "0" if fallback else "1")
     monkeypatch.setattr(config, "ASSISTANT_TIMEOUT_SEC", 6.0)
     monkeypatch.setattr(mock_agent, "run", slow_mock)
 
-    async def unavailable(question, token):
+    async def unavailable(question, context):
         await asyncio.sleep(2)
         raise RuntimeError("provider secret")
 
@@ -56,7 +52,7 @@ def test_exhausted_gemini_budget_does_not_start_fallback(monkeypatch, tmp_path):
     monkeypatch.setattr(mock_agent, "run", slow_mock)
     cancelled = []
 
-    async def stalled(question, token):
+    async def stalled(question, context):
         try:
             await asyncio.sleep(10)
         finally:
@@ -68,19 +64,6 @@ def test_exhausted_gemini_budget_does_not_start_fallback(monkeypatch, tmp_path):
         client.run_agent(str(marker))
     assert cancelled == [True]
     assert not marker.with_suffix(".started").exists()
-
-
-def test_mock_worker_restores_paper_token(monkeypatch, tmp_path):
-    from portfolio_risk import paper
-
-    monkeypatch.setenv("USE_MOCK_LLM", "1")
-    db = tmp_path / "paper.db"
-    monkeypatch.setenv("PAPER_DB", str(db))
-    token = "t" * 40
-    paper.get_account(db, token)
-    monkeypatch.setattr(mock_agent, "run", token_mock)
-    assert client.run_agent("account", token).answer == "account exists"
-    assert "account" in client.run_agent("account").answer.lower()
 
 
 def test_normal_mock_response_survives_process_boundary(monkeypatch):

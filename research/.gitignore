@@ -5,7 +5,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
-# generated data: price cache and the paper-trading SQLite file
+# generated data: price cache
 data/
 # eval score files and a locally built knowledge store
 evals/results/

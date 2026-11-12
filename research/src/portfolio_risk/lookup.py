@@ -62,7 +62,7 @@ def _current(ticker: str, series: pd.Series) -> tuple[float, float]:
 
 
 def mock_close(ticker: str) -> float:
-    """The mock price a lookup shows, so a mock paper fill matches the panel."""
+    """The mock price a lookup shows, used by the lookup tests."""
     return float(_prices(ticker, 300).iloc[-1])
 
 

@@ -22,16 +22,13 @@ import json
 import os
 import re
 import sys
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
 HERE = Path(__file__).parent
-TOKEN = "eval-paper-token-0123456789abcdef0123"  # 32+ characters of the allowed alphabet; only its hash is ever stored
 
 # Offline and deterministic by default; the app itself defaults to live data.
 os.environ.setdefault("USE_MOCK_DATA", "1")
-os.environ["PAPER_DB"] = str(Path(tempfile.mkdtemp(prefix="evals_paper_")) / "paper.db")
 
 from portfolio_risk import config
 from portfolio_risk.agent.client import run_agent
@@ -159,8 +156,8 @@ def groundedness(answer: str, calls: list[dict]) -> dict:
             "uncited": uncited, "unsupported_figures": unsupported}
 
 
-def score_question(q: dict, token: str) -> dict:
-    result = run_agent(q["question"], token)
+def score_question(q: dict) -> dict:
+    result = run_agent(q["question"], q.get("context", ""))
     names = result.tool_names()
     answer = result.answer
     if q.get("expected_tool"):
@@ -206,7 +203,7 @@ def main() -> int:
     server, os.environ["PUMPWATCH_API_URL"] = fixtures.serve()
     try:
         questions = [json.loads(line) for line in (HERE / "questions.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
-        rows = [score_question(q, TOKEN) for q in questions]
+        rows = [score_question(q) for q in questions]
         retrieval = retrieval_scores()
     finally:
         server.shutdown()

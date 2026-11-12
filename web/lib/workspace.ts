@@ -9,7 +9,7 @@ export const PRESETS: Record<string, Workspace> = {
 const IDS = new Set<string>([...PRESETS.default.panels, "lookup"]);
 const KEY = "pumpwatch:workspace:v1";
 
-// Layouts saved before paper trading and the assistant left the grid still list "paper" and "assistant": those ids are dropped.
+// Ids that are not panels any more (older saved layouts) are dropped.
 export function parseWorkspace(raw: string | null): Workspace {
   try {
     const value = JSON.parse(raw ?? "null");

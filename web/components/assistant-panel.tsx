@@ -7,24 +7,24 @@ import { Skeleton } from "@/components/term-panel";
 
 export type AssistantState =
   | { status: "idle" }
-  | { status: "loading"; question: string }
-  | { status: "error"; question: string; message: string }
-  | { status: "done"; question: string; result: AssistantAnswer; notice: string };
+  | { status: "loading"; question: string; context?: string }
+  | { status: "error"; question: string; message: string; context?: string }
+  | { status: "done"; question: string; result: AssistantAnswer; notice: string; context?: string };
 
 // One question at a time: asking again cancels the one in flight.
 export function useAssistant() {
   const [state, setState] = useState<AssistantState>({ status: "idle" });
   const controller = useRef<AbortController>(null);
   useEffect(() => () => controller.current?.abort(), []);
-  const ask = useCallback(async (question: string) => {
+  const ask = useCallback(async (question: string, context?: string) => {
     controller.current?.abort();
     const mine = (controller.current = new AbortController());
-    setState({ status: "loading", question });
+    setState({ status: "loading", question, context });
     try {
-      const { notice, data } = await askAssistant(question, mine.signal);
-      if (!mine.signal.aborted) setState({ status: "done", question, result: data, notice });
+      const { notice, data } = await askAssistant(question, mine.signal, context);
+      if (!mine.signal.aborted) setState({ status: "done", question, result: data, notice, context });
     } catch (error) {
-      if (!mine.signal.aborted) setState({ status: "error", question, message: error instanceof Error ? error.message : "The assistant failed." });
+      if (!mine.signal.aborted) setState({ status: "error", question, message: error instanceof Error ? error.message : "The assistant failed.", context });
     }
   }, []);
   return { state, ask };
@@ -35,14 +35,14 @@ export function assistantTag(state: AssistantState) {
 }
 
 // The conversation shown inside the floating chat widget.
-export function AssistantBody({ state, onAsk, ticker }: { state: AssistantState; onAsk: (question: string) => void; ticker?: string }) {
-  const examples = [`Is ${ticker ?? "GME"} being pumped?`, "What is a pump and dump?", `What is the sentiment on ${ticker ?? "AMC"}?`];
+export function AssistantBody({ state, onAsk, ticker }: { state: AssistantState; onAsk: (question: string, context?: string) => void; ticker?: string }) {
+  const examples = [`Why is ${ticker ?? "GME"} flagged or not flagged?`, "What does the risk score mean?", `What is the sentiment on ${ticker ?? "AMC"}?`];
   return (
     <>
       {state.status === "idle" ? (
         <div className="p-3 text-xs" role="status">
-          <p className="font-semibold text-accent">Ask about a stock</p>
-          <p className="mt-1 max-w-[52ch] text-mute">Answers come from read-only tools and cite their sources. For pump questions it reads the same risk score and sentiment as the panels here. It cannot place orders. With no Gemini key a rule-based mock agent answers, and the answer says so.</p>
+          <p className="font-semibold text-accent">Ask about a flag</p>
+          <p className="mt-1 max-w-[52ch] text-mute">Explains why a ticker is or is not flagged and what the evidence means. Answers come from read-only tools and cite their sources. It detects risk: it never says buy or sell. With no Gemini key a rule-based mock agent answers, and the answer says so.</p>
           <ul className="mt-2 space-y-0.5">
             {examples.map((e) => <li key={e}><button type="button" onClick={() => onAsk(e)} className="min-h-8 text-left text-yellow underline-offset-2 hover:underline">{e}</button></li>)}
           </ul>
@@ -59,7 +59,7 @@ export function AssistantBody({ state, onAsk, ticker }: { state: AssistantState;
           <p className="text-white"><span className="text-accent">Q</span> {state.question}</p>
           <p className="mt-2 font-semibold text-accent">The assistant did not answer.</p>
           <p className="mt-1 max-w-[52ch] text-mute">{state.message}</p>
-          <button type="button" onClick={() => onAsk(state.question)} className={`${btnGhost} mt-2`}>Retry</button>
+          <button type="button" onClick={() => onAsk(state.question, state.context)} className={`${btnGhost} mt-2`}>Retry</button>
         </div>
       ) : (
         <div className="text-xs">

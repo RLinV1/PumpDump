@@ -7,18 +7,16 @@ Nothing here is investment advice.
 
 from __future__ import annotations
 
-import contextvars
-import os
 import re
 
-from . import config, paper
+from . import config
 from .data.market_data import SOFT_ERRORS, get_news
-from .lookup import PERIODS, _current, _prices, lookup, mock_close
+from .lookup import PERIODS, _current, _prices, lookup
 
 READ_ONLY_TOOLS = (
     "get_stock_snapshot", "get_price_performance", "compare_stocks", "explain_stock_risk",
     "get_technical_indicators", "get_ticker_news", "explain_price_move", "get_pump_risk",
-    "get_sentiment", "search_knowledge", "get_paper_account", "get_paper_orders",
+    "get_sentiment", "search_knowledge",
 )
 
 SENTIMENT_MODEL = "FinTwitBERT"
@@ -234,50 +232,3 @@ def search_knowledge(query: str, ticker: str = "", k: int = 4) -> dict:
         return {"results": results}
     except Exception as exc:  # noqa: BLE001  (a missing or broken store must not stop the assistant)
         return _err(f"knowledge library unavailable: {type(exc).__name__}")
-
-
-# --- Paper trading, read only. The account token is bound to the request by the service, never chosen by the model. ---
-_token: contextvars.ContextVar[str | None] = contextvars.ContextVar("paper_token", default=None)
-
-
-def set_paper_token(token: str) -> None:
-    _token.set(token or "")
-
-
-def _paper_state() -> dict:
-    token = _token.get()
-    if token is None:  # Standalone MCP may use the environment; an explicit empty HTTP token must stay anonymous.
-        token = os.environ.get("RESEARCH_PAPER_TOKEN", "")
-    if not token:
-        return _err("no paper account is attached to this question")
-    db = config.paper_db_path()
-    marks = {}
-    if config.use_mock_data():
-        for t in paper.held_tickers(db, token):
-            marks[t] = round(mock_close(t) * 100)
-    return paper.get_account(db, token, marks)
-
-
-def get_paper_account() -> dict:
-    """The asker's simulated paper account: cash, positions, P&L. Read only; simulated money, no broker."""
-    try:
-        s = _paper_state()
-        if "error" in s:
-            return s
-        out = {k: v for k, v in s.items() if k != "orders"} | {"simulated": True, "data_mode": "mock" if config.use_mock_data() else "live"}
-        out["valuation_available"] = all(p["markCents"] is not None for p in s["positions"])
-        if not out["valuation_available"]:
-            out.update(positionsValueCents=None, totalCents=None, pnlCents=None)
-            out["note"] = "Current holding prices are unavailable. Portfolio value and unrealized P&L are unavailable."
-        return out
-    except (paper.PaperError, *SOFT_ERRORS) as exc:
-        return _err(str(exc))
-
-
-def get_paper_orders() -> dict:
-    """The asker's recent simulated paper orders (newest first). Read only."""
-    try:
-        s = _paper_state()
-        return s if "error" in s else {"orders": s["orders"][:20], "simulated": True}
-    except (paper.PaperError, *SOFT_ERRORS) as exc:
-        return _err(str(exc))

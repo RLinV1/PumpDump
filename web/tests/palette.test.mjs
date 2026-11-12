@@ -16,8 +16,8 @@ test("fuzzy ranks prefix before word start before substring before scattered let
   assert.ok(score("ma", "go market") < score("ar", "go market"));
   assert.ok(score("ar", "go market") < score("gmt", "go market"));
   assert.equal(fuzzy("zz", "go market"), null);
-  assert.deepEqual(fuzzy("pap", "Paper trading").indexes, [0, 1, 2]);
-  assert.deepEqual(fuzzy("pt", "paper trading").indexes, [0, 6]);
+  assert.deepEqual(fuzzy("fla", "Flag chat").indexes, [0, 1, 2]);
+  assert.deepEqual(fuzzy("fc", "flag chat").indexes, [0, 5]);
 });
 
 test("palette groups tickers, commands and an ask row, best match first", () => {
@@ -36,12 +36,13 @@ test("an unknown symbol can still be selected, and commands offer only real acti
   assert.ok(items.some((i) => i.run === "LOOK XYZ"));
   assert.ok(items.some((i) => i.run === "ADD XYZ"));
   assert.ok(!paletteItems("gme", known).some((i) => i.run === "ADD GME"));
-  const commands = paletteItems("paper", known).filter((i) => i.group === "commands");
-  assert.equal(commands[0].run, "PT");
+  const commands = paletteItems("flag", known).filter((i) => i.group === "commands");
+  assert.ok(commands.some((i) => i.run === "ASK" && i.label === "Ask about a flag"));
+  assert.ok(!paletteItems("pt", known).some((i) => i.run === "PT" || /paper/i.test(i.label)));
 });
 
 test("every palette action is a command the parser accepts, and the ask row opens the assistant", () => {
-  for (const q of ["gme", "chart", "paper", "assistant", "mode", "refresh", "help", "sent", "ask is gme pumped"]) {
+  for (const q of ["gme", "chart", "flag", "assistant", "mode", "refresh", "help", "sent", "ask is gme pumped"]) {
     for (const item of paletteItems(q, known)) assert.notEqual(parseCommand(item.run).type, "error", `${q} -> ${item.run}`);
   }
   assert.deepEqual(parseCommand(paletteItems("ask is gme pumped", known).at(-1).run), { type: "ask", question: "is gme pumped" });

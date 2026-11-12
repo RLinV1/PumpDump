@@ -21,9 +21,6 @@ from portfolio_risk.agent import client as agent_client
 from portfolio_risk.agent import mock_agent
 from portfolio_risk.agent.base import AgentResult
 
-TOKEN = "t" * 40
-
-
 @pytest.fixture
 def pumpwatch(monkeypatch):
     server, url = fixtures.serve()
@@ -48,6 +45,13 @@ def test_mock_agent_routes_to_the_right_tool(pumpwatch):
 def test_mock_agent_refuses_to_trade_and_uses_no_tool():
     r = mock_agent.run("Buy 100 shares of GME for me")
     assert r.tool_calls == [] and "cannot place orders" in r.answer
+
+
+def test_mock_agent_declines_advice_and_explains_flags(pumpwatch):
+    advice = mock_agent.run("Should I buy GME before it pumps?")
+    assert advice.tool_calls == [] and "cannot place orders or give buy, sell or hold advice" in advice.answer
+    flagged = mock_agent.run("Why is GME flagged?")
+    assert [c["name"] for c in flagged.tool_calls] == ["get_pump_risk"] and "74 of 100" in flagged.answer
 
 
 def test_mock_pump_answer_keeps_sentiment_as_context(pumpwatch):
@@ -132,7 +136,7 @@ def test_gemini_failure_falls_back_to_the_labelled_mock(monkeypatch, pumpwatch):
     monkeypatch.setenv("GEMINI_API_KEY", "x")
     monkeypatch.delenv("USE_MOCK_LLM", raising=False)
 
-    async def boom(question, token):
+    async def boom(question, context):
         raise RuntimeError("secret detail")
 
     monkeypatch.setattr(agent_client, "_run_gemini", boom)
@@ -158,8 +162,7 @@ def test_mcp_server_lists_exactly_the_read_only_tools():
 
 # --- Assistant route -------------------------------------------------------------------------------------------------
 @pytest.fixture
-def http(db, monkeypatch, pumpwatch):
-    monkeypatch.setenv("PAPER_DB", str(db))
+def http(monkeypatch, pumpwatch):
     monkeypatch.setenv("USE_MOCK_LLM", "1")
     service._calls.clear()
     return TestClient(service.app)
@@ -179,7 +182,7 @@ def test_route_limits_and_validation(http, monkeypatch):
     # Control only the service limiter clock; do not freeze worker/async deadlines.
     monkeypatch.setattr(service, "time", SimpleNamespace(monotonic=lambda: clock.t))
 
-    def answer(question, token):
+    def answer(question, context):
         calls.append(question)
         return AgentResult(answer="Rate-limit fixture")
 
@@ -195,14 +198,13 @@ def test_route_limits_and_validation(http, monkeypatch):
     assert len(calls) == service.GLOBAL_PER_MINUTE + 1
 
 
-def test_route_binds_the_paper_token_to_the_paper_tools(http, monkeypatch):
-    monkeypatch.setenv("RESEARCH_PAPER_TOKEN", TOKEN)
-    r = http.post("/assistant/ask", json={"question": "What is my paper account worth?"}, headers={"X-Paper-Token": TOKEN}).json()
-    assert r["tools_used"] == ["get_paper_account"] and "100,000.00" in r["answer"]
-    r = http.post("/assistant/ask", json={"question": "What is my paper account worth?"}).json()
-    assert "no paper account" in r["answer"]
-    r = http.post("/assistant/ask", json={"question": "Show my paper orders"}, headers={"X-Paper-Token": "invalid"}).json()
-    assert "no paper account" in r["answer"]
+def test_route_passes_the_flag_context_to_the_agent(http, monkeypatch):
+    seen = []
+    monkeypatch.setattr(service, "run_agent", lambda question, context: seen.append((question, context)) or AgentResult(answer="ok"))
+    assert http.post("/assistant/ask", json={"question": "Why?", "context": " GME score 74 "}).status_code == 200
+    assert http.post("/assistant/ask", json={"question": "Why?"}).status_code == 200
+    assert http.post("/assistant/ask", json={"question": "Why?", "context": "x" * 601}).status_code == 422
+    assert seen == [("Why?", "GME score 74"), ("Why?", "")]
 
 
 def test_groundedness_catches_fabricated_citations_and_figures():

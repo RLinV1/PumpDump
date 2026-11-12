@@ -67,7 +67,7 @@ Do not use `ProsusAI/finbert`: its license is CC BY-NC-SA 4.0 (non-commercial, s
 | Resource | Needed for | Notes |
 | --- | --- | --- |
 | SEC litigation releases and trading suspensions | Confirmed pump episodes | Public. Each episode needs its source URL. |
-| Historical bars (Alpaca) and, for the research service, Yahoo Finance data via `yfinance` | Prices for lookup and paper trading | Real data stays on the owner's machine; the public VM uses labelled mock data (`RESEARCH_USE_MOCK_DATA=1`). |
+| Historical bars (Alpaca) and, for the research service, Yahoo Finance data via `yfinance` | Prices for lookup | Real data stays on the owner's machine; the public VM uses labelled mock data (`RESEARCH_USE_MOCK_DATA=1`). |
 | Historical bars and filings | Market and catalyst features for past episodes | Free from Alpaca (older than 15 minutes) and EDGAR. |
 | Historical social data | Social features for past episodes | Not available for free. You must record live data going forward, so social features only exist from the day recording starts. |
 

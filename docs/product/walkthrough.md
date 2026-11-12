@@ -55,20 +55,12 @@ actual classified sample and model status.
 
 ![Research layout with stock indicators, a pump-risk answer, news and sentiment controls](../img/workspace-research.jpg)
 
-## Paper trading
-
-`BUY GME 10` and `SELL GME 5` create simulated orders at server-decided prices.
-The Trading layout shows cash, positions, marks, P&L and recent orders alongside
-stock lookup. `PT RESET` requires a second confirmation. No real orders are sent.
-
-![Trading layout after a simulated buy, including the position and order history](../img/workspace-trading.jpg)
-
 ## Assistant, MCP tools and the knowledge library
 
-`ASK Is GME being pumped?` reads the same risk signals as the dashboard.
+`ASK Why is GME flagged?` reads the same risk signals as the dashboard, and the "Ask about this flag" action on a flag sends its evidence.
 `ASK What is a pump and dump?` retrieves the local Chroma knowledge library.
 Answers identify Gemini or the mock agent, data mode, tools and sources.
-The assistant's MCP tools can read data and your paper account; they cannot trade.
+The assistant's MCP tools can read data; they cannot trade, and it never gives buy or sell advice.
 
 ![Assistant knowledge answer with retrieved Markdown citations and tool provenance](../img/workspace-assistant-rag.jpg)
 

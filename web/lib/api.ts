@@ -248,7 +248,7 @@ export function age(iso: string) {
 }
 
 
-// ---- Stock lookup and simulated paper trading. Money is integer cents; nothing here is a real order. ----
+// ---- Stock lookup and the flag assistant. Nothing here is investment advice. ----
 export type Lookup = {
   ticker: string; name: string; sector: string; price: number; changePct: number; marketCap: number | null; peRatio: number | null;
   performance: Record<string, number | null>;
@@ -256,29 +256,6 @@ export type Lookup = {
   risk: { beta: number | null; volatilityPct: number | null; movement: string; sensitivity: string; benchmark: string };
   dataMode: DataMode;
 };
-export type PaperPosition = { ticker: string; qty: number; avgCostCents: number; costCents: number; markCents: number | null; valueCents: number | null; pnlCents: number | null };
-export type PaperOrder = { id: number; ts: number; side: "BUY" | "SELL"; ticker: string; qty: number; priceCents: number };
-export type PaperAccount = {
-  cashCents: number; positionsValueCents: number; totalCents: number; startCents: number; pnlCents: number; realizedCents: number;
-  positions: PaperPosition[]; orders: PaperOrder[]; dataMode: DataMode; fill?: { side: "BUY" | "SELL"; ticker: string; qty: number; priceCents: number };
-};
-
-const TOKEN_KEY = "pumpwatch.paper.token";
-const TOKEN_SHAPE = /^[A-Za-z0-9_-]{32,64}$/;
-let sessionPaperToken: string | undefined;
-
-// An anonymous account is just a random token this browser keeps. Lose it and the account is gone; there is no sign-in.
-export function paperToken(): string {
-  try {
-    const saved = localStorage.getItem(TOKEN_KEY);
-    if (saved && TOKEN_SHAPE.test(saved)) return (sessionPaperToken = saved);
-  } catch { /* storage blocked: fall through to a token for this page view */ }
-  if (sessionPaperToken) return sessionPaperToken;
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  try { localStorage.setItem(TOKEN_KEY, token); } catch { /* the account then lasts until this page closes */ }
-  return (sessionPaperToken = token);
-}
 
 const isMode = (m: unknown): m is DataMode => m === "mock" || m === "live";
 const num = (v: unknown) => typeof v === "number" && Number.isFinite(v);
@@ -295,24 +272,13 @@ async function send<T>(path: string, init: RequestInit, signal: AbortSignal | un
 export const getLookup = (ticker: string, signal?: AbortSignal) => send<Lookup>(`/api/v1/lookup/${ticker}`, {}, signal, (d) =>
   d.ticker === ticker && num(d.price) && num(d.changePct) && typeof d.name === "string" && !!d.performance && !!d.indicators && !!d.risk && nullNum(d.marketCap) && nullNum(d.peRatio));
 
-const validAccount = (d: PaperAccount) => num(d.cashCents) && num(d.totalCents) && num(d.pnlCents) && num(d.startCents) && num(d.realizedCents) && num(d.positionsValueCents)
-  && Array.isArray(d.positions) && d.positions.every((p) => typeof p.ticker === "string" && num(p.qty) && num(p.avgCostCents) && nullNum(p.markCents) && nullNum(p.pnlCents))
-  && Array.isArray(d.orders) && d.orders.every((o) => typeof o.ticker === "string" && (o.side === "BUY" || o.side === "SELL") && num(o.qty) && num(o.priceCents));
-const mine = () => ({ "X-Paper-Token": paperToken() });
-
-export const getPaperAccount = (signal?: AbortSignal) => send<PaperAccount>("/api/v1/paper/account", { headers: mine() }, signal, validAccount);
-export const placePaperOrder = (side: "BUY" | "SELL", ticker: string, qty: number, signal?: AbortSignal) =>
-  send<PaperAccount>("/api/v1/paper/orders", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ side, ticker, qty }) }, signal, validAccount);
-export const resetPaperAccount = (signal?: AbortSignal) =>
-  send<PaperAccount>("/api/v1/paper/reset", { method: "POST", headers: { ...mine(), "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) }, signal, validAccount);
-
 export type AssistantSource = { kind: string; title: string; url: string | null };
 export type AssistantAnswer = { answer: string; toolsUsed: string[]; sources: AssistantSource[]; llm: "mock" | "gemini"; note: string; dataMode: DataMode };
 
-// The research assistant. Errors carry the server's own short message, which never includes provider details.
-export async function askAssistant(question: string, signal: AbortSignal): Promise<{ notice: string; data: AssistantAnswer }> {
+// The flag assistant. The optional context is the flag on screen (ticker, score, evidence). Errors carry the server's own short message, which never includes provider details.
+export async function askAssistant(question: string, signal: AbortSignal, context?: string): Promise<{ notice: string; data: AssistantAnswer }> {
   const res = await fetch(`${API_URL}/api/v1/assistant/ask`, {
-    method: "POST", headers: { "Content-Type": "application/json", ...mine() }, body: JSON.stringify({ question }),
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(context ? { question, context } : { question }),
     signal: AbortSignal.any([signal, AbortSignal.timeout(50_000)]), cache: "no-store",
   });
   const body = await res.json().catch(() => null);

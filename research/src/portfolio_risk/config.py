@@ -31,8 +31,7 @@ def _flag(name: str, default: str) -> str:
 def use_mock_data() -> bool:
     """``USE_MOCK_DATA=1`` (the default for the service image) means synthetic prices and no network.
 
-    Unset or ``0`` pulls real data from yfinance for lookups. Paper fills never use yfinance:
-    in live mode the web server supplies an Alpaca quote.
+    Unset or ``0`` pulls real data from yfinance for lookups.
     """
     return _flag("USE_MOCK_DATA", "0") not in ("0", "false", "no")
 
@@ -67,11 +66,6 @@ def pumpwatch_api_url() -> str | None:
     """Base URL of the Pumpwatch web server, which serves /api/v1/watchlist, /flags and the sentiment route
     (mock records in mock mode, the real API in live mode). None means the pump and sentiment tools say so."""
     return os.environ.get("PUMPWATCH_API_URL", "").strip().rstrip("/") or None
-
-
-def paper_db_path() -> Path:
-    """SQLite file holding the anonymous paper accounts (a named compose volume in Docker)."""
-    return Path(os.environ.get("PAPER_DB", "").strip() or DATA_DIR / "paper.db")
 
 
 def ensure_dirs() -> None:
