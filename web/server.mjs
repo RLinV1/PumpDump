@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import next from "next";
-import { applySecurityHeaders, isApiRequest, sanitizeForwardingHeaders } from "./server-headers.mjs";
+import { applySecurityHeaders, canonicalApiUrl, isApiRequest, sanitizeForwardingHeaders } from "./server-headers.mjs";
 import { serveMockApi } from "./mock-api.mjs";
 import { loadRootEnv } from "./env.cjs";
 import { createMarketMoversLoader } from "./market-movers.mjs";
@@ -45,6 +45,7 @@ const server = createServer((request, response) => {
   sanitizeForwardingHeaders(request);
   applySecurityHeaders(response);
   if (isApiRequest(request.url)) {
+    request.url = canonicalApiUrl(request.url);
     if (assistant(request, response)) return;
     if (lookup(request, response)) return; // before the mock branch: the service labels its own data mode
     if (mode === "mock") return serveMockApi(request, response);

@@ -11,9 +11,15 @@ export function sanitizeForwardingHeaders(request, behindProxy = process.env.TRU
 export function isApiRequest(target) {
   try {
     const url = /^https?:/i.test(target) ? new URL(target) : new URL(target, "http://localhost");
-    return url.pathname === "/api" || url.pathname.startsWith("/api/");
+    const path = url.pathname.toLowerCase(); // Next's proxy rule is case-insensitive
+    return path === "/api" || path.startsWith("/api/");
   }
   catch { return false; }
+}
+
+// Next matches /api case-insensitively, so give the door handlers (which match the exact lowercase prefix) the same view.
+export function canonicalApiUrl(target) {
+  return isApiRequest(target) ? target.replace(/^(https?:\/*[^/]+)?\/api(?=[/?]|$)/i, "$1/api") : target;
 }
 
 // Safe-by-default headers for every web response. No CSP script rules: Next injects inline scripts. No HSTS: the site is plain HTTP.

@@ -38,6 +38,14 @@ test("normalized API paths cannot bypass the mock-mode boundary", () => {
   assert.equal(routing.isApiRequest("/live"), false);
 });
 
+test("API paths match case-insensitively like Next's proxy rule, and reach the doors in lowercase", () => {
+  for (const target of ["/API/v1/flags", "/Api/v1/flags?x=1", "/aPi", "http://web.test/API/v1/flags"]) assert.equal(routing.isApiRequest(target), true, target);
+  for (const target of ["/apix/v1", "/v1/api", "/"]) assert.equal(routing.isApiRequest(target), false, target);
+  assert.equal(routing.canonicalApiUrl("/API/V1/Flags?A=1"), "/api/V1/Flags?A=1");
+  assert.equal(routing.canonicalApiUrl("http://web.test/Api/v1/flags"), "http://web.test/api/v1/flags");
+  assert.equal(routing.canonicalApiUrl("/other/API"), "/other/API");
+});
+
 test("every web response carries the baseline security headers", () => {
   const set = {};
   routing.applySecurityHeaders({ setHeader: (name, value) => { set[name] = value; } });
