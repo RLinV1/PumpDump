@@ -166,7 +166,7 @@ def test_rotation_moves_to_next_model_on_retired_or_quota(code):
 
 def test_rotation_moves_on_server_error():
     from google.genai import errors
-    tried, go = _rotate({"a": errors.ServerError(503, {"error": {"message": "x", "status": "S"}}), "b": "from b"})
+    _tried, go = _rotate({"a": errors.ServerError(503, {"error": {"message": "x", "status": "S"}}), "b": "from b"})
     assert go().answer == "from b"
 
 
@@ -303,7 +303,7 @@ def test_rotation_moves_on_when_a_call_hangs(monkeypatch):
             return SimpleNamespace(function_calls=[], text=f"from {model}", candidates=[])
 
     fake = SimpleNamespace(aio=SimpleNamespace(models=Models()))
-    run = lambda m: agent_client.gemini_loop(fake, [], None, "q", m)  # noqa: E731
+    run = lambda m: agent_client.gemini_loop(fake, [], None, "q", m)
     assert asyncio.run(agent_client.rotate_models(["a", "b"], run)).answer == "from b"
 
 
