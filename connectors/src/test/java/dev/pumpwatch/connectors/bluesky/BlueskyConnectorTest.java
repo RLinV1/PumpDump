@@ -238,4 +238,33 @@ class BlueskyConnectorTest {
         var post = firstPostWith(dids -> { throw new java.io.IOException("appview down"); });
         assertThat(post.authorCreatedAt()).isNull();
     }
+
+    @Test
+    void afterAFailedLookupNoProfileCallsAreMadeForAMinuteAndMissingProfilesAreNotRetried() {
+        var now = new java.util.concurrent.atomic.AtomicReference<>(Instant.parse("2026-10-27T12:00:00Z"));
+        var clock = new Clock() {
+            public ZoneOffset getZone() { return ZoneOffset.UTC; }
+            public Clock withZone(java.time.ZoneId z) { return this; }
+            public Instant instant() { return now.get(); }
+        };
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var failing = new java.util.concurrent.atomic.AtomicBoolean(true);
+        ProfileClient profiles = dids -> {
+            calls.incrementAndGet();
+            if (failing.get()) throw new java.io.IOException("down");
+            return java.util.Map.of();
+        };
+        var c = new BlueskyConnector(PROPS, List.of("GME"), null, seen, positions, (u, m) -> { }, profiles, meters, clock,
+                Duration.ofMillis(1), Duration.ofMillis(4));
+        assertThat(c.accountCreatedAt("did:a")).isNull();
+        assertThat(c.accountCreatedAt("did:b")).isNull();
+        assertThat(c.accountCreatedAt("did:c")).isNull();
+        assertThat(calls).hasValue(1); // paused after the first failure
+        now.set(now.get().plusSeconds(61));
+        failing.set(false);
+        assertThat(c.accountCreatedAt("did:a")).isNull();
+        assertThat(calls).hasValue(2); // tried again after the minute
+        assertThat(c.accountCreatedAt("did:a")).isNull();
+        assertThat(calls).hasValue(2); // no profile in a good response: not asked again
+    }
 }

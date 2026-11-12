@@ -209,17 +209,27 @@ public class BlueskyConnector implements Connector {
         if (publish(Keys.postKey(SOURCE, postId), post) && postId != null) seen.markNew(SOURCE, postId);
     }
 
-    /** Null when unknown: a failed lookup must not lose the post, it just leaves the "new account" rule silent. */
-    private Instant accountCreatedAt(String did) {
+    /** No profile in a successful response: remembered as "unknown" so the DID is not asked about again. */
+    private static final Instant NO_PROFILE = Instant.EPOCH;
+    private static final Duration LOOKUP_PAUSE = Duration.ofMinutes(1);
+    private Instant lookupsPausedUntil = Instant.MIN;
+
+    /**
+     * Null when unknown: a failed lookup must not lose the post, it just leaves the "new account" rule silent.
+     * After a failure no lookups are made for a minute, so a down AppView cannot stall the stream thread per post.
+     */
+    Instant accountCreatedAt(String did) {
         if (did == null) return null;
         var cached = createdAtCache.get(did);
-        if (cached != null) return cached;
+        if (cached != null) return cached == NO_PROFILE ? null : cached;
+        if (clock.instant().isBefore(lookupsPausedUntil)) return null;
         try {
             var created = profiles.createdAt(List.of(did)).get(did);
-            if (created != null) createdAtCache.put(did, created);
+            createdAtCache.put(did, created != null ? created : NO_PROFILE);
             return created;
         } catch (Exception ex) {
-            log.debug("profile lookup failed: {}", ex.toString());
+            lookupsPausedUntil = clock.instant().plus(LOOKUP_PAUSE);
+            log.debug("profile lookup failed, pausing lookups: {}", ex.toString());
             return null;
         }
     }
