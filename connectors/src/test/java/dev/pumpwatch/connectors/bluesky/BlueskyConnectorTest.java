@@ -211,4 +211,31 @@ class BlueskyConnectorTest {
         await(() -> !sent.isEmpty());
         assertThat(Json.fromJson(sent.getFirst()[2], PostRecord.class).text()).isEqualTo("Loading up on $GME today");
     }
+
+    private PostRecord firstPostWith(ProfileClient profiles) throws Exception {
+        publisher = new ConnectorPublisher("bluesky", new InMemoryOutbox(), (t, k, v) -> {
+            sent.add(new String[] {t, k, v});
+            return CompletableFuture.completedFuture(null);
+        }, PumpwatchKafkaProperties.defaults(), meters, CLOCK);
+        publisher.start();
+        connector = new BlueskyConnector(PROPS, List.of("GME"), publisher, seen, positions,
+                (uri, onMessage) -> { onMessage.accept(lines("jetstream-sample.jsonl").getFirst()); Thread.sleep(60_000); },
+                profiles, meters, CLOCK, Duration.ofMillis(1), Duration.ofMillis(4));
+        connector.start();
+        await(() -> !sent.isEmpty());
+        return Json.fromJson(sent.getFirst()[2], PostRecord.class);
+    }
+
+    @Test
+    void passesTheAuthorsAccountCreationDate() throws Exception {
+        var created = java.time.Instant.parse("2025-06-01T00:00:00Z");
+        var post = firstPostWith(dids -> dids.stream().collect(java.util.stream.Collectors.toMap(d -> d, d -> created)));
+        assertThat(post.authorCreatedAt()).isEqualTo(created);
+    }
+
+    @Test
+    void aFailedProfileLookupStillPublishesThePostWithoutADate() throws Exception {
+        var post = firstPostWith(dids -> { throw new java.io.IOException("appview down"); });
+        assertThat(post.authorCreatedAt()).isNull();
+    }
 }
