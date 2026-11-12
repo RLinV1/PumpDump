@@ -23,6 +23,7 @@ from portfolio_risk.lookup import lookup
 ASSISTANT_NOTICE = "Not investment advice. Pumpwatch is a non-commercial project."
 MAX_QUESTION = 300
 GLOBAL_PER_MINUTE = 30  # spend guard behind the web server's per-client limit: agent runs per minute in total
+MAX_CONCURRENT_RUNS = 3  # each run is a ~110 MB subprocess; the per-minute cap limits starts, not how many live at once
 MAX_SOURCES = 8
 MAX_CONTEXT = 600
 
@@ -52,6 +53,7 @@ class Ask(BaseModel):
 
 _calls: deque[float] = deque()
 _lock = threading.Lock()
+_slots = threading.BoundedSemaphore(MAX_CONCURRENT_RUNS)
 
 
 def _allow(now: float) -> bool:
@@ -102,12 +104,18 @@ def ask(body: Ask) -> dict:
     question = body.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="Empty question.")
-    if not _allow(time.monotonic()):
-        raise HTTPException(status_code=429, detail="Busy. Try again in a minute.")
+    if not _slots.acquire(blocking=False):
+        raise HTTPException(status_code=429, detail="Assistant is busy. Try again shortly.")
     try:
+        if not _allow(time.monotonic()):
+            raise HTTPException(status_code=429, detail="Busy. Try again in a minute.")
         result = run_agent(question, (body.context or "").strip())
+    except HTTPException:
+        raise
     except Exception:  # noqa: BLE001  (never leak provider or stack details to the browser)
         raise HTTPException(status_code=502, detail="The assistant could not answer. Try again.") from None
+    finally:
+        _slots.release()
     answer = result.answer.strip()
     if "not investment advice" not in answer.lower():
         answer += f"\n\n{ASSISTANT_NOTICE}"
