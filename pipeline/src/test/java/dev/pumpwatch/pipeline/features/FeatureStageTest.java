@@ -197,11 +197,25 @@ class FeatureStageTest {
         mentions.pipeInput("GME", mentionJson(at(5, 1), "a", false, "x"), FAR);
         mentions.pipeInput("GME", mentionJson(at(125, 1), "b", false, "y"), FAR);
         close();
-        // window [125:00, 126:00): baseline = hour 0 bucket over a 2 hour span = 600 / 120 = 5 shares a minute
+        // window [125:00, 126:00): baseline = hour 0 bucket, one active hour = 600 / 60 = 10 shares a minute
         Features w = latest(drain(), 1, at(126, 0));
-        assertThat(w.values().get("volumeRatio")).isCloseTo(200.0, within(1e-9));
-        // mention baseline = 1 mention / 120 min, so 1 mention in a 1 minute window is 120 times baseline
-        assertThat(w.values().get("mentionRatio")).isCloseTo(120.0, within(1e-9));
+        assertThat(w.values().get("volumeRatio")).isCloseTo(100.0, within(1e-9));
+        // mention baseline = 1 mention / 60 min, so 1 mention in a 1 minute window is 60 times baseline
+        assertThat(w.values().get("mentionRatio")).isCloseTo(60.0, within(1e-9));
+    }
+
+    @Test
+    void overnightGapDoesNotInflateVolumeRatio() {
+        int day2 = 24 * 60;
+        // steady 10 shares a minute from 10:00 to 14:00 on both days, with no ticks in between
+        for (int day : new int[] {0, day2}) {
+            for (int m = 10 * 60; m < 14 * 60; m++) tick(at(day + m, 5), "10.00", 10);
+        }
+        close();
+        // window [day 2 13:05, 13:06): trading-hour baseline is 10 a minute, so the ratio is 1; a baseline that
+        // counts the overnight gap as hours would read about 4
+        Features w = latest(drain(), 1, at(day2 + 13 * 60 + 6, 0));
+        assertThat(w.values().get("volumeRatio")).isCloseTo(1.0, within(1e-9));
     }
 
     @Test

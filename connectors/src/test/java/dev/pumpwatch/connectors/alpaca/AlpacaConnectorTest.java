@@ -50,6 +50,8 @@ class AlpacaConnectorTest {
         final List<String> clientFrames = new ArrayList<>();
         final List<List<String>> connections = new ArrayList<>();
         int opened;
+        int closes;
+        boolean stopOnClose; // a closed connection delivers no more frames
 
         @Override
         public Connection open(URI uri, Listener l) {
@@ -62,13 +64,13 @@ class AlpacaConnectorTest {
                         l.onText(this, "[{\"T\":\"success\",\"msg\":\"authenticated\"}]");
                     } else {
                         l.onText(this, "[{\"T\":\"subscription\",\"trades\":[\"GME\"]}]");
-                        script.forEach(f -> l.onText(this, f));
+                        script.forEach(f -> { if (!(stopOnClose && closes > 0)) l.onText(this, f); });
                         l.onClose("test close");
                     }
                 }
 
                 @Override
-                public void close() {}
+                public void close() { closes++; }
             };
             l.onText(c, "[{\"T\":\"success\",\"msg\":\"connected\"}]");
             return c;
@@ -164,6 +166,74 @@ class AlpacaConnectorTest {
         assertThat(ticks()).extracting(x -> x.eventTime().toString())
                 .containsExactlyInAnyOrder("2026-01-02T15:00:01Z", "2026-01-02T15:00:02Z", "2026-01-02T15:00:03Z",
                         "2026-01-02T15:00:04Z");
+    }
+
+    @Test
+    void failedFirstTickWithNoCheckpointBackfillsFromTheSessionStart() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[" + trade("GME", "1", 1, "2026-01-02T15:00:01Z", 1) + "]"));
+        s.connections.add(List.of());
+        var failing = new FakeSeenItems() {
+            @Override
+            public boolean isSeen(String source, String itemId) {
+                throw new IllegalStateException("db down");
+            }
+        };
+        var asked = new ArrayList<Instant>();
+        TradeHistory history = (sy, start, end, tok) -> {
+            asked.add(start);
+            return new TradeHistory.Page(List.of(), null);
+        };
+        publisher.start();
+        var c = new AlpacaConnector(props(30, KEY, SECRET), List.of("GME"), publisher, s, history, failing, positions, CLOCK);
+        c.session();
+        c.session();
+
+        assertThat(asked).containsExactly(CLOCK.instant()); // the gap fill still runs although no tick was ever saved
+    }
+
+    @Test
+    void failedSaveClosesTheConnectionAndTheGapFillStartsBeforeTheLostTick() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[" + trade("GME", "1", 1, "2026-01-02T15:00:01Z", 1) + ","
+                + trade("GME", "2", 1, "2026-01-02T15:00:02Z", 2) + "," + trade("GME", "3", 1, "2026-01-02T15:00:03Z", 3) + "]"));
+        s.connections.add(List.of());
+        var failing = new FakeSeenItems() {
+            int calls;
+
+            @Override
+            public boolean isSeen(String source, String itemId) {
+                if (++calls == 2) throw new IllegalStateException("db down"); // the second tick
+                return super.isSeen(source, itemId);
+            }
+        };
+        var asked = new ArrayList<Instant>();
+        TradeHistory history = (sy, start, end, tok) -> {
+            asked.add(start);
+            return new TradeHistory.Page(List.of(t("GME", "2026-01-02T15:00:02Z", 2), t("GME", "2026-01-02T15:00:03Z", 3)), null);
+        };
+        publisher.start();
+        var c = new AlpacaConnector(props(30, KEY, SECRET), List.of("GME"), publisher, s, history, failing, positions, CLOCK);
+        c.session();
+        assertThat(s.closes).isEqualTo(2); // the error-path close plus the session cleanup close
+        c.session();
+
+        assertThat(asked).containsExactly(Instant.parse("2026-01-02T15:00:01Z")); // not past the failed tick
+        assertThat(ticks()).extracting(x -> x.eventTime().toString()).containsExactlyInAnyOrder(
+                "2026-01-02T15:00:01Z", "2026-01-02T15:00:02Z", "2026-01-02T15:00:03Z");
+    }
+
+    @Test
+    void malformedTradeIsSkippedWithoutClosingTheConnection() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[{\"T\":\"t\",\"S\":\"GME\",\"s\":1,\"t\":\"bad\"}," // no price, bad time
+                + trade("GME", "2", 1, "2026-01-02T15:00:02Z", 2) + "]"));
+        connector(s, NO_HISTORY, List.of("GME")).session();
+        assertThat(s.closes).isEqualTo(1); // only the session's own cleanup close after the script ended
+        assertThat(ticks()).extracting(x -> x.eventTime().toString()).containsExactly("2026-01-02T15:00:02Z");
     }
 
     @Test

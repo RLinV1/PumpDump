@@ -50,21 +50,23 @@ public record Ctx(Map<Long, Bucket> hours, List<Cat> cats, long latestMs) {
         return new Ctx(h, c, latest);
     }
 
-    /** Baseline over complete hour buckets that end at or before {@code startMs}, within the previous seven days. */
+    /** Baseline over complete hour buckets that end at or before {@code startMs}, within the previous seven days.
+     *  Rates divide by active hours only, so nights and weekends (no bucket) do not dilute the baseline. */
     public Baseline baseline(long startMs) {
         long lo = startMs - BASELINE_HOURS * HOUR_MS;
         double m = 0, v = 0;
-        long earliest = Long.MAX_VALUE;
+        int mHours = 0, vHours = 0, any = 0;
         for (Map.Entry<Long, Bucket> e : hours.entrySet()) {
             long bs = e.getKey() * HOUR_MS;
             if (bs < lo || bs + HOUR_MS > startMs) continue;
+            any++;
             m += e.getValue().mentions();
             v += e.getValue().volume();
-            earliest = Math.min(earliest, bs);
+            if (e.getValue().mentions() > 0) mHours++;
+            if (e.getValue().volume() > 0) vHours++;
         }
-        if (earliest == Long.MAX_VALUE) return new Baseline(false, 0, 0);
-        long span = Math.min(BASELINE_HOURS, Math.max(1, (startMs - earliest) / HOUR_MS));
-        return new Baseline(true, m / (span * 60.0), v / (span * 60.0));
+        if (any == 0) return new Baseline(false, 0, 0);
+        return new Baseline(true, mHours == 0 ? 0 : m / (mHours * 60.0), vHours == 0 ? 0 : v / (vHours * 60.0));
     }
 
     /** Catalyst feature values for the window [startMs, endMs]. Only catalysts at or before endMs are read. */

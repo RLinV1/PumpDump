@@ -143,6 +143,7 @@ public final class AlpacaConnector implements Connector {
     boolean session() throws Exception {
         var subscribed = new CompletableFuture<Void>();
         var closed = new CompletableFuture<Void>();
+        Instant started = clock.instant();
         try {
             current = stream.open(URI.create(streamUrl), new TradeStream.Listener() {
                 @Override
@@ -150,7 +151,9 @@ public final class AlpacaConnector implements Connector {
                     try {
                         handleFrame(c, text, subscribed);
                     } catch (Exception e) {
-                        log.warn("Alpaca frame skipped: {}", e.toString());
+                        // a tick lost to a store error would be skipped forever: reconnect so the gap fill from lastSeen runs
+                        log.warn("Alpaca frame failed, reconnecting to backfill: {}", e.toString());
+                        c.close();
                     }
                 }
 
@@ -184,7 +187,8 @@ public final class AlpacaConnector implements Connector {
             current = null;
             if (c != null) c.close();
             synchronized (this) {
-                if (gapFrom == null) gapFrom = lastSeen;
+                // no saved tick yet (first trade failed, or none arrived): backfill from when this session started
+                if (gapFrom == null) gapFrom = lastSeen != null ? lastSeen : started;
             }
         }
     }
@@ -194,7 +198,14 @@ public final class AlpacaConnector implements Connector {
         for (JsonNode m : root.isArray() ? root : List.of(root)) {
             switch (m.path("T").asText()) {
                 case "t" -> {
-                    publish(Trade.parse(m, m.get("S").asText()));
+                    Trade t;
+                    try {
+                        t = Trade.parse(m, m.get("S").asText());
+                    } catch (RuntimeException e) {
+                        log.warn("Alpaca trade skipped: {}", e.toString());
+                        continue;
+                    }
+                    publish(t);
                     publisher.markFetched();
                 }
                 case "success" -> {
