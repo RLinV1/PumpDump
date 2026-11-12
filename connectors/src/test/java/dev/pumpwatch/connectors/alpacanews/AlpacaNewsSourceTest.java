@@ -51,6 +51,8 @@ class AlpacaNewsSourceTest {
         final List<String> clientFrames = new ArrayList<>();
         final List<List<String>> connections = new ArrayList<>();
         int opened;
+        int closes;
+        boolean stopOnClose; // a closed connection delivers no more frames
 
         @Override
         public Connection open(URI uri, Listener l) {
@@ -63,13 +65,13 @@ class AlpacaNewsSourceTest {
                         l.onText(this, "[{\"T\":\"success\",\"msg\":\"authenticated\"}]");
                     } else {
                         l.onText(this, "[{\"T\":\"subscription\",\"news\":[\"*\"]}]");
-                        script.forEach(f -> l.onText(this, f));
+                        script.forEach(f -> { if (!(stopOnClose && closes > 0)) l.onText(this, f); });
                         l.onClose("test close");
                     }
                 }
 
                 @Override
-                public void close() {}
+                public void close() { closes++; }
             };
             l.onText(c, "[{\"T\":\"success\",\"msg\":\"connected\"}]");
             return c;
@@ -157,6 +159,33 @@ class AlpacaNewsSourceTest {
 
         assertThat(asked).containsExactly(NOW.minusSeconds(3600), Instant.parse("2026-01-02T15:00:01Z"));
         assertThat(articles()).extracting(ArticleRecord::itemId).containsExactlyInAnyOrder("1", "2", "3", "4");
+    }
+
+    @Test
+    void failedSaveClosesTheConnectionAndTheBackfillStartsBeforeTheLostArticle() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[" + news(1, "One", "2026-01-02T15:00:01Z", "GME") + ","
+                + news(2, "Two", "2026-01-02T15:00:02Z", "GME") + "," + news(3, "Three", "2026-01-02T15:00:03Z", "GME") + "]"));
+        s.connections.add(List.of());
+        var calls = new int[1];
+        var flaky = new NewsSink(publisher, (src, i) -> {
+            if (++calls[0] == 2) throw new IllegalStateException("db down"); // the second article
+            return seen.contains(src + "|" + i);
+        }, (src, i) -> seen.add(src + "|" + i), () -> false);
+        var asked = new ArrayList<Instant>();
+        NewsHistory history = (sy, start, end, tok) -> {
+            asked.add(start);
+            return new NewsHistory.Page(asked.size() == 1 ? List.of() : List.of(item(2, "2026-01-02T15:00:02Z"),
+                    item(3, "2026-01-02T15:00:03Z")), null);
+        };
+        var src = source(s, history, true, List.of());
+        src.run(flaky);
+        assertThat(s.closes).isGreaterThan(0);
+        src.run(flaky);
+
+        assertThat(asked).containsExactly(NOW.minusSeconds(3600), Instant.parse("2026-01-02T15:00:01Z"));
+        assertThat(articles()).extracting(ArticleRecord::itemId).containsExactlyInAnyOrder("1", "2", "3");
     }
 
     @Test

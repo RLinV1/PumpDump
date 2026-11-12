@@ -150,7 +150,9 @@ public final class AlpacaConnector implements Connector {
                     try {
                         handleFrame(c, text, subscribed);
                     } catch (Exception e) {
-                        log.warn("Alpaca frame skipped: {}", e.toString());
+                        // a tick lost to a store error would be skipped forever: reconnect so the gap fill from lastSeen runs
+                        log.warn("Alpaca frame failed, reconnecting to backfill: {}", e.toString());
+                        c.close();
                     }
                 }
 

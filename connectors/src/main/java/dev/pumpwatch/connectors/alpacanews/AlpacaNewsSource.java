@@ -106,7 +106,9 @@ public final class AlpacaNewsSource implements NewsSource {
                     try {
                         handleFrame(c, text, subscribed, sink);
                     } catch (Exception e) {
-                        log.warn("Alpaca News frame skipped: {}", e.toString());
+                        // an article lost to a store error would be skipped forever: reconnect so the backfill from lastSeen runs
+                        log.warn("Alpaca News frame failed, reconnecting to backfill: {}", e.toString());
+                        c.close();
                     }
                 }
 
@@ -187,8 +189,8 @@ public final class AlpacaNewsSource implements NewsSource {
 
     private void publish(NewsSink sink, JsonNode n) {
         var a = normalize(n, clock.instant());
-        if (lastSeen == null || a.eventTime().isAfter(lastSeen)) lastSeen = a.eventTime();
         sink.publish(a);
+        if (lastSeen == null || a.eventTime().isAfter(lastSeen)) lastSeen = a.eventTime(); // only after a successful publish
     }
 
     /** Works for both the stream frame and the REST item. Invalid symbols (e.g. crypto pairs) are dropped. */
