@@ -225,6 +225,40 @@ def fit_finetune(df: pd.DataFrame, out: Path, base=EMBED_MODEL, device=None, epo
             "periods": {k: [str(p["date"].min().date()), str(p["date"].max().date())] for k, p in parts.items()}}
 
 
+def _tfidf_matrix(vocab, idf, texts):
+    """Rebuild TfidfVectorizer(1-2 grams, sublinear_tf) from saved vocabulary and idf, so no pickle is needed."""
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.preprocessing import normalize
+    X = CountVectorizer(ngram_range=(1, 2), vocabulary=vocab).transform(texts).astype(float)
+    X.data = 1 + np.log(X.data)
+    return normalize(X.multiply(np.asarray(idf)).tocsr())
+
+
+def fit_tfidf(df: pd.DataFrame, cs=(0.1, 1, 10, 100)):
+    """TF-IDF word 1-2 grams (fit on train only) + logistic regression; C and threshold chosen on validation only."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    tr, va, te = time_split(df)
+    for name, part in (("train", tr), ("validation", va), ("test", te)):
+        if part["y"].nunique() < 2:
+            raise SystemExit(f"{name} period has one class; need more data")
+    vec = TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True, min_df=2)
+    X = {"tr": vec.fit_transform(tr["text"]), "va": vec.transform(va["text"]), "te": vec.transform(te["text"])}
+    fits = [(c, LogisticRegression(C=c, class_weight="balanced", max_iter=2000, solver="liblinear").fit(X["tr"], tr["y"])) for c in cs]
+    c, model = max(fits, key=lambda t: average_precision_score(va["y"], t[1].predict_proba(X["va"])[:, 1]))
+    pr, rc, th = precision_recall_curve(va["y"], model.predict_proba(X["va"])[:, 1])
+    f1 = 2 * pr[:-1] * rc[:-1] / np.maximum(pr[:-1] + rc[:-1], 1e-12)
+    thr = float(th[int(np.argmax(f1))])
+    parts = {"train": tr, "validation": va, "test": te}
+    info = {"kind": "tfidf", "C": c, "threshold": thr,
+            "metrics": bootstrap(te["y"].to_numpy(), model.predict_proba(X["te"])[:, 1], thr),
+            "coef": model.coef_[0].tolist(), "intercept": float(model.intercept_[0]),
+            "vocabulary": {k: int(v) for k, v in vec.vocabulary_.items()}, "idf": vec.idf_.tolist(),
+            "sizes": {k: len(p) for k, p in parts.items()},
+            "positives": {k: int(p["y"].sum()) for k, p in parts.items()},
+            "periods": {k: [str(p["date"].min().date()), str(p["date"].max().date())] for k, p in parts.items()}}
+    return info
+
+
 def _ver(n):
     try:
         return version(n)
@@ -240,7 +274,8 @@ def write_card(out: Path, name: str, info: dict) -> Path:
         f"# Model card: {name}", "", f"Date: {datetime.date.today().isoformat()}", "",
         "## Task", "Flags a short social message as a pump announcement. " + (
             f"The encoder {EMBED_MODEL} was fine-tuned end to end with a linear head on mean-pooled tokens."
-            if "epoch" in info else f"Logistic regression on sentence embeddings; embeddings come from {EMBED_MODEL}."), "",
+            if "epoch" in info else "Logistic regression on TF-IDF word 1-2 grams; no pretrained model is used."
+            if info.get("kind") == "tfidf" else f"Logistic regression on sentence embeddings; embeddings come from {EMBED_MODEL}."), "",
         "## Data", f"- {DATASET}; raw text is not stored or committed.",
         *[f"- {k}: {s[k]} messages ({pos[k]} pump announcements), {per[k][0]} to {per[k][1]}" for k in s],
         (f"- Fine-tuning: up to {info['epochs']} epochs, lr {info['lr']}, batch {info['batch']}, max length {info['max_len']}, "
@@ -250,8 +285,10 @@ def write_card(out: Path, name: str, info: dict) -> Path:
         "## Metrics on the held-out test period (later in time than training)",
         "| precision | recall | PR-AUC |", "| --- | --- | --- |", f"| {cell('precision')} | {cell('recall')} | {cell('pr_auc')} |", "",
         "Values show the estimate with a 95% bootstrap interval over messages.", "",
-        "## Known limits", *[f"- {x}" for x in LIMITS], "",
-        "## Licenses", f"- model {name}: {MODEL_LICENSE}", f"- embedding model {EMBED_MODEL.split('/')[-1]}: {EMBED_LICENSE}",
+        "## Known limits", *[f"- {x}" for x in LIMITS],
+        *(["- The saved vocabulary holds word n-grams from the corpus (min_df=2), not whole messages. The model keys on crypto "
+           "exchange words, so it will likely transfer worse to stock posts."] if info.get("kind") == "tfidf" else []), "",
+        "## Licenses", f"- model {name}: {MODEL_LICENSE}", *([] if info.get("kind") == "tfidf" else [f"- embedding model {EMBED_MODEL.split('/')[-1]}: {EMBED_LICENSE}"]),
         f"- dataset PumpSense Telegram corpus: {DATASET_LICENSE}",
         *[f"- {n} {_ver(n)}: {lic}" for n, lic in DEPS.items()],
     ]
@@ -260,11 +297,14 @@ def write_card(out: Path, name: str, info: dict) -> Path:
     return p
 
 
-def train(data_dir: Path, out_dir: Path, version_name: str, embed=embed_texts, finetune=False, **ft) -> dict:
+def train(data_dir: Path, out_dir: Path, version_name: str, embed=embed_texts, finetune=False, tfidf=False, **ft) -> dict:
     df = load_corpus(data_dir)
     out = Path(out_dir) / f"promo-{version_name}"
     out.mkdir(parents=True, exist_ok=True)
-    if finetune:
+    if tfidf:
+        info = fit_tfidf(df)
+        meta = {k: info[k] for k in ("kind", "vocabulary", "idf", "coef", "intercept")}
+    elif finetune:
         info = fit_finetune(df, out, **ft)
         meta = {"kind": "finetuned", "embedding_model": EMBED_MODEL, "encoder": "encoder", "max_length": info["max_len"],
                 "coef": info["coef"], "intercept": info["intercept"]}
@@ -279,6 +319,9 @@ def train(data_dir: Path, out_dir: Path, version_name: str, embed=embed_texts, f
 def score(model_json: Path, texts, embed=embed_texts, device=None) -> np.ndarray:
     """Probability each text is a pump announcement, from a saved model.json (frozen or fine-tuned)."""
     m = json.loads(Path(model_json).read_text(encoding="utf-8"))
+    if m.get("kind") == "tfidf":
+        z = _tfidf_matrix(m["vocabulary"], m["idf"], list(texts)) @ np.array(m["coef"]) + m["intercept"]
+        return 1 / (1 + np.exp(-z))
     if m.get("kind") == "finetuned":
         from transformers import AutoTokenizer
         d, enc_dir = _device(device), Path(model_json).parent / m["encoder"]

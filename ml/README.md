@@ -33,6 +33,8 @@ python -m pumpml promo-train --data <chat_data folder> --version v1   # -> model
 It separates pump-announcement messages from other chatter in crypto pump groups, with a time split and bootstrap intervals. It is not
 validated on stock posts. Raw text is never written; the default model is 384 coefficients. See the model card for licenses.
 
+Add `--tfidf` for TF-IDF word 1-2 grams + logistic regression instead (CPU, no embedding model; vocabulary saved as JSON). It excludes `--finetune`.
+
 Add `--finetune` to fine-tune the MiniLM encoder with a linear head instead (needs a CUDA GPU; it exits rather than fall back to CPU).
 It saves the weights under `models/promo-<v>/encoder/` (gitignored) and `model.json` gets `"kind": "finetuned"`; `score()` loads either kind.
 

@@ -23,7 +23,9 @@ def main(argv=None):
     pr.add_argument("--data", required=True, help="folder of PumpSense chat_data CSVs (date, text, Pump); stays local")
     pr.add_argument("--out", default="models")
     pr.add_argument("--version", default="dev")
-    pr.add_argument("--finetune", action="store_true", help="fine-tune the MiniLM encoder (CUDA GPU required)")
+    g = pr.add_mutually_exclusive_group()
+    g.add_argument("--finetune", action="store_true", help="fine-tune the MiniLM encoder (CUDA GPU required)")
+    g.add_argument("--tfidf", action="store_true", help="TF-IDF word 1-2 grams + logistic regression (no embedding model)")
     v = sub.add_parser("vol-baseline")
     v.add_argument("--bars", help="one-minute bars CSV")
     v.add_argument("--synthetic", action="store_true")
@@ -46,7 +48,7 @@ def main(argv=None):
 
     if a.cmd == "promo-train":
         from . import promo
-        print(json.dumps(promo.train(Path(a.data), Path(a.out), a.version, finetune=a.finetune)["metrics"], indent=2))
+        print(json.dumps(promo.train(Path(a.data), Path(a.out), a.version, finetune=a.finetune, tfidf=a.tfidf)["metrics"], indent=2))
         return
 
     if a.cmd == "vol-evaluate":

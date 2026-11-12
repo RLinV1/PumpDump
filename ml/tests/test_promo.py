@@ -85,3 +85,18 @@ def test_finetune_roundtrip_offline(tmp_path):
                                                 "coef": info["coef"], "intercept": info["intercept"]}), encoding="utf-8")
     s = promo.score(out / "model.json", ["The coin to pump is X on Bittrex", "good morning everyone"], device="cpu")
     assert s.shape == (2,) and ((s >= 0) & (s <= 1)).all()
+
+
+def test_tfidf_train_and_score_reload(tmp_path):
+    d = tmp_path / "chat"
+    d.mkdir()
+    df = frame()
+    out = df.assign(date=df["date"].dt.strftime("%Y-%m-%dT%H:%M:%S"), Pump=df["y"].map({1: 1.0, 0: np.nan}))
+    out[["date", "text", "Pump"]].to_csv(d / "r.csv", index=False)
+    info = promo.train(d, tmp_path / "out", "t", tfidf=True)
+    mdir = tmp_path / "out" / "promo-t"
+    assert info["metrics"]["recall"]["value"] > 0.9
+    assert json.loads((mdir / "model.json").read_text(encoding="utf-8"))["kind"] == "tfidf"
+    assert "coin0" not in (mdir / "model.json").read_text(encoding="utf-8")
+    s = promo.score(mdir / "model.json", ["The coin to pump is X on Bittrex", "good morning everyone"])
+    assert s[0] > s[1]
