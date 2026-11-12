@@ -1,5 +1,6 @@
 """Evaluation harness: time split, decision metrics with bootstrap intervals, baselines, promotion gate."""
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,7 @@ from . import model as M
 from .card import write_card
 from .split import three_way
 
+log = logging.getLogger(__name__)
 TOP_K = 1  # flags per day counted for "precision among the top flags"
 
 
@@ -53,9 +55,12 @@ def with_ci(df: pd.DataFrame, s: np.ndarray, level: float, n_boot: int = 200, se
     return out
 
 
-def gate(cand_pr: float, baseline_pr: dict, violations: int, current_pr: float | None = None) -> dict:
+def gate(cand_pr: float, baseline_pr: dict, violations: int, current_pr: float | None = None,
+         flag_level: float | None = 0.0) -> dict:
     """Promote only if the candidate beats every baseline (and the current model) and the catalyst test passes."""
     reasons = []
+    if flag_level is None:
+        reasons.append("no flag level reaches target precision")
     for name, pr in baseline_pr.items():
         if not cand_pr > pr:
             reasons.append(f"does not beat {name} baseline on PR-AUC ({cand_pr:.3f} vs {pr:.3f})")
@@ -81,12 +86,18 @@ def evaluate(df: pd.DataFrame, model_dir: Path, data_note: str, current_dir: Pat
         report[name] = with_ci(test, s, level if level is not None else float("inf"), n_boot)
     violations = M.catalyst_violations(booster, iso, test)
     current_pr = None
-    if current_dir and (current_dir / "report.json").exists():
-        current_pr = json.loads((current_dir / "report.json").read_text())["model"]["pr_auc"]["value"]
+    if current_dir and (current_dir / "model.json").exists():
+        # score the current model on THIS test split; its old report.json came from a different period
+        try:
+            cb, ci, _ = M.load(current_dir)
+            current_pr = float(average_precision_score(test["label"], M.score(cb, ci, test)))
+        except Exception as e:  # missing/corrupt files or a feature mismatch: treat as no current model
+            log.warning("cannot score current model in %s, skipping the beats-current check: %s", current_dir, e)
     report["catalyst_violations"] = violations
     report["gate"] = gate(report["model"]["pr_auc"]["value"],
-                          {k: report[k]["pr_auc"]["value"] for k in ("rules", "volume")}, violations, current_pr)
-    (model_dir / "report.json").write_text(json.dumps(report, indent=2))
+                          {k: report[k]["pr_auc"]["value"] for k in ("rules", "volume")}, violations, current_pr,
+                          info["flag_level"])
     if report["gate"]["promoted"]:
         write_card(model_dir, info, report, df, tr)
+    (model_dir / "report.json").write_text(json.dumps(report, indent=2))  # last, so a failed card leaves no report
     return report

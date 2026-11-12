@@ -116,3 +116,57 @@ def test_onnx_export_matches_python_model(trained, df):
     assert 0 < ref["expected_score"] < 100
     got = sess.run(["probabilities"], {"input": df[info["features"]].to_numpy(np.float32)})[0][:, 1]
     assert np.abs(got - booster.predict(df[info["features"]])).max() < 1e-5
+
+
+def test_gate_rejects_missing_flag_level():
+    g = E.gate(0.9, {"rules": 0.6}, 0, flag_level=None)
+    assert not g["promoted"] and "no flag level reaches target precision" in g["reasons"]
+
+
+def test_card_renders_missing_flag_level(df, trained, tmp_path):
+    import shutil
+    from pumpml.card import write_card
+    d = tmp_path / "m"
+    shutil.copytree(trained, d)
+    info = {**json.loads((d / "model.json").read_text()), "flag_level": None}
+    r = E.evaluate(df, trained, "SYNTHETIC", n_boot=5)
+    write_card(d, info, r, df, df.head(5))
+    assert "Level none of 100" in (d / "model-card.md").read_text()
+
+
+def test_no_report_when_card_fails(df, trained, tmp_path, monkeypatch):
+    import shutil
+    d = tmp_path / "m"
+    shutil.copytree(trained, d)
+    (d / "report.json").unlink(missing_ok=True)
+    (d / "model-card.md").unlink(missing_ok=True)
+
+    def boom(*a, **k):
+        raise RuntimeError("card failed")
+    monkeypatch.setattr(E, "write_card", boom)
+    with pytest.raises(RuntimeError):
+        E.evaluate(df, d, "SYNTHETIC", n_boot=5)
+    assert not (d / "report.json").exists()
+
+
+def test_current_model_is_scored_on_the_new_test_split(df, trained, tmp_path):
+    import shutil
+    new, cur = tmp_path / "new", tmp_path / "cur"
+    shutil.copytree(trained, new)
+    shutil.copytree(trained, cur)
+    # stale report from another period claims a weak model; the same model scored now ties, so it must not win
+    (cur / "report.json").write_text(json.dumps({"model": {"pr_auc": {"value": 0.0}}}))
+    r = E.evaluate(df, new, "SYNTHETIC", current_dir=cur, n_boot=5)
+    assert not r["gate"]["promoted"]
+    assert any("does not beat current model" in x for x in r["gate"]["reasons"])
+
+
+def test_unloadable_current_model_means_no_current_model(df, trained, tmp_path, caplog):
+    import shutil
+    new, cur = tmp_path / "new", tmp_path / "cur"
+    shutil.copytree(trained, new)
+    cur.mkdir()
+    (cur / "model.json").write_text("{not json")
+    r = E.evaluate(df, new, "SYNTHETIC", current_dir=cur, n_boot=5)
+    assert r["gate"]["promoted"], r["gate"]
+    assert "cannot score current model" in caplog.text
