@@ -91,4 +91,35 @@ class SseHubTest {
         assertThat(timed.clientCount()).isEqualTo(1);
         assertThat(emitter).isNotNull();
     }
+
+    @Test
+    void viewersOfOneRunShareOneQueryPerTick() {
+        var wide = new SseHub(repo, new ApiProperties(List.of(), 120, 30, Duration.ofSeconds(15), Duration.ofSeconds(1), 100, 50));
+        for (int i = 0; i < 20; i++) wide.subscribe("live", 5L, "c");
+        wide.tick();
+        verify(repo, org.mockito.Mockito.times(1)).flagsAfter("live", 5, SseHub.BATCH);
+    }
+
+    @Test
+    void aViewerFarBehindDoesNotDelayACaughtUpViewer() {
+        when(repo.flagsAfter("live", 0, SseHub.BATCH)).thenReturn(List.of(flag(1)));
+        when(repo.flagsAfter("live", 50, SseHub.BATCH)).thenReturn(List.of(flag(51)));
+        hub.subscribe("live", 0L, "laggard");
+        hub.subscribe("live", 50L, "current");
+        hub.tick();
+        verify(repo).flagsAfter("live", 0, SseHub.BATCH);
+        verify(repo).flagsAfter("live", 50, SseHub.BATCH);
+        hub.tick(); // the caught-up viewer moved to 51 on the first tick, the laggard to 1
+        verify(repo).flagsAfter("live", 51, SseHub.BATCH);
+        verify(repo).flagsAfter("live", 1, SseHub.BATCH);
+    }
+
+    @Test
+    void differentRunsGetOneQueryEach() {
+        hub.subscribe("live", 0L, "a");
+        hub.subscribe("r2", 0L, "b");
+        hub.tick();
+        verify(repo).flagsAfter("live", 0, SseHub.BATCH);
+        verify(repo).flagsAfter("r2", 0, SseHub.BATCH);
+    }
 }

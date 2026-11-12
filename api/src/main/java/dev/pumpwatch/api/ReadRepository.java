@@ -15,6 +15,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -25,12 +26,12 @@ public class ReadRepository {
         this.jdbc = jdbc;
     }
 
-    /** Idempotent: the same topic/partition/offset is stored once. */
+    /** Idempotent: the same run, ticker, window and model is stored once, whatever the Kafka offset. */
     public void saveScore(String runId, String topic, int partition, long offset, Score s) {
         jdbc.update("""
                 INSERT INTO api_scores (run_id, topic, kafka_partition, kafka_offset, ticker, window_end, score,
                                         model_version, stale_sources, ingest_time, swing)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (run_id, ticker, window_end, model_version) DO NOTHING""",
                 runId, topic, partition, offset, s.ticker(), Timestamp.from(s.windowEnd()), s.score(),
                 s.modelVersion(), String.join(",", new TreeSet<>(s.staleSources())), Timestamp.from(s.ingestTime()),
                 s.swing() == null ? null : Json.toJson(s.swing()));
@@ -39,14 +40,26 @@ public class ReadRepository {
     public void saveFlag(String runId, String topic, int partition, long offset, Flag f) {
         jdbc.update("""
                 INSERT INTO api_flags (run_id, topic, kafka_partition, kafka_offset, ticker, raised_at, evidence)
-                VALUES (?,?,?,?,?,?,?::jsonb) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
+                VALUES (?,?,?,?,?,?,?::jsonb) ON CONFLICT (run_id, ticker, raised_at) DO NOTHING""",
                 runId, topic, partition, offset, f.ticker(), Timestamp.from(f.raisedAt()), Json.toJson(f.evidence()));
     }
 
+    /** Only the run's last day of scores is scanned, measured from its newest row so replay runs work too. */
     public List<ScoreView> latestScores(String runId) {
         return jdbc.query("""
                 SELECT DISTINCT ON (ticker) ticker, score, model_version, window_end, ingest_time, stale_sources, swing
-                FROM api_scores WHERE run_id = ? ORDER BY ticker, window_end DESC, id DESC""", SCORE, runId);
+                FROM api_scores
+                WHERE run_id = ? AND window_end > (SELECT MAX(window_end) FROM api_scores WHERE run_id = ?) - interval '1 day'
+                ORDER BY ticker, window_end DESC, id DESC""", SCORE, runId, runId);
+    }
+
+    static final int SCORE_RETENTION_DAYS = 7;
+
+    /** Live scores older than a week are never read; replay runs are left alone. */
+    @Scheduled(cron = "0 17 3 * * *")
+    public int purgeOldLiveScores() {
+        return jdbc.update("DELETE FROM api_scores WHERE run_id = 'live' AND window_end < now() - make_interval(days => ?)",
+                SCORE_RETENTION_DAYS);
     }
 
     public List<ScoreView> scores(String runId, String ticker, Instant from, Instant to) {

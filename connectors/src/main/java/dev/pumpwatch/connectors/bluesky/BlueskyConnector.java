@@ -25,7 +25,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +55,11 @@ public class BlueskyConnector implements Connector {
     private final SeenItems seen;
     private final ConnectorPositions positions;
     private final JetstreamClient client;
+    private final ProfileClient profiles;
+    /** Account creation dates by DID, least recently used out at 10k. Only the Jetstream thread touches it. */
+    private final Map<String, Instant> createdAtCache = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, Instant> eldest) { return size() > 10_000; }
+    };
     private final Clock clock;
     private final Duration initialBackoff;
     private final Duration maxBackoff;
@@ -69,12 +76,19 @@ public class BlueskyConnector implements Connector {
     public BlueskyConnector(BlueskyProperties props, @Value("${pumpwatch.watchlist}") List<String> watchlist,
                             ConnectorPublishers publishers, SeenItems seen, ConnectorPositions positions,
                             MeterRegistry meters, Clock clock) {
-        this(props, watchlist, publishers.create(SOURCE), seen, positions, new JdkJetstreamClient(), meters, clock, Duration.ofSeconds(1), Duration.ofMinutes(1));
+        this(props, watchlist, publishers.create(SOURCE), seen, positions, new JdkJetstreamClient(), new JdkProfileClient(), meters, clock, Duration.ofSeconds(1), Duration.ofMinutes(1));
     }
 
     BlueskyConnector(BlueskyProperties props, List<String> watchlist, ConnectorPublisher publisher,
                      SeenItems seen, ConnectorPositions positions, JetstreamClient client, MeterRegistry meters, Clock clock,
                      Duration initialBackoff, Duration maxBackoff) {
+        this(props, watchlist, publisher, seen, positions, client, dids -> Map.of(), meters, clock, initialBackoff, maxBackoff);
+    }
+
+    BlueskyConnector(BlueskyProperties props, List<String> watchlist, ConnectorPublisher publisher,
+                     SeenItems seen, ConnectorPositions positions, JetstreamClient client, ProfileClient profiles,
+                     MeterRegistry meters, Clock clock, Duration initialBackoff, Duration maxBackoff) {
+        this.profiles = profiles;
         this.props = props;
         this.watchlist = Set.copyOf(watchlist.stream().map(Keys::tickerKey).toList());
         this.filter = new PostFilter(watchlist, props.financeTerms());
@@ -190,9 +204,34 @@ public class BlueskyConnector implements Connector {
         if (tickers.isEmpty()) return; // nothing derived to keep
         var created = parseTime(record.path("createdAt").asText(null));
         var post = new PostRecord(SchemaVersions.POST, created, clock.instant(), SOURCE, postId,
-                did == null ? null : Keys.authorKey(did), null, List.copyOf(tickers), SimHash.of(text),
+                did == null ? null : Keys.authorKey(did), accountCreatedAt(did), List.copyOf(tickers), SimHash.of(text),
                 props.retainText() ? text : null);
         if (publish(Keys.postKey(SOURCE, postId), post) && postId != null) seen.markNew(SOURCE, postId);
+    }
+
+    /** No profile in a successful response: remembered as "unknown" so the DID is not asked about again. */
+    private static final Instant NO_PROFILE = Instant.EPOCH;
+    private static final Duration LOOKUP_PAUSE = Duration.ofMinutes(1);
+    private Instant lookupsPausedUntil = Instant.MIN;
+
+    /**
+     * Null when unknown: a failed lookup must not lose the post, it just leaves the "new account" rule silent.
+     * After a failure no lookups are made for a minute, so a down AppView cannot stall the stream thread per post.
+     */
+    Instant accountCreatedAt(String did) {
+        if (did == null) return null;
+        var cached = createdAtCache.get(did);
+        if (cached != null) return cached == NO_PROFILE ? null : cached;
+        if (clock.instant().isBefore(lookupsPausedUntil)) return null;
+        try {
+            var created = profiles.createdAt(List.of(did)).get(did);
+            createdAtCache.put(did, created != null ? created : NO_PROFILE);
+            return created;
+        } catch (Exception ex) {
+            lookupsPausedUntil = clock.instant().plus(LOOKUP_PAUSE);
+            log.debug("profile lookup failed, pausing lookups: {}", ex.toString());
+            return null;
+        }
     }
 
     /** A deleted post we published: tell downstream to purge it. Deletes of posts we never kept are ignored. */

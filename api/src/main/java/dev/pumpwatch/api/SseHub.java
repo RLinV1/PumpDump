@@ -16,7 +16,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /**
  * Flag stream. Every client has a cursor (flag id); a poll reads newer flags from Postgres, so resume after a drop
  * is the same query as normal delivery and nothing here has to survive a restart.
- * shortcut: one query per client per poll, fine up to api.max-streams, use a shared fan-out beyond that.
  */
 @Component
 public class SseHub {
@@ -84,23 +83,41 @@ public class SseHub {
 
     @Scheduled(fixedDelayString = "${api.poll-interval:PT1S}")
     public void tick() {
-        for (Client c : clients) {
+        // Viewers of one run at the same cursor (normally all live ones) share a query, so a client that resumes far
+        // behind (Last-Event-ID is client-supplied) only costs its own query and cannot hold back the others.
+        var groups = clients.stream().collect(java.util.stream.Collectors.groupingBy(c -> List.of(c.runId, c.cursor)));
+        for (var group : groups.entrySet()) {
+            List<Client> viewers = group.getValue();
+            List<FlagView> flags;
             try {
-                List<FlagView> flags = repo.flagsAfter(c.runId, c.cursor, BATCH);
-                for (FlagView f : flags) {
-                    c.emitter.send(SseEmitter.event().id(Long.toString(f.id())).name("flag")
-                            .data(Json.toJson(Envelope.of(f)), MediaType.APPLICATION_JSON));
-                    c.cursor = f.id();
-                    c.lastSent = clock.instant();
+                flags = repo.flagsAfter(viewers.get(0).runId, viewers.get(0).cursor, BATCH);
+            } catch (Exception e) { // failed read: drop this run's viewers, the browsers reconnect
+                viewers.forEach(c -> drop(c, e));
+                continue;
+            }
+            for (Client c : viewers) {
+                try {
+                    boolean sent = false;
+                    for (FlagView f : flags) {
+                        c.emitter.send(SseEmitter.event().id(Long.toString(f.id())).name("flag")
+                                .data(Json.toJson(Envelope.of(f)), MediaType.APPLICATION_JSON));
+                        c.cursor = f.id();
+                        c.lastSent = clock.instant();
+                        sent = true;
+                    }
+                    if (!sent && c.lastSent.plus(props.heartbeat()).isBefore(clock.instant())) {
+                        c.emitter.send(SseEmitter.event().comment("heartbeat"));
+                        c.lastSent = clock.instant();
+                    }
+                } catch (Exception e) { // closed connection: drop this client, the browser reconnects
+                    drop(c, e);
                 }
-                if (flags.isEmpty() && c.lastSent.plus(props.heartbeat()).isBefore(clock.instant())) {
-                    c.emitter.send(SseEmitter.event().comment("heartbeat"));
-                    c.lastSent = clock.instant();
-                }
-            } catch (Exception e) { // closed connection or failed read: drop this client, the browser reconnects
-                clients.remove(c);
-                c.emitter.completeWithError(e);
             }
         }
+    }
+
+    private void drop(Client c, Exception e) {
+        clients.remove(c);
+        c.emitter.completeWithError(e);
     }
 }

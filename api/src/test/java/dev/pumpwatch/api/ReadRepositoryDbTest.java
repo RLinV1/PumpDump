@@ -74,6 +74,17 @@ class ReadRepositoryDbTest {
     }
 
     @Test
+    void sameDataIsStoredOnceAndNewDataIsKeptAfterKafkaOffsetsRestart() {
+        repo.saveFlag("live", "flags", 0, 0, flag("OFFS", T, 61));
+        repo.saveFlag("live", "flags", 0, 7, flag("OFFS", T, 61)); // redelivered under another offset
+        repo.saveFlag("live", "flags", 0, 0, flag("OFFS", T.plusSeconds(60), 62)); // Kafka wiped: offset 0 again, new flag
+        repo.saveScore("live", "scores", 0, 0, score("OFFS", T, 10));
+        repo.saveScore("live", "scores", 0, 0, score("OFFS", T.plusSeconds(60), 20));
+        assertThat(repo.recentFlags("live", 50).stream().filter(f -> f.ticker().equals("OFFS"))).hasSize(2);
+        assertThat(repo.scores("live", "OFFS", T.minusSeconds(1), T.plusSeconds(61))).hasSize(2);
+    }
+
+    @Test
     void watchlistIsLatestLiveScorePerTickerAndTimelineIsEventTimeOrdered() {
         repo.saveScore("live", "scores", 0, 10, score("NVDA", T.plusSeconds(300), 30));
         repo.saveScore("live", "scores", 0, 11, score("NVDA", T, 10)); // arrives late, older window

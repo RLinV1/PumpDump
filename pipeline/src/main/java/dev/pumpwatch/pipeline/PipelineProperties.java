@@ -20,7 +20,9 @@ public record PipelineProperties(
         /** Directory holding model.onnx, model.json and reference.json; empty means no model, so the rule scorer. */
         @DefaultValue("") String modelDir,
         /** Directory of a vol-train model (median.onnx, upper.onnx, model.json, reference.json); empty means the HAR-RV baseline. */
-        @DefaultValue("") String volModelDir) {
+        @DefaultValue("") String volModelDir,
+        /** Feature windows to build. Only scoring-window-minutes is read downstream; each extra window costs state and CPU. */
+        @DefaultValue("5") List<Integer> windowMinutes) {
 
     public FlagConfig flagConfig() {
         return new FlagConfig(scoringWindowMinutes, flagLevel, cooldown, reflagMargin, catalystLookback);
