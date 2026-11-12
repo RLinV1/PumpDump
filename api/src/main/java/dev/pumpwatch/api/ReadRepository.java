@@ -26,12 +26,12 @@ public class ReadRepository {
         this.jdbc = jdbc;
     }
 
-    /** Idempotent: the same topic/partition/offset is stored once. */
+    /** Idempotent: the same run, ticker, window and model is stored once, whatever the Kafka offset. */
     public void saveScore(String runId, String topic, int partition, long offset, Score s) {
         jdbc.update("""
                 INSERT INTO api_scores (run_id, topic, kafka_partition, kafka_offset, ticker, window_end, score,
                                         model_version, stale_sources, ingest_time, swing)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?::jsonb) ON CONFLICT (run_id, ticker, window_end, model_version) DO NOTHING""",
                 runId, topic, partition, offset, s.ticker(), Timestamp.from(s.windowEnd()), s.score(),
                 s.modelVersion(), String.join(",", new TreeSet<>(s.staleSources())), Timestamp.from(s.ingestTime()),
                 s.swing() == null ? null : Json.toJson(s.swing()));
@@ -40,7 +40,7 @@ public class ReadRepository {
     public void saveFlag(String runId, String topic, int partition, long offset, Flag f) {
         jdbc.update("""
                 INSERT INTO api_flags (run_id, topic, kafka_partition, kafka_offset, ticker, raised_at, evidence)
-                VALUES (?,?,?,?,?,?,?::jsonb) ON CONFLICT (topic, kafka_partition, kafka_offset) DO NOTHING""",
+                VALUES (?,?,?,?,?,?,?::jsonb) ON CONFLICT (run_id, ticker, raised_at) DO NOTHING""",
                 runId, topic, partition, offset, f.ticker(), Timestamp.from(f.raisedAt()), Json.toJson(f.evidence()));
     }
 
