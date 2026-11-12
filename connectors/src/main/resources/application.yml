@@ -35,7 +35,7 @@ pumpwatch:
     # requests-per-minute: set BELOW the source's published limit, never at it.
     sec:
       requests-per-minute: 300  # SEC publishes 10 req/s (600/min)
-      enabled: ${SEC_ENABLED:false} # off until terms verified (docs/data-sources.md)
+      enabled: ${SEC_ENABLED:false} # off until terms verified (docs/data/sources.md)
       requires-user-agent: true # when enabled, startup fails if SEC_USER_AGENT is empty
       user-agent: ${SEC_USER_AGENT:}
 

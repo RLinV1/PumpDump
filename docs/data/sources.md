@@ -1,6 +1,6 @@
 # Data sources
 
-Source register (compliance task 1.1). Facts come from `free-use-audit.md` and `resources-needed.md`. "Unverified" means the official terms were not read; read them and update the date before enabling a source. Status is `verified` only when the row has a Terms link and a Last verified date; otherwise it is `unverified`.
+Source register (compliance task 1.1). Facts come from `free-use-audit.md` and `resources.md`. "Unverified" means the official terms were not read; read them and update the date before enabling a source. Status is `verified` only when the row has a Terms link and a Last verified date; otherwise it is `unverified`.
 
 | Config key | Source | Plan | Limit | Terms link | Last verified | Status | Allows storage | Allows training | Enabled by default |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

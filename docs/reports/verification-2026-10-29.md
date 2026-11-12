@@ -1,5 +1,7 @@
 # Local verification
 
+> Historical record from 2026-10-29. Test counts and behaviour have changed since; see [verification-2026-11-06.md](verification-2026-11-06.md) for the later run.
+
 The repository default is `DATA_MODE=mock`. Mock data works without credentials, Docker or a running API.
 On 2026-10-29 the operator supplied credentials and requested the local switch to `DATA_MODE=live` with
 `ALPACA_ENABLED=true`. Live mode routes exclusively to the real API; it does not substitute mock records.

@@ -72,7 +72,7 @@ At 10,000 distinct keys the whole map is cleared, which hands every client one f
 ## Not checked
 
 - Live behaviour on the VM: Caddy header handling, the actual Docker subnet (the `172.16.0.0/12` default assumes the default bridge ranges), and whether the web image really serves what is expected.
-- Terraform, `deploy/`, `load/` and `docs/deploy-gcp.md` were only skimmed for ports and secrets, not reviewed.
+- Terraform, `deploy/`, `load/` and `docs/operations/gcp.md` were only skimmed for ports and secrets, not reviewed.
 - Individual reachability of each Maven advisory; the transformers model download (Hugging Face, pinned by revision) and its supply chain; `npm` transitive install scripts.
 - A gitleaks or trufflehog run (not installed), so unusual secret formats could be missed.
 - Load or DoS testing beyond reading the limits.

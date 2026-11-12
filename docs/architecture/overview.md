@@ -3,6 +3,8 @@
 Pumpwatch has a durable Java risk-processing path and a separate web context path.
 They meet in the dashboard, but use different state and produce different signals.
 This describes the current checkout, including work submitted in open PRs.
+For the Docker containers, ports, Kafka topics between them and how one event travels, see
+[containers.md](containers.md). The Python `research` service is in [research.md](research.md).
 
 ## System overview
 
@@ -109,7 +111,7 @@ late arrivals affect when windows update.
 `rules-v1` adds threshold points, subtracts points for explaining catalysts, and
 clamps the result to 0–100. The default flag threshold is 60, with cooldown and
 reflag settings controlling repeats. Evidence includes feature-group contributions
-computed by rescoring with each group removed. [The scorer guide](rule-scorer.md)
+computed by rescoring with each group removed. [The scorer guide](../ml/rule-scorer.md)
 defines the thresholds, anomaly alternative and source-staleness semantics.
 
 Streams uses `exactly_once_v2` with a 15-second commit interval. This applies inside
@@ -176,7 +178,7 @@ not mean no discussion of that company exists elsewhere on Bluesky.
 
 `BLUESKY_ENABLED` controls a different, Java connector that feeds social risk features.
 It does not control this web model. Positive sentiment is not itself a pump flag,
-and these counts do not alter Java risk scores. See [live sentiment](../ml/LIVE-SENTIMENT.md)
+and these counts do not alter Java risk scores. See [live sentiment](../../ml/LIVE-SENTIMENT.md)
 for the model's training domain, license and detailed limits.
 
 ## Browser behavior and personal watchlists
@@ -249,7 +251,7 @@ operate in browser storage, while replay is a separate operator API.
 
 The custom web host loads root `.env`. Compose uses it for interpolation and application
 environment files. Direct Java/IDE runs need values explicitly exported. The blank
-template is [`.env.example`](../.env.example); real credentials must remain untracked.
+template is [`.env.example`](../../.env.example); real credentials must remain untracked.
 
 | Setting | Controls | Distinction |
 | --- | --- | --- |
@@ -283,7 +285,7 @@ dropped unless `pumpwatch.sources.bluesky.retain-text` is set (default off). Whe
 the connector already published, it publishes a `PostDeletion` marker on `raw-posts` under the post's key; the recorder
 deletes that post's `recorded_events` rows. Not purged: `mentions` records on Kafka (post id, hashed author, SimHash; no
 text) until topic retention expires, and the `seen_items` dedupe row (post identifier only). Retention is a flag, not a
-number of days. Source retention/training permissions are tracked in the [source register](data-sources.md).
+number of days. Source retention/training permissions are tracked in the [source register](../data/sources.md).
 
 Compose is a single-broker development setup. Cloud deployment, production availability,
 learned model serving and a persistent historical sentiment archive are not supplied by this architecture.
@@ -301,6 +303,6 @@ learned model serving and a persistent historical sentiment archive are not supp
 | Watchlist does not persist | Storage permissions, storage clearing and whether the browser origin changed |
 | Shared-schema startup failure | Flyway history/baseline configuration; avoid deleting volumes as a first fix |
 
-See [README](../README.md) for startup commands and [tech stack](tech-stack.md) for module
-responsibilities. The [dated verification report](verification-2026-10-29.md) records
+See [README](../../README.md) for startup commands and [tech stack](tech-stack.md) for module
+responsibilities. The [dated verification report](../reports/verification-2026-10-29.md) records
 historical checks rather than guaranteeing current service health.

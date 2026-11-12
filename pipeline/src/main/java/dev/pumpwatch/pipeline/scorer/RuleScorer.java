@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Threshold-and-weight scorer. The tables are documented in docs/rule-scorer.md; RuleScorerTest keeps them equal.
+ * Threshold-and-weight scorer. The tables are documented in docs/ml/rule-scorer.md; RuleScorerTest keeps them equal.
  * {@link #anomaly()} is the same machinery over the z-score features, for use before labels exist.
  */
 public class RuleScorer implements Scorer {

@@ -13,7 +13,7 @@
 | Offline ML pytest | **16 passed** on Python 3.12 initially and again on Python 3.13 in the combined CI dependency environment. |
 | Assistant mock evaluations | 19 questions plus 14 retrieval queries. Tool selection, numeric accuracy, groundedness and retrieval hit@3 all 1.000; threshold gate passed. |
 | Actual text-model pipelines | Real ONNX weights on synthetic inputs; positive/neutral/negative counts, stream/top/latest, deduplication, off-topic filtering, disabled collection, and separate financial-news inference passed. Explicit network-disabled execution verified bundled assets. |
-| Confusing-post diagnostics | 46 synthetic examples evaluated against both sentiment models and the separate irony model. **Errors retained**, with full predictions and caveats in the [evaluation report](sentiment-evaluation-2026-11-06.md). |
+| Confusing-post diagnostics | 46 synthetic examples evaluated against both sentiment models and the separate irony model. **Errors retained**, with full predictions and caveats in the [evaluation report](../ml/sentiment-evaluation-2026-11-06.md). |
 | Local load tests | 100-VU read test, 1,000-client flag delivery and restored default-limit behavior; see [results and conditions](performance-2026-11-06.md). |
 
 The four main automated suites total **446 tests**. Passing software checks do not establish perfect model interpretation or predictive performance.

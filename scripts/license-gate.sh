@@ -11,7 +11,7 @@ case "$only" in all|npm|maven|python|research|cards|selftest) ;; *) echo "usage:
 # prints "name<TAB>license" lines on stdin; flags bad ones not on the allow-list
 flag() {
   while IFS=$'\t' read -r name lic; do
-    # LGPL is weak copyleft (dynamic linking ok, see docs/free-use-audit.md): ignore it, keep GPL/AGPL
+    # LGPL is weak copyleft (dynamic linking ok, see docs/data/free-use-audit.md): ignore it, keep GPL/AGPL
     echo "$lic" | sed -E 's/LGPL[-A-Za-z0-9.]*//g' | grep -Eiq "$BAD" || continue
     base="${name%@*}"; [ -z "$base" ] && base="$name"
     if echo "$ALLOW" | grep -Fxq -e "$name" -e "$base"; then continue; fi

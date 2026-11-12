@@ -1,6 +1,6 @@
 # Deploy to AWS
 
-The stack runs on ECS Fargate behind an Application Load Balancer, with RDS PostgreSQL and either a single-node Kafka task (default) or Amazon MSK. Terraform is in `infra/aws/`, the scripts are `deploy/aws-up.sh` and `deploy/aws-down.sh`. This is a disposable test deployment, not production. The Google Cloud VM path (`docs/deploy-gcp.md`) is unchanged.
+The stack runs on ECS Fargate behind an Application Load Balancer, with RDS PostgreSQL and either a single-node Kafka task (default) or Amazon MSK. Terraform is in `infra/aws/`, the scripts are `deploy/aws-up.sh` and `deploy/aws-down.sh`. This is a disposable test deployment, not production. The Google Cloud VM path (`docs/operations/gcp.md`) is unchanged.
 
 **Warning: nothing here is free once it runs.** The load balancer, RDS, Fargate tasks and public IPv4 addresses bill by the hour from the moment they exist, whether or not anyone visits. Destroy the stack when you finish (`deploy/aws-down.sh`).
 
@@ -29,7 +29,7 @@ The ALB runs with `xff_header_processing_mode = append`: it adds the address it 
 
 ## Data policy
 
-Tasks run `DATA_MODE=mock`, with every Alpaca source disabled and no Alpaca or Anthropic keys anywhere in Terraform, variables or the scripts. Real market data stays on your machine (`docs/data-sources.md`). For a load test only, set `data_mode = "live"`: the web server then proxies `/api` to the Java API, still with no keys and only `load/seed.sql` data. Set it back to `mock` afterwards.
+Tasks run `DATA_MODE=mock`, with every Alpaca source disabled and no Alpaca or Anthropic keys anywhere in Terraform, variables or the scripts. Real market data stays on your machine (`docs/data/sources.md`). For a load test only, set `data_mode = "live"`: the web server then proxies `/api` to the Java API, still with no keys and only `load/seed.sql` data. Set it back to `mock` afterwards.
 
 ## Prerequisites
 
@@ -103,3 +103,31 @@ That is roughly 0.20 USD an hour without MSK and 0.24 with it, so a four-hour te
 ## Not done
 
 Not run: `terraform plan` and `apply` (no AWS credentials were used), so nothing has been deployed or verified against AWS. `tflint`, `checkov` and `actionlint` were not installed. Remote state, WAF, private subnets for tasks with a NAT Gateway, and EFS for Research are follow-ups.
+
+## Diagram
+
+```mermaid
+flowchart LR
+  user([Browser]) --> alb[Application Load Balancer]
+  alb -- "/api/v1/flags/stream" --> api
+  alb -- "everything else" --> web
+  subgraph vpc [VPC, 2 AZs]
+    subgraph pub [Public subnets: Fargate tasks]
+      web[web] -- "Cloud Map: api.pumpwatch.local" --> api[api]
+      pipeline[pipeline]
+      kafka["kafka task (default)"]
+    end
+    subgraph priv [Private subnets]
+      rds[(RDS PostgreSQL 17)]
+      msk[("Amazon MSK (optional)")]
+    end
+  end
+  api --> rds
+  api --> kafka
+  pipeline --> kafka
+  api -.-> msk
+  pipeline -.-> msk
+  ecr[ECR] -. images .-> pub
+  sm[Secrets Manager] -. DB password .-> api
+  cw[CloudWatch alarms] --> sns[SNS email]
+```

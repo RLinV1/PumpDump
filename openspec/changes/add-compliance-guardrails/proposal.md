@@ -25,5 +25,5 @@ The project depends on several outside services and models, and "free to use" is
 ## Impact
 
 - Touches the connectors from `add-ingestion-pipeline` and `add-news-ingestion` (rate limiters, plan flags, storage rules), the API from `add-alerts-and-api` (no raw content) and the model work in `add-pump-scoring-model` (model licenses).
-- New files: `docs/data-sources.md` (the register), `docs/free-use-audit.md` (the findings), a CI job for the license gate.
-- Assumption to confirm: each source's current terms, which could not all be read from official pages during the audit (see `docs/free-use-audit.md`).
+- New files: `docs/data/sources.md` (the register), `docs/data/free-use-audit.md` (the findings), a CI job for the license gate.
+- Assumption to confirm: each source's current terms, which could not all be read from official pages during the audit (see `docs/data/free-use-audit.md`).

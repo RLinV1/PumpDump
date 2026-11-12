@@ -5,7 +5,7 @@ from pathlib import Path
 
 from . import evaluate as E
 from . import model as M
-from . import synth, vol, vol_eval
+from . import labels, synth, vol, vol_eval
 
 
 def main(argv=None):
@@ -70,6 +70,8 @@ def main(argv=None):
     if a.synthetic == bool(a.data):
         p.error("give exactly one of --data or --synthetic")
     df = synth.make_pump_dataset() if a.synthetic else synth.load_csv(a.data)
+    if not a.synthetic:
+        labels.gate_windows(df)
     note = "SYNTHETIC FIXTURE: not a real model." if a.synthetic else f"Data file: {a.data}"
     d = Path(a.out) / a.version
     if a.cmd == "train":

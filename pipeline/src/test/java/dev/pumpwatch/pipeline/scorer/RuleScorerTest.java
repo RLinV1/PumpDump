@@ -139,7 +139,7 @@ class RuleScorerTest {
     void documentedTablesMatchTheCode() throws IOException {
         List<String> rules = new ArrayList<>(), anomaly = new ArrayList<>();
         List<String> into = rules;
-        for (String line : Files.readAllLines(Path.of("..", "docs", "rule-scorer.md"))) {
+        for (String line : Files.readAllLines(Path.of("..", "docs", "ml", "rule-scorer.md"))) {
             if (line.startsWith("## Anomaly table")) into = anomaly;
             String[] c = line.split("\\|");
             if (c.length == 6 && c[3].trim().startsWith("`")) {

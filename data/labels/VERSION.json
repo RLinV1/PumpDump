@@ -1,0 +1,10 @@
+{
+  "version": "0.2.0",
+  "date": "2026-11-11",
+  "file": "episodes.csv",
+  "changelog": [
+    {"version": "0.2.0", "date": "2026-11-11", "reason": "Added a policy column and decisions.json (uncertain rows grouped into 6 policy questions plus 3 one-offs). Control windows re-checked against SEC EDGAR filings; 14 of 20 moved to a clean window. No row changed class."},
+    {"version": "0.1.0", "date": "2026-11-11", "reason": "First collection: pump episodes from SEC and DOJ pages, news-mover and hype negatives, matched controls. Uncertain rows await owner review (REVIEW.md)."}
+  ],
+  "rule": "Changing an episode's class needs a new version and a changelog entry with the reason."
+}
