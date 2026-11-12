@@ -114,3 +114,8 @@ jobs:
       - run: terraform -chdir=infra/aws fmt -check -recursive
       - run: terraform -chdir=infra/aws init -backend=false -input=false
       - run: terraform -chdir=infra/aws validate
+      - run: terraform -chdir=infra fmt -check -recursive
+      - run: terraform -chdir=infra init -backend=false -input=false
+      - run: terraform -chdir=infra validate
+      # Syntax and interpolation only: no images are built or pulled. The .env copy exists in CI only.
+      - run: cp .env.example .env && docker compose config -q
