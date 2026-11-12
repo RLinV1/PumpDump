@@ -59,7 +59,7 @@ Everything is indexed in **[docs/README.md](docs/README.md)**. The main entries:
 | [Live sentiment](ml/LIVE-SENTIMENT.md) | Pretrained models, matching rules, retention and limits |
 | [Source register](docs/data/sources.md) | Source permissions and verification status |
 | [Source terms](docs/data/terms.md) | Storage terms and rate limits found per source |
-| [Deploy: GCP](docs/operations/gcp.md), [AWS](docs/operations/aws.md) | Terraform runbooks for the mock-data deployments |
+| [Deploy: GCP](docs/operations/gcp.md) | Terraform runbook for the mock-data deployment |
 | [Load tests](docs/operations/load-test.md) | k6 read and SSE tests |
 | [Roadmap](docs/product/roadmap.md) | Milestones; task checklists live in `openspec/changes/` |
 
