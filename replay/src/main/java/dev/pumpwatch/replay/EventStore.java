@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Repository;
 
 /** Postgres-backed storage for recorded events. */
@@ -50,5 +51,12 @@ public class EventStore implements EventSource {
 
     public long count() {
         return jdbc.queryForObject("SELECT count(*) FROM recorded_events", Long.class);
+    }
+
+    static final int RETENTION_DAYS = 30;
+
+    @Scheduled(cron = "0 29 3 * * *")
+    public int purgeOld() {
+        return jdbc.update("DELETE FROM recorded_events WHERE event_time < now() - make_interval(days => ?)", RETENTION_DAYS);
     }
 }

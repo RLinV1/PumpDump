@@ -15,6 +15,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -43,10 +44,22 @@ public class ReadRepository {
                 runId, topic, partition, offset, f.ticker(), Timestamp.from(f.raisedAt()), Json.toJson(f.evidence()));
     }
 
+    /** Only the run's last day of scores is scanned, measured from its newest row so replay runs work too. */
     public List<ScoreView> latestScores(String runId) {
         return jdbc.query("""
                 SELECT DISTINCT ON (ticker) ticker, score, model_version, window_end, ingest_time, stale_sources, swing
-                FROM api_scores WHERE run_id = ? ORDER BY ticker, window_end DESC, id DESC""", SCORE, runId);
+                FROM api_scores
+                WHERE run_id = ? AND window_end > (SELECT MAX(window_end) FROM api_scores WHERE run_id = ?) - interval '1 day'
+                ORDER BY ticker, window_end DESC, id DESC""", SCORE, runId, runId);
+    }
+
+    static final int SCORE_RETENTION_DAYS = 7;
+
+    /** Live scores older than a week are never read; replay runs are left alone. */
+    @Scheduled(cron = "0 17 3 * * *")
+    public int purgeOldLiveScores() {
+        return jdbc.update("DELETE FROM api_scores WHERE run_id = 'live' AND window_end < now() - make_interval(days => ?)",
+                SCORE_RETENTION_DAYS);
     }
 
     public List<ScoreView> scores(String runId, String ticker, Instant from, Instant to) {

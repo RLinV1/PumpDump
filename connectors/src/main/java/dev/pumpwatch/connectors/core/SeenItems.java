@@ -1,6 +1,7 @@
 package dev.pumpwatch.connectors.core;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,5 +27,12 @@ public class SeenItems {
         return jdbc.update(
                 "INSERT INTO seen_items (source, item_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
                 source, itemId) == 1;
+    }
+
+    static final int RETENTION_DAYS = 7; // gap fill reaches back 24h, news backfill less
+
+    @Scheduled(cron = "0 23 3 * * *")
+    public int purgeOld() {
+        return jdbc.update("DELETE FROM seen_items WHERE first_seen < now() - make_interval(days => ?)", RETENTION_DAYS);
     }
 }
