@@ -199,6 +199,32 @@ def test_route_limits_and_validation(http, monkeypatch):
     assert len(calls) == service.GLOBAL_PER_MINUTE + 1
 
 
+def test_fourth_concurrent_run_gets_429(http, monkeypatch):
+    import threading
+
+    started, release = threading.Semaphore(0), threading.Event()
+
+    def slow(question, context):
+        started.release()
+        release.wait(5)
+        return AgentResult(answer="ok")
+
+    monkeypatch.setattr(service, "run_agent", slow)
+    codes = []
+    threads = [threading.Thread(target=lambda: codes.append(http.post("/assistant/ask", json={"question": "q"}).status_code))
+               for _ in range(service.MAX_CONCURRENT_RUNS)]
+    for t in threads:
+        t.start()
+    for _ in threads:
+        assert started.acquire(timeout=5)
+    assert http.post("/assistant/ask", json={"question": "q"}).status_code == 429
+    release.set()
+    for t in threads:
+        t.join()
+    assert codes == [200] * service.MAX_CONCURRENT_RUNS
+    assert http.post("/assistant/ask", json={"question": "q"}).status_code == 200  # slot freed
+
+
 def test_route_passes_the_flag_context_to_the_agent(http, monkeypatch):
     seen = []
     monkeypatch.setattr(service, "run_agent", lambda question, context: seen.append((question, context)) or AgentResult(answer="ok"))

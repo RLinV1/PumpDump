@@ -61,11 +61,6 @@ def _current(ticker: str, series: pd.Series) -> tuple[float, float]:
     return last, float(series.iloc[-1] / series.iloc[-2] - 1.0) if len(series) >= 2 else 0.0
 
 
-def mock_close(ticker: str) -> float:
-    """The mock price a lookup shows, used by the lookup tests."""
-    return float(_prices(ticker, 300).iloc[-1])
-
-
 def lookup(ticker: str) -> dict:
     """Everything the LOOK panel shows for one ticker. Raises ValueError when there is no price data."""
     t = ticker.upper()

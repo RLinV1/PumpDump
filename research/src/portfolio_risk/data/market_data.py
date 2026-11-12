@@ -38,10 +38,19 @@ class DataUnavailableError(RuntimeError):
     pass
 
 
-# How stale cached data may be before we refetch. Prices must stay current, so a
-# few calendar days (covers weekends/holidays); company info changes slowly.
-_MAX_PRICE_AGE_DAYS = 4
+# Company info changes slowly; cached prices are fresh by market date (see _price_is_fresh).
 _MAX_INFO_AGE_DAYS = 2
+
+
+def _price_is_fresh(last_bar, now=None) -> bool:
+    """Fresh when the last bar is on or after the previous weekday (US/Eastern market dates; weekends roll back to Friday)."""
+    # shortcut: market holidays are ignored (a cache across one just refetches), add a trading calendar if that matters.
+    try:
+        clock = pd.Timestamp.now(tz="America/New_York") if now is None else pd.Timestamp(now).tz_convert("America/New_York")
+        previous = clock.tz_localize(None).normalize() - pd.offsets.BDay(1)  # Mon, Sat, Sun -> Fri; Tue -> Mon
+        return pd.Timestamp(last_bar).normalize() >= previous
+    except SOFT_ERRORS:
+        return False
 
 
 def _days_old(when) -> float:
@@ -115,12 +124,11 @@ def _download_yf(tickers: list[str], period_days: int) -> pd.DataFrame:
 def get_prices(
     tickers: list[str],
     lookback_days: int = config.DEFAULT_LOOKBACK_DAYS,
-    force_refresh: bool = False,
-) -> pd.DataFrame:
+)-> pd.DataFrame:
     """Adjusted-close matrix (index=dates, cols=tickers).
 
     Mock mode returns synthetic prices. Live mode reads the parquet cache and
-    hits yfinance only for tickers missing from cache (or when force_refresh).
+    hits yfinance only for tickers missing or stale in cache.
     """
     tickers = [t.upper() for t in tickers]
     if not tickers:
@@ -134,11 +142,11 @@ def get_prices(
     cached: dict[str, pd.Series] = {}
     missing: list[str] = []
     for t in tickers:
-        series = None if force_refresh else _read_cache(t)
+        series = _read_cache(t)
         fresh = (
             series is not None
             and (len(series) >= lookback_days or series.attrs.get("lookback_days", 0) >= lookback_days)
-            and _days_old(series.index.max()) <= _MAX_PRICE_AGE_DAYS
+            and _price_is_fresh(series.index.max())
         )
         if fresh:
             cached[t] = series
@@ -306,14 +314,11 @@ def _info_is_empty(info: dict, ticker: str) -> bool:
     )
 
 
-def get_company_info(
-    tickers: list[str], force_refresh: bool = False
-) -> dict[str, dict]:
+def get_company_info(tickers: list[str]) -> dict[str, dict]:
     """Map each ticker to ``{ticker, name, sector, description, market_cap, pe_ratio}``.
 
     Mock mode returns deterministic synthetic profiles. Live mode reads a JSON
-    cache and hits yfinance only for tickers missing from cache (or on
-    force_refresh). Failed live lookups return unavailable metadata without
+    cache and hits yfinance only for tickers missing from cache. Failed live lookups return unavailable metadata without
     caching it, so the next request can retry.
     """
     tickers = [t.upper() for t in tickers]
@@ -326,12 +331,11 @@ def get_company_info(
     out: dict[str, dict] = {}
     for t in tickers:
         rkey = f"info:v3:{t}"
-        if not force_refresh:
-            hit = cache.cache_get_json(rkey)
-            if hit is not None:
-                out[t] = hit
-                continue
-        info = None if force_refresh else _read_info_cache(t)
+        hit = cache.cache_get_json(rkey)
+        if hit is not None:
+            out[t] = hit
+            continue
+        info = _read_info_cache(t)
         if info is not None and _days_old(info.get("_cached_at")) > _MAX_INFO_AGE_DAYS:
             info = None  # cache too old — refetch
         if info is not None and "industry" not in info:
