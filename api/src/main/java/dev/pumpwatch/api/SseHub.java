@@ -83,14 +83,14 @@ public class SseHub {
 
     @Scheduled(fixedDelayString = "${api.poll-interval:PT1S}")
     public void tick() {
-        // One query per run: it starts at the slowest viewer's cursor and each viewer keeps only flags newer than its own.
-        // shortcut: a viewer resuming far behind makes its run page through BATCH flags per tick, fine until resumes are long.
-        for (var group : clients.stream().collect(java.util.stream.Collectors.groupingBy(c -> c.runId)).entrySet()) {
+        // Viewers of one run at the same cursor (normally all live ones) share a query, so a client that resumes far
+        // behind (Last-Event-ID is client-supplied) only costs its own query and cannot hold back the others.
+        var groups = clients.stream().collect(java.util.stream.Collectors.groupingBy(c -> List.of(c.runId, c.cursor)));
+        for (var group : groups.entrySet()) {
             List<Client> viewers = group.getValue();
             List<FlagView> flags;
             try {
-                long from = viewers.stream().mapToLong(c -> c.cursor).min().orElse(0);
-                flags = repo.flagsAfter(group.getKey(), from, BATCH);
+                flags = repo.flagsAfter(viewers.get(0).runId, viewers.get(0).cursor, BATCH);
             } catch (Exception e) { // failed read: drop this run's viewers, the browsers reconnect
                 viewers.forEach(c -> drop(c, e));
                 continue;
@@ -99,7 +99,6 @@ public class SseHub {
                 try {
                     boolean sent = false;
                     for (FlagView f : flags) {
-                        if (f.id() <= c.cursor) continue;
                         c.emitter.send(SseEmitter.event().id(Long.toString(f.id())).name("flag")
                                 .data(Json.toJson(Envelope.of(f)), MediaType.APPLICATION_JSON));
                         c.cursor = f.id();

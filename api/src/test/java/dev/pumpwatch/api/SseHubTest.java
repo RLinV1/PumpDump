@@ -101,15 +101,17 @@ class SseHubTest {
     }
 
     @Test
-    void sharedQueryStartsAtTheSlowestCursorAndEachViewerKeepsItsOwn() {
-        when(repo.flagsAfter("live", 5, SseHub.BATCH)).thenReturn(List.of(flag(6), flag(7)));
-        when(repo.flagsAfter("live", 7, SseHub.BATCH)).thenReturn(List.of());
-        hub.subscribe("live", 5L, "a");
-        hub.subscribe("live", 6L, "b");
+    void aViewerFarBehindDoesNotDelayACaughtUpViewer() {
+        when(repo.flagsAfter("live", 0, SseHub.BATCH)).thenReturn(List.of(flag(1)));
+        when(repo.flagsAfter("live", 50, SseHub.BATCH)).thenReturn(List.of(flag(51)));
+        hub.subscribe("live", 0L, "laggard");
+        hub.subscribe("live", 50L, "current");
         hub.tick();
-        hub.tick(); // both cursors are now 7: the next shared query starts there
-        verify(repo).flagsAfter("live", 5, SseHub.BATCH);
-        verify(repo).flagsAfter("live", 7, SseHub.BATCH);
+        verify(repo).flagsAfter("live", 0, SseHub.BATCH);
+        verify(repo).flagsAfter("live", 50, SseHub.BATCH);
+        hub.tick(); // the caught-up viewer moved to 51 on the first tick, the laggard to 1
+        verify(repo).flagsAfter("live", 51, SseHub.BATCH);
+        verify(repo).flagsAfter("live", 1, SseHub.BATCH);
     }
 
     @Test
