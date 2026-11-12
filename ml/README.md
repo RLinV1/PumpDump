@@ -32,3 +32,6 @@ python -m pumpml promo-train --data <chat_data folder> --version v1   # -> model
 
 It separates pump-announcement messages from other chatter in crypto pump groups, with a time split and bootstrap intervals. It is not
 validated on stock posts. Raw text is never written; the model is 384 coefficients. See the model card for licenses.
+
+Embedding 170k messages takes about 40 minutes on CPU. sentence-transformers uses the GPU when PyTorch sees one, so install the
+CUDA build of torch from download.pytorch.org (pick the wheel for your driver) before `requirements-embed.txt` to cut that to minutes.

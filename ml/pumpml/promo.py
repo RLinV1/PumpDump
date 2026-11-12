@@ -23,7 +23,8 @@ from .card import MODEL_LICENSE
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBED_LICENSE = "Apache-2.0"  # model card on Hugging Face, checked 2026-11-11
 DATASET = "PumpSense Telegram pump-and-dump corpus (Zenodo 10.5281/zenodo.19616802)"
-DATASET_LICENSE = "MIT"  # https://github.com/AhmedMahrous00/icbc_2026_reproducibility/blob/main/LICENSE
+# Zenodo record 19616802 (v1.1, open access) states "MIT License" with no extra terms, checked 2026-11-11.
+DATASET_LICENSE = "MIT"
 # Declared licenses of the embedding stack.
 DEPS = {"sentence-transformers": "Apache-2.0", "transformers": "Apache-2.0", "torch": "BSD-3-Clause",
         "scikit-learn": "BSD-3-Clause", "pandas": "BSD-3-Clause", "numpy": "BSD-3-Clause"}
@@ -33,6 +34,7 @@ LIMITS = [
     "It has not been tested on stock posts (Reddit, Bluesky, StockTwits). Expect a domain shift; check before using it as a feature.",
     "Metrics are on a later period of the same groups. Resampling is over messages, which come in bursts, so the intervals are optimistic.",
     "Exact duplicate texts were removed before splitting, so templated announcements that repeat verbatim are counted once.",
+    "The corpus is public Telegram channel posts. MIT is the archive's only stated license; it does not address Telegram's own terms.",
 ]
 
 
