@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from portfolio_risk.lookup import lookup, mock_close
+from portfolio_risk.lookup import _prices, lookup
+
+
+def mock_close(ticker: str) -> float:
+    return float(_prices(ticker, 300).iloc[-1])
 
 
 def test_lookup_has_every_section_and_is_labelled_mock():

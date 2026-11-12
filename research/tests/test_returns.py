@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -9,14 +8,8 @@ from portfolio_risk.data import returns as ret
 
 def test_simple_returns():
     prices = pd.DataFrame({"X": [100.0, 110.0, 99.0]})
-    r = ret.to_returns(prices, method="simple")
+    r = ret.to_returns(prices)
     assert r["X"].tolist() == pytest.approx([0.1, -0.1])
-
-
-def test_log_returns():
-    prices = pd.DataFrame({"X": [100.0, 110.0]})
-    r = ret.to_returns(prices, method="log")
-    assert r["X"].iloc[0] == pytest.approx(np.log(1.1))
 
 
 def test_align_inner_join():

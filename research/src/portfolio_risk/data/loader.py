@@ -26,7 +26,7 @@ def load_returns(
     all_tickers = list(dict.fromkeys(tickers + [benchmark]))  # de-dupe, keep order
 
     prices = get_prices(all_tickers, lookback_days=lookback_days)
-    all_returns = ret.to_returns(prices, method="simple")
+    all_returns = ret.to_returns(prices)
 
     bench_series = all_returns[benchmark]
     asset_returns = all_returns[[t for t in tickers]]

@@ -2,23 +2,12 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 
-def to_returns(prices: pd.DataFrame, method: str = "simple") -> pd.DataFrame:
-    """Daily returns from an adjusted-close price matrix.
-
-    method: "simple" (pct change) or "log".
-    Drops the leading NaN row.
-    """
-    if method == "log":
-        rets = np.log(prices / prices.shift(1))
-    elif method == "simple":
-        rets = prices.pct_change()
-    else:
-        raise ValueError(f"Unknown method: {method!r}")
-    return rets.dropna(how="all")
+def to_returns(prices: pd.DataFrame) -> pd.DataFrame:
+    """Simple daily returns from an adjusted-close price matrix. Drops the leading NaN row."""
+    return prices.pct_change().dropna(how="all")
 
 
 def align(
