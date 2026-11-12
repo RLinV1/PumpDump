@@ -211,7 +211,7 @@ services:
     environment:
       USE_MOCK_DATA: ${RESEARCH_USE_MOCK_DATA:-1} # 0 = live yfinance lookups, for your own machine only (data terms)
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
       USE_MOCK_LLM: ${USE_MOCK_LLM:-auto}
       PUMPWATCH_API_URL: http://web:3000
     restart: unless-stopped

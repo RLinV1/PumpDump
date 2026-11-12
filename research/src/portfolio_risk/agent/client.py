@@ -80,7 +80,7 @@ def run_agent(question: str, context: str = "") -> AgentResult:
     if config.use_mock_llm():
         return _run_mock(question, deadline)
     try:
-        return asyncio.run(asyncio.wait_for(_run_gemini(question, context), _remaining(deadline)))
+        return asyncio.run(asyncio.wait_for(_run_gemini(question, context), max(_remaining(deadline) - config.MOCK_RESERVE_SEC, 1)))
     except Exception as exc:  # noqa: BLE001 (only the failure type is logged)
         print(f"gemini agent failed: {type(exc).__name__}", file=sys.stderr)
         result = _run_mock(question, deadline)
@@ -104,7 +104,7 @@ async def gemini_loop(client, declarations: list, call_tool: CallTool, question:
     contents = [types.Content(role="user", parts=[types.Part.from_text(text=question)])]
     calls: list[dict] = []
     for _ in range(max_steps):
-        resp = await client.aio.models.generate_content(model=model, contents=contents, config=cfg)
+        resp = await asyncio.wait_for(client.aio.models.generate_content(model=model, contents=contents, config=cfg), config.GEMINI_CALL_TIMEOUT_SEC)
         requested = list(resp.function_calls or [])
         if not requested:
             return AgentResult(answer=(resp.text or "").strip(), tool_calls=calls, llm="gemini")
@@ -119,8 +119,29 @@ async def gemini_loop(client, declarations: list, call_tool: CallTool, question:
     # Out of steps: ask once more with tools off so the user still gets an answer from what was gathered.
     cfg.tools = None
     cfg.automatic_function_calling = None
-    resp = await client.aio.models.generate_content(model=model, contents=contents, config=cfg)
+    resp = await asyncio.wait_for(client.aio.models.generate_content(model=model, contents=contents, config=cfg), config.GEMINI_CALL_TIMEOUT_SEC)
     return AgentResult(answer=(resp.text or "").strip(), tool_calls=calls, llm="gemini")
+
+
+async def rotate_models(models: list[str], run: Callable[[str], Awaitable[AgentResult]]) -> AgentResult:
+    """Try each model in turn; move on only for a retired model (404), quota (429), a server error or a hung call (timeout).
+
+    Runs inside the MCP session so the real error is seen before any task group can wrap it.
+    The tool loop restarts from scratch on the next model.
+    """
+    from google.genai import errors
+
+    for i, model in enumerate(models):
+        try:
+            return await run(model)
+        except (errors.ClientError, errors.ServerError, TimeoutError) as exc:
+            code = "timeout" if isinstance(exc, TimeoutError) else exc.code
+            if isinstance(exc, errors.ClientError) and code not in (404, 429):
+                raise
+            if i == len(models) - 1:
+                raise
+            print(f"gemini model {model} failed ({code}), trying next", file=sys.stderr)
+    raise RuntimeError("no Gemini models configured")
 
 
 async def _run_gemini(question: str, context: str) -> AgentResult:
@@ -157,7 +178,7 @@ async def _run_gemini(question: str, context: str) -> AgentResult:
             except ValueError:
                 return {"error": text[:200] or "tool failed"}
 
-        return await gemini_loop(client, declarations, call_tool, prompt, config.gemini_model())
+        return await rotate_models(config.gemini_models(), lambda m: gemini_loop(client, declarations, call_tool, prompt, m))
 
 
 def main() -> None:

@@ -37,14 +37,21 @@ def use_mock_data() -> bool:
 
 
 # --- Assistant ---
-# Google's models page (aistudio.google.com/docs/models) labels gemini-3.6-flash "Stable"; read 2026-11-06.
-GEMINI_MODEL_DEFAULT = "gemini-3.6-flash"
+# gemini-3.5-flash-lite first: the only model that answered in testing. Tried in order; the next one is used when a model is retired (404) or out of quota (429). IDs checked against models.list() 2026-11-12.
+GEMINI_MODELS_DEFAULT = ("gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash")
 MAX_TOOL_STEPS = 6           # model turns that may call tools before the loop is cut off
 ASSISTANT_TIMEOUT_SEC = 40   # whole run; the web route allows 45
+GEMINI_CALL_TIMEOUT_SEC = 12  # one generate_content call; a hung model counts as failed and the next is tried
+MOCK_RESERVE_SEC = 5         # kept back from the run deadline so the mock fallback can still answer
+
+
+def gemini_models() -> list[str]:
+    """Env GEMINI_MODEL first (if set), then the defaults, without duplicates."""
+    return list(dict.fromkeys([m for m in (os.environ.get("GEMINI_MODEL", "").strip(),) if m] + list(GEMINI_MODELS_DEFAULT)))
 
 
 def gemini_model() -> str:
-    return os.environ.get("GEMINI_MODEL", "").strip() or GEMINI_MODEL_DEFAULT
+    return gemini_models()[0]
 
 
 def gemini_api_key() -> str:

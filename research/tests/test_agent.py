@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -127,10 +128,60 @@ def test_auto_mode_is_mock_without_a_key_and_gemini_with_one(monkeypatch):
     assert config.use_mock_llm() is False
     monkeypatch.setenv("USE_MOCK_LLM", "1")
     assert config.use_mock_llm() is True
+
+
+def test_gemini_models_put_env_first_and_dedupe(monkeypatch):
     monkeypatch.delenv("GEMINI_MODEL", raising=False)
-    assert config.gemini_model() == "gemini-3.6-flash"
+    assert config.gemini_models() == list(config.GEMINI_MODELS_DEFAULT)
     monkeypatch.setenv("GEMINI_MODEL", "gemini-other")
-    assert config.gemini_model() == "gemini-other"
+    assert config.gemini_models() == ["gemini-other", *config.GEMINI_MODELS_DEFAULT]
+    monkeypatch.setenv("GEMINI_MODEL", config.GEMINI_MODELS_DEFAULT[1])
+    assert config.gemini_models() == [config.GEMINI_MODELS_DEFAULT[1], config.GEMINI_MODELS_DEFAULT[0], config.GEMINI_MODELS_DEFAULT[2]]
+
+
+def _rotate(errors_by_model):
+    """Run rotate_models over fake models; a value that is an exception is raised, otherwise returned as the answer."""
+    tried = []
+
+    async def run(model):
+        tried.append(model)
+        out = errors_by_model[model]
+        if isinstance(out, Exception):
+            raise out
+        return AgentResult(answer=out, tool_calls=[], llm="gemini")
+
+    return tried, lambda: asyncio.run(agent_client.rotate_models(list(errors_by_model), run))
+
+
+def _client_error(code):
+    from google.genai import errors
+    return errors.ClientError(code, {"error": {"message": "x", "status": "S"}})
+
+
+@pytest.mark.parametrize("code", [404, 429])
+def test_rotation_moves_to_next_model_on_retired_or_quota(code):
+    tried, go = _rotate({"a": _client_error(code), "b": "from b"})
+    assert go().answer == "from b" and tried == ["a", "b"]
+
+
+def test_rotation_moves_on_server_error():
+    from google.genai import errors
+    _tried, go = _rotate({"a": errors.ServerError(503, {"error": {"message": "x", "status": "S"}}), "b": "from b"})
+    assert go().answer == "from b"
+
+
+def test_rotation_raises_other_errors_at_once():
+    tried, go = _rotate({"a": _client_error(400), "b": "from b"})
+    with pytest.raises(Exception) as info:
+        go()
+    assert info.value.code == 400 and tried == ["a"]
+
+
+def test_rotation_raises_last_error_when_all_fail():
+    tried, go = _rotate({"a": _client_error(404), "b": _client_error(429)})
+    with pytest.raises(Exception) as info:
+        go()
+    assert info.value.code == 429 and tried == ["a", "b"]
 
 
 def test_gemini_failure_falls_back_to_the_labelled_mock(monkeypatch, pumpwatch):
@@ -240,3 +291,32 @@ def test_groundedness_catches_fabricated_citations_and_figures():
     assert groundedness("See [b.md]", calls)["fabricated_citations"] == ["b.md"]
     assert groundedness("It is up 12.5%", calls)["unsupported_figures"] == ["12.5%"]
     assert groundedness("no citation", calls)["uncited"]
+
+
+def test_rotation_moves_on_when_a_call_hangs(monkeypatch):
+    monkeypatch.setattr(config, "GEMINI_CALL_TIMEOUT_SEC", 0.05)
+
+    class Models:
+        async def generate_content(self, model, contents, config):
+            if model == "a":
+                await asyncio.sleep(5)
+            return SimpleNamespace(function_calls=[], text=f"from {model}", candidates=[])
+
+    fake = SimpleNamespace(aio=SimpleNamespace(models=Models()))
+    run = lambda m: agent_client.gemini_loop(fake, [], None, "q", m)
+    assert asyncio.run(agent_client.rotate_models(["a", "b"], run)).answer == "from b"
+
+
+def test_all_models_hanging_still_returns_the_mock_answer(monkeypatch, pumpwatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("USE_MOCK_LLM", "0")
+    monkeypatch.setattr(config, "ASSISTANT_TIMEOUT_SEC", 30)
+    monkeypatch.setattr(config, "MOCK_RESERVE_SEC", 20)
+
+    async def hang(question, context):
+        await asyncio.sleep(60)
+
+    monkeypatch.setattr(agent_client, "_run_gemini", hang)
+    start = time.monotonic()
+    result = agent_client.run_agent("Why is AAPL flagged?")
+    assert result.llm == "mock" and time.monotonic() - start < 30
