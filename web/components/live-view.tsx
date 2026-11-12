@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useApi } from "@/lib/use-api";
 import { sentimentSummary } from "@/lib/sentiment-summary";
@@ -9,8 +8,8 @@ import { LiveChart } from "@/components/live-chart";
 import { MoversPanel, NewsPanel, SentimentPanel } from "@/components/market-context";
 import { useAssistant } from "@/components/assistant-panel";
 import { AssistantWidget } from "@/components/assistant-widget";
-import { AppTabs } from "@/components/app-tabs";
-import { LookupPanel, useLookup, usePaper } from "@/components/trade-panels";
+import { LookupPanel, useLookup } from "@/components/lookup-panel";
+import { flagContext } from "@/lib/flag-context";
 import { Message, Panel, Skeleton, Stale, Verdict, dirTone, modeTag, money, signed } from "@/components/term-panel";
 import { NOTICE, STREAM_URL, age, clock, compareFlags, parseFlagEvent, type Flag, type MarketMovers, type Quote, type Quotes, type Score, type Sentiment, type Timeline } from "@/lib/api";
 import { PANELS, parseCommand, type Panel as PanelId } from "@/lib/commands";
@@ -26,12 +25,9 @@ const ELEMENT: Record<PanelId, string> = { watchlist: "watchlist", chart: "score
 const HELP: [string, string][] = [
   ["GME <GO>", "Select a ticker (1 to 5 letters). Chart, news and sentiment follow it."],
   ["WL  GR  FLAG  NEWS  SENT  MOV  LOOK", "Jump to a panel. The panel numbers 1 to 7 work too."],
-  ["ASK Is GME being pumped?", "Ask the research assistant in the chat at the bottom right. Read-only tools, cited sources, not investment advice. Says whether Gemini or the mock agent answered. ASK alone opens the chat."],
-  ["PT", "Open the Paper tab: your simulated account and order form."],
+  ["ASK Why is GME flagged?", "Ask the flag assistant in the chat at the bottom right. It explains flags and risk, with cited sources and no buy or sell advice. Says whether Gemini or the mock agent answered. ASK alone opens the chat; the Ask button on a flag sends its evidence."],
   ["MODE", "Say whether the data is mock or live."],
   ["LOOK GME  /  DES GME", "Stock lookup (panel 7): snapshot, performance, indicators, beta and volatility."],
-  ["BUY GME 10  /  SELL GME 10", "Simulated paper order, from here or the Paper tab. Whole shares, filled at the server's price. No broker, no real money."],
-  ["PT RESET", "Reset the paper account. It asks you to confirm with PT RESET CONFIRM."],
   ["ADD AMC  /  RM AMC", "Add a stock to your browser-saved watchlist, or remove it."],
   ["SEL FLAG", "Select a ticker that shares its name with a command."],
   ["RF", "Reload every panel."],
@@ -190,7 +186,7 @@ function ChartPanel({ ticker, nonce, stale, refreshKey, quote, active }: { ticke
   );
 }
 
-function FlagFeed({ onPick, extra, setExtra, refreshKey, onStream, active }: { onPick: (t: string) => void; extra: Flag[]; setExtra: (f: (o: Flag[]) => Flag[]) => void; refreshKey: number; onStream: (open: boolean) => void; active: boolean }) {
+function FlagFeed({ onPick, onAsk, extra, setExtra, refreshKey, onStream, active }: { onPick: (t: string) => void; onAsk: (f: Flag) => void; extra: Flag[]; setExtra: (f: (o: Flag[]) => Flag[]) => void; refreshKey: number; onStream: (open: boolean) => void; active: boolean }) {
   const { data, failed, done, retry, mode } = useApi<Flag[]>("/api/v1/flags?limit=20", 3600e3, 0, undefined, refreshKey);
   const [open, setOpen] = useState(false);
 
@@ -230,6 +226,9 @@ function FlagFeed({ onPick, extra, setExtra, refreshKey, onStream, active }: { o
                 </button>
                 <span className="text-white">{Math.round(f.evidence.score)}</span>
                 <Verdict score={f.evidence.score} />
+                <button onClick={() => onAsk(f)} aria-label={`Ask about the ${f.ticker} flag`} className="inline-flex min-h-11 items-center text-xs text-yellow underline-offset-2 hover:underline lg:min-h-7">
+                  Ask about this flag
+                </button>
                 <span className="ml-auto text-xs text-mute">
                   {clock(f.raisedAt)}, {age(f.raisedAt)}
                 </span>
@@ -287,14 +286,14 @@ export function LiveView() {
   const savedRaw = useSyncExternalStore(subscribeWatchlist, readWatchlist, () => null);
   const saved = useMemo(() => parseWatchlist(savedRaw), [savedRaw]);
   const symbols = useMemo(() => saved ?? (w.data ?? []).map((score) => score.ticker), [saved, w.data]);
-  const quotePath = symbols.length ? `/api/v1/quotes?symbols=${[...symbols].sort().join(",")}` : "";
+  // The quotes endpoint takes at most 30 symbols (MAX_QUOTE_SYMBOLS); keep the first 30 in watchlist order.
+  const quotePath = symbols.length ? `/api/v1/quotes?symbols=${symbols.slice(0, 30).sort().join(",")}` : "";
   const q = useApi<Quotes>(quotePath, 15000, 0, undefined, refreshKey);
   const movers = useApi<MarketMovers>("/api/v1/market-movers", 60000, 0, undefined, refreshKey);
   const lookup = useLookup();
-  const paper = usePaper();
   const assistant = useAssistant();
-  const router = useRouter();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const askAboutFlag = (f: Flag) => { void assistant.ask(`Why is ${f.ticker} flagged?`, flagContext(f)); setAssistantOpen(true); };
   const [focused, setFocused] = useState(false);
   const [highlight, setHighlight] = useState(-1);
 
@@ -396,20 +395,11 @@ export function LiveView() {
         break;
       }
       case "help": setOut({ kind: "help", text: "" }); break;
-      case "refresh": setRefreshKey((key) => key + 1); void paper.refresh(); setOut({ kind: "info", text: "RELOADING ALL PANELS." }); break;
+      case "refresh": setRefreshKey((key) => key + 1); setOut({ kind: "info", text: "RELOADING ALL PANELS." }); break;
       case "ask": void assistant.ask(cmd.question); setAssistantOpen(true); setOut({ kind: "info", text: "ASKING THE ASSISTANT. THE ANSWER APPEARS IN THE CHAT AT THE BOTTOM RIGHT." }); break;
       case "assistant": setAssistantOpen(true); setOut({ kind: "info", text: "ASSISTANT OPEN AT THE BOTTOM RIGHT." }); break;
-      case "paper": setOut({ kind: "info", text: "OPENING THE PAPER TAB." }); router.push("/paper"); break;
       case "mode": setOut({ kind: "info", text: mode ? `DATA MODE: ${mode.toUpperCase()}. ${mode === "mock" ? "FIGURES ARE INVENTED FOR DEMONSTRATION." : "FIGURES COME FROM THE LIVE FEED."}` : "DATA MODE NOT KNOWN YET: STILL CONNECTING." }); break;
       case "look": void lookup.look(cmd.ticker); jump("lookup"); setOut({ kind: "info", text: `LOOKING UP ${cmd.ticker}. THE RESULT APPEARS IN PANEL 7.` }); break;
-      case "trade":
-        setOut({ kind: "info", text: `SENDING SIMULATED ${cmd.side} ${cmd.qty} ${cmd.ticker}...` });
-        void paper.trade(cmd.side, cmd.ticker, cmd.qty).then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }));
-        break;
-      case "reset":
-        if (!cmd.confirmed) setOut({ kind: "info", text: "RESET CLEARS ALL POSITIONS AND HISTORY. TYPE PT RESET CONFIRM, OR USE THE PAPER TAB." });
-        else void paper.reset().then((r) => setOut({ kind: r.ok ? "info" : "error", text: r.text }));
-        break;
       case "error": setOut({ kind: "error", text: cmd.message }); break;
     }
     setCommand("");
@@ -424,7 +414,6 @@ export function LiveView() {
           <Link href="/" className="inline-flex min-h-11 shrink-0 items-center font-display text-3xl font-black uppercase leading-none tracking-wide text-accent">
             Pumpwatch
           </Link>
-          <AppTabs current="/live" />
           <form role="search" aria-label="Command line" className="relative flex min-w-0 flex-1 basis-64 items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (sel >= 0) choose(items[sel]); else run(command); }}>
             <label htmlFor="command" className="sr-only">Command line. Type a ticker or a command, then press Enter. Type HELP for the list.</label>
             <span aria-hidden className="shrink-0 font-bold text-accent">PW&gt;</span>
@@ -544,7 +533,7 @@ export function LiveView() {
                 <Message title="No ticker selected" body="Add a stock to your watchlist or select a market mover." />
               </Panel>
             ))}
-            {id === "flags" && <FlagFeed onPick={setPick} extra={extra} setExtra={setExtra} refreshKey={refreshKey} onStream={onStream} active={active === id} />}
+            {id === "flags" && <FlagFeed onPick={setPick} onAsk={askAboutFlag} extra={extra} setExtra={setExtra} refreshKey={refreshKey} onStream={onStream} active={active === id} />}
             {id === "news" && <NewsPanel key={ticker ?? "market"} ticker={ticker} refreshKey={refreshKey} active={active === id} />}
             {id === "sentiment" && (ticker ? <SentimentPanel key={ticker} ticker={ticker} refreshKey={refreshKey} active={active === id} /> : (
               <Panel id="stock-sentiment" number={5} title="Sentiment" active={active === id}>
@@ -557,7 +546,7 @@ export function LiveView() {
         ))}
       </main>
 
-      <AssistantWidget open={assistantOpen} onOpenChange={setAssistantOpen} state={assistant.state} onAsk={(question) => void assistant.ask(question)} ticker={ticker} />
+      <AssistantWidget open={assistantOpen} onOpenChange={setAssistantOpen} state={assistant.state} onAsk={(question, context) => void assistant.ask(question, context)} ticker={ticker} />
 
       <footer className="flex flex-wrap items-center gap-x-5 gap-y-0.5 border-t border-accent px-3 py-1 pb-16 text-xs sm:pb-1 lg:min-h-10 lg:pr-24">
         <span className="text-accent">DATA <strong className={mode === "mock" ? "bg-accent px-1 text-bg" : "text-white"}>{mode ? mode.toUpperCase() : "--"}</strong></span>

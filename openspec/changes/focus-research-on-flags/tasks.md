@@ -1,0 +1,7 @@
+- [x] Remove the web paper surface: `/paper` page, tab, commands, palette entry, `paper-api.mjs` (lookup kept as `lookup-api.mjs`), client API, tests and screenshot.
+- [x] Remove the research paper ledger, endpoints, `PAPER_DB`, assistant paper tools and tests; drop the `researchpaper` volume.
+- [x] Update docs, README, compose, deploy notes and the security review.
+- [x] Add "Ask about this flag" on each flag, with a validated optional `context` through the web door and the service.
+- [x] Rewrite the assistant prompt and mock agent: explain flags, risk framing, no buy/sell/hold advice.
+- [x] Add eval cases for explaining a flag and refusing advice; rename the palette entry to "Ask about a flag".
+- [x] Run web tests, lint and build; research tests and the mock eval.

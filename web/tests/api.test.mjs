@@ -199,25 +199,15 @@ test("a caller cancellation signal does not disable the request deadline", async
 });
 
 
-test("paper and assistant reuse the session account when storage is blocked", async () => {
-  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
-  const tokens = [];
+test("the assistant sends the flag context only when there is one", async () => {
+  const bodies = [];
   globalThis.fetch = async (_url, init) => {
-    tokens.push(init.headers["X-Paper-Token"]);
-    return Response.json({ notice: api.NOTICE, data: String(_url).includes("assistant")
-      ? { answer: "No orders", toolsUsed: [], sources: [], llm: "mock", dataMode: "mock", note: "" }
-      : { cashCents: 1, totalCents: 1, pnlCents: 0, startCents: 1, realizedCents: 0, positionsValueCents: 0, positions: [], orders: [], dataMode: "mock" } });
+    bodies.push(JSON.parse(init.body));
+    return Response.json({ notice: api.NOTICE, data: { answer: "ok", toolsUsed: [], sources: [], llm: "mock", dataMode: "mock", note: "" } });
   };
-  try {
-    await api.getPaperAccount();
-    await api.askAssistant("What is my paper account worth?", new AbortController().signal);
-    assert.match(tokens[0], /^[A-Za-z0-9_-]{32,64}$/);
-    assert.equal(tokens[0], tokens[1]);
-  } finally {
-    if (previous) Object.defineProperty(globalThis, "localStorage", previous);
-    else delete globalThis.localStorage;
-  }
+  await api.askAssistant("Why is GME flagged?", new AbortController().signal, "GME score 74");
+  await api.askAssistant("What is a pump?", new AbortController().signal);
+  assert.deepEqual(bodies, [{ question: "Why is GME flagged?", context: "GME score 74" }, { question: "What is a pump?" }]);
 });
 
 test("swing is optional and validated: finite, non-negative, band at least median, known regime", () => {

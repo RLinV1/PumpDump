@@ -1,7 +1,7 @@
 [project]
 name = "stock-research-assistant"
 version = "0.2.0"
-description = "Stock lookup, simulated paper trading and a Gemini research assistant (MCP tools, RAG, evals) for Pumpwatch"
+description = "Stock lookup and a Gemini research assistant (MCP tools, RAG, evals) for Pumpwatch"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "yfinance>=0.2.40",

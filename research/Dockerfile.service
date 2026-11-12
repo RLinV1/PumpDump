@@ -1,4 +1,4 @@
-# Pumpwatch private service: stock lookup, paper trading and the research assistant (api/service.py).
+# Pumpwatch private service: stock lookup and the flag assistant (api/service.py).
 # Build context is this directory (research/). Python 3.13 because pyproject requires it.
 FROM python:3.13-slim
 
@@ -18,7 +18,7 @@ RUN python -c "import tomllib;print('\n'.join(tomllib.load(open('pyproject.toml'
 COPY src ./src
 COPY api ./api
 COPY evals ./evals
-# /data is the named volume holding the paper-trading SQLite file and the price cache.
+# /data holds the price cache.
 RUN useradd --system --home /app research && mkdir /data /app/.cache /app/rag-store && chown -R research /data /app/.cache /app/rag-store
 USER research
 # Build the knowledge library now: this downloads Chroma's ONNX embedding model once (no key) and embeds the seed files,

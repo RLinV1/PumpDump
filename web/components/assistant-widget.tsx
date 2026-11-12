@@ -7,7 +7,7 @@ import { AssistantBody, assistantTag, type AssistantState } from "@/components/a
 
 // A small floating chat at the bottom right. Open state lives in the parent so the command line can open it too.
 export function AssistantWidget({ open, onOpenChange, state, onAsk, ticker }: {
-  open: boolean; onOpenChange: (open: boolean) => void; state: AssistantState; onAsk: (question: string) => void; ticker?: string;
+  open: boolean; onOpenChange: (open: boolean) => void; state: AssistantState; onAsk: (question: string, context?: string) => void; ticker?: string;
 }) {
   const launcher = useRef<HTMLButtonElement>(null);
   const field = useRef<HTMLInputElement>(null);
@@ -39,12 +39,12 @@ export function AssistantWidget({ open, onOpenChange, state, onAsk, ticker }: {
         <div
           id="assistant-window"
           role="dialog"
-          aria-label="Research assistant"
+          aria-label="Flag assistant"
           onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}
           className="widget-in fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] min-h-64 flex-col border border-line-strong bg-bg sm:inset-x-auto sm:bottom-14 sm:right-3 sm:w-[360px] sm:max-h-[60vh]"
         >
           <header className="bar flex h-8 shrink-0 items-center justify-between gap-2 px-2 text-xs">
-            <h2 className="flex min-w-0 items-baseline gap-2 font-semibold uppercase"><span className="text-yellow">ASK</span><span className="truncate">Assistant</span></h2>
+            <h2 className="flex min-w-0 items-baseline gap-2 font-semibold uppercase"><span className="text-yellow">ASK</span><span className="truncate">Flag assistant</span></h2>
             <span className="flex shrink-0 items-center gap-2">
               {tag && <span className="font-semibold uppercase" role="status">{tag}</span>}
               <button type="button" onClick={close} aria-label="Close assistant" className="-mr-2 inline-flex h-11 w-11 items-center justify-center hover:bg-accent hover:text-bg sm:h-8 sm:w-8">
@@ -72,7 +72,7 @@ export function AssistantWidget({ open, onOpenChange, state, onAsk, ticker }: {
               id="assistant-question"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder={ticker ? `Ask about ${ticker}...` : "Ask about a stock..."}
+              placeholder={ticker ? `Ask about ${ticker}...` : "Ask about a flag..."}
               maxLength={MAX_QUESTION}
               autoComplete="off"
               spellCheck={false}

@@ -1,6 +1,6 @@
 # Agent rules for Pumpwatch
 
-Pumpwatch is a real-time pump-and-dump detector. It is the main feature. The service in `research/` adds stock search, paper trading and the research assistant around it.
+Pumpwatch is a real-time pump-and-dump detector. It is the main feature. The service in `research/` adds stock search and a flag assistant (it explains flags and never gives buy or sell advice) around it.
 
 ## Git
 

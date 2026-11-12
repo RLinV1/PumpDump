@@ -47,24 +47,11 @@ test("LOOK and DES look a ticker up; alone they open the lookup panel", () => {
   assert.equal(parseCommand("LOOK 12").type, "error");
 });
 
-test("BUY and SELL take a ticker and a whole quantity from 1 to 10,000", () => {
-  assert.deepEqual(parseCommand("buy gme 10"), { type: "trade", side: "BUY", ticker: "GME", qty: 10 });
-  assert.deepEqual(parseCommand("SELL $amc 2 <GO>"), { type: "trade", side: "SELL", ticker: "AMC", qty: 2 });
-  assert.deepEqual(parseCommand("BUY GME 10000"), { type: "trade", side: "BUY", ticker: "GME", qty: 10000 });
-  for (const input of ["BUY", "BUY GME", "BUY GME 0", "BUY GME -5", "BUY GME 1.5", "BUY GME 10001", "BUY GME ten", "BUY GME 5 6", "SELL 12 5", "BUY TOOLONG 5"]) {
-    const result = parseCommand(input);
-    assert.equal(result.type, "error", input);
-    assert.match(result.message, /USAGE: (BUY|SELL) <TICKER> <QTY>/);
-  }
+test("retired order and account commands are plain errors", () => {
+  for (const input of ["buy gme 10", "SELL AMC 2", "PT", "PT RESET"]) assert.notEqual(parseCommand(input).type, "trade", input);
+  assert.equal(parseCommand("BUY GME 10").type, "error");
+  assert.equal(parseCommand("PT RESET").type, "error");
   assert.deepEqual(parseCommand("SEL BUY"), { type: "select", ticker: "BUY" });
-});
-
-test("PT opens the Paper tab and PT RESET needs a second, explicit confirmation", () => {
-  for (const input of ["PT", "pt <GO>", "PAPER"]) assert.deepEqual(parseCommand(input), { type: "paper" }, input);
-  assert.equal(parseCommand("8").type, "error"); // paper is no longer a numbered panel
-  assert.deepEqual(parseCommand("PT RESET"), { type: "reset", confirmed: false });
-  assert.deepEqual(parseCommand("pt reset confirm"), { type: "reset", confirmed: true });
-  assert.equal(parseCommand("PT NOW").type, "error");
 });
 
 test("ASK sends the question with its own case, a bare ASK opens the chat widget, long questions are refused", () => {

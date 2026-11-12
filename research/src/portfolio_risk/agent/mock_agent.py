@@ -22,7 +22,7 @@ _STOP = {
     "HOW", "DO", "RSI", "SMA", "PE", "P", "E", "EPS", "ETF", "AI", "US", "USA", "USD", "CEO", "Q", "OK", "NEWS", "VIX", "SEC",
     "DOES", "DID", "HAS", "HAVE", "BE", "BEEN", "ARE", "WAS", "WERE", "CAN", "COULD", "WOULD", "ME", "TELL", "ABOUT",
     "SHOW", "PRICE", "TODAY", "MOVE", "MOVED", "DROP", "FELL", "JUMP", "PUMP", "DUMP", "HYPE", "RISK", "RISKY", "SAFE",
-    "BELOW", "ABOVE", "ITS", "DAY", "WEEK", "MONTH", "YEAR", "WATCH", "OUT", "STOCK", "CASH", "PAPER", "BUY", "SELL",
+    "BELOW", "ABOVE", "ITS", "DAY", "WEEK", "MONTH", "YEAR", "WATCH", "OUT", "STOCK", "CASH", "BUY", "SELL",
 }
 _PERIODS = (("year", "1y"), ("6 month", "6mo"), ("six month", "6mo"), ("3 month", "3mo"), ("quarter", "3mo"),
             ("week", "1w"), ("today", "1d"), ("month", "1mo"))
@@ -58,13 +58,11 @@ def run(question: str) -> AgentResult:
         calls.append({"name": name, "input": args, "output": out})
         return out
 
-    pump = _has(ql, "pump", "dump", "manipulat", "coordinated", "hype", "squeeze")
+    pump = _has(ql, "pump", "dump", "manipulat", "coordinated", "hype", "squeeze", "flag")
     compare = _has(ql, "compare", " vs ", "versus")
-    if _has(ql, "buy ", "sell ", "place an order", "place a trade", "short ") and not _has(ql, "should", "paper account"):
-        answer = "I cannot place orders or trade: I only read data. Use the BUY and SELL commands in the paper-trading panel for simulated orders."
-    elif _has(ql, "paper") and _has(ql, "account", "position", "order", "cash", "p&l", "pnl", "holding", "trade"):
-        out = call("get_paper_orders") if "order" in ql else call("get_paper_account")
-        answer = _paper(out)
+    if _has(ql, "buy ", "sell ", " hold ", "place an order", "place a trade", "short "):
+        answer = ("I cannot place orders or give buy, sell or hold advice. Pumpwatch detects pump-and-dump risk, so ask why a "
+                  "ticker is or is not flagged and what its evidence means.")
     elif len(tk) > 1 and not compare:
         answer = f"Which ticker do you mean: {', '.join(tk)}? Ask to compare them for a side-by-side view."
     elif compare and len(tk) >= 2:
@@ -175,16 +173,3 @@ def _knowledge(o: dict) -> str:
     top = rows[0]
     body = re.sub(r"\s+", " ", re.sub(r"(?m)^#+\s*", "", top["text"])).strip()
     return f"{body[:600]} [{top['source']}]" + "".join(f" [{r['source']}]" for r in rows[1:3] if r["source"] != top["source"])
-
-
-def _paper(o: dict) -> str:
-    if (e := _err(o)):
-        return e
-    if "orders" in o:
-        rows = o["orders"][:5]
-        return "Your recent simulated orders:\n" + ("\n".join(f"- {r['side']} {r['qty']} {r['ticker']} at ${r['priceCents'] / 100:.2f}" for r in rows) or "none yet") + "\nSimulated only; I cannot place orders."
-    if not o.get("valuation_available", True):
-        return (f"Your simulated account holds ${o['cashCents'] / 100:,.2f} cash and {len(o['positions'])} position(s). "
-                "Current holding prices, portfolio value and unrealized P&L are unavailable. Simulated only; I cannot place orders.")
-    return (f"Your simulated account holds ${o['cashCents'] / 100:,.2f} cash and {len(o['positions'])} position(s), "
-            f"total ${o['totalCents'] / 100:,.2f}, P&L ${o['pnlCents'] / 100:+,.2f}. Simulated only; I cannot place orders.")

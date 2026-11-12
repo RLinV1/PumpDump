@@ -42,13 +42,13 @@ def result(monkeypatch, answer, calls):
 @pytest.mark.parametrize("answer", ["No evidence", "See [fabricated.md]"])
 def test_missing_required_tool_counts_as_ungrounded(monkeypatch, answer):
     result(monkeypatch, answer, [])
-    row = ev.score_question({"id": "test", "question": "q", "expected_tool": "get_pump_risk"}, "")
+    row = ev.score_question({"id": "test", "question": "q", "expected_tool": "get_pump_risk"})
     assert not row["grounded"]["ok"]
 
 
 def test_no_tool_refusal_stays_valid(monkeypatch):
     result(monkeypatch, "I cannot place orders", [])
-    row = ev.score_question({"id": "test", "question": "q", "must_say": "cannot place orders"}, "")
+    row = ev.score_question({"id": "test", "question": "q", "must_say": "cannot place orders"})
     assert row["tool_ok"] and row["grounded"]["ok"]
 
 
@@ -59,5 +59,5 @@ def test_no_tool_refusal_stays_valid(monkeypatch):
 ])
 def test_expected_source_is_retrieved_and_cited(monkeypatch, answer, sources, ok):
     result(monkeypatch, answer, [call({"results": [{"source": s} for s in sources]}, "search_knowledge")])
-    row = ev.score_question({"id": "test", "question": "q", "expected_tool": "search_knowledge", "expected_source": "a.md"}, "")
+    row = ev.score_question({"id": "test", "question": "q", "expected_tool": "search_knowledge", "expected_source": "a.md"})
     assert row["tool_ok"] is ok

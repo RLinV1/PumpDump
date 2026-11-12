@@ -9,7 +9,7 @@ Plans for new behaviour live in [`openspec/changes/`](../openspec/changes/), not
 | --- | --- |
 | [containers.md](architecture/containers.md) | Docker containers, Kafka topics, Postgres use, ports, startup order, record/replay, mock vs live; one diagram |
 | [overview.md](architecture/overview.md) | How the Java risk path and the Node web path work inside: windows, scoring, API, sentiment, routes, config |
-| [research.md](architecture/research.md) | The private Python service: stock lookup, paper trading, the Gemini/MCP/RAG assistant |
+| [research.md](architecture/research.md) | The private Python service: stock lookup, the Gemini/MCP/RAG flag assistant |
 | [tech-stack.md](architecture/tech-stack.md) | Technologies, versions and what each does; repository layout |
 
 ## Data and compliance

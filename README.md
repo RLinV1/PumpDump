@@ -11,8 +11,8 @@ not buy or sell advice. Sentiment describes sampled text; it does not predict re
 ![Current default workspace with all six monitoring panels (MOCK data)](docs/img/workspace-default.jpg)
 
 More screenshots and the feature tour: [docs/product/walkthrough.md](docs/product/walkthrough.md).
-The research service adds stock lookup, simulated paper trading and a read-only assistant
-beside the pump panels. This is simulated trading, not advice; there is no broker or real money.
+The research service adds stock lookup and a flag assistant beside the pump panels. The assistant
+explains why a ticker is or is not flagged; it never gives buy or sell advice.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ Connectors publish normalized records to Kafka. A Kafka Streams pipeline turns t
 features, risk scores and flags. A read-only API stores and serves them over REST and SSE, and
 optionally sends webhook alerts. A recorder stores supported topics so a time window can be replayed.
 A Node web host serves the dashboard, adds news, movers and sentiment, and proxies the rest to the API.
-A private Python service adds lookup, paper trading and the assistant. Caddy fronts it all.
+A private Python service adds lookup and the flag assistant. Caddy fronts it all.
 
 See **[docs/architecture/containers.md](docs/architecture/containers.md)** for the container
 diagram, Kafka topics, ports, startup order and the life of one event, and

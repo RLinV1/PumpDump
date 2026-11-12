@@ -32,8 +32,7 @@ export function fuzzy(query: string, text: string): { score: number; indexes: nu
 type Cmd = { label: string; detail: string; run: string; keywords: string };
 const COMMANDS: Cmd[] = [
   ...PANELS.map((p) => ({ label: `Open ${p.title}`, detail: `panel ${p.number}`, run: p.mnemonic, keywords: [p.mnemonic, ...p.aliases].join(" ") })),
-  { label: "Go to Paper trading tab", detail: "PT", run: "PT", keywords: "paper trading tab pt" },
-  { label: "Open the assistant", detail: "ASK", run: "ASK", keywords: "assistant chat ask ai" },
+  { label: "Ask about a flag", detail: "ASK", run: "ASK", keywords: "assistant chat ask ai flag why explain" },
   { label: "Show data mode (mock or live)", detail: "MODE", run: "MODE", keywords: "mock live data mode" },
   { label: "Refresh all panels", detail: "RF", run: "RF", keywords: "reload refresh rf" },
   { label: "Help: list commands", detail: "HELP", run: "HELP", keywords: "help ?" },
@@ -67,6 +66,6 @@ export function paletteItems(query: string, known: PaletteTicker[]): PaletteItem
 
   const question = q.replace(/^ask\s+/i, "").trim();
   const ask: PaletteItem[] = question && question.length <= MAX_QUESTION
-    ? [{ id: "ask", group: "ask", label: `Ask the assistant: ${question}`, run: `ASK ${question}`, indexes: [] }] : [];
+    ? [{ id: "ask", group: "ask", label: `Ask about a flag: ${question}`, run: `ASK ${question}`, indexes: [] }] : [];
   return [...tickers, ...commands, ...ask];
 }

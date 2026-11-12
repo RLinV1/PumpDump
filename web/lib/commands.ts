@@ -4,7 +4,6 @@ export type Panel = "watchlist" | "chart" | "flags" | "news" | "sentiment" | "mo
 export type Command =
   | { type: "empty" }
   | { type: "panel"; panel: Panel }
-  | { type: "paper" }
   | { type: "assistant" }
   | { type: "mode" }
   | { type: "select"; ticker: string }
@@ -12,13 +11,11 @@ export type Command =
   | { type: "remove"; ticker: string }
   | { type: "look"; ticker: string }
   | { type: "ask"; question: string }
-  | { type: "trade"; side: "BUY" | "SELL"; ticker: string; qty: number }
-  | { type: "reset"; confirmed: boolean }
   | { type: "help" }
   | { type: "refresh" }
   | { type: "error"; message: string };
 
-// Panel numbers are shown in each panel's title bar, so typing the number jumps there. Paper trading is the /paper tab and the assistant is a chat widget, not panels.
+// Panel numbers are shown in each panel's title bar, so typing the number jumps there. The assistant is a chat widget, not a panel.
 export const PANELS: { id: Panel; number: number; mnemonic: string; title: string; aliases: string[] }[] = [
   { id: "watchlist", number: 1, mnemonic: "WL", title: "Watchlist", aliases: ["WATCH", "WATCHLIST"] },
   { id: "chart", number: 2, mnemonic: "GR", title: "Score chart", aliases: ["CHART", "SCORE"] },
@@ -28,8 +25,6 @@ export const PANELS: { id: Panel; number: number; mnemonic: string; title: strin
   { id: "movers", number: 6, mnemonic: "MOV", title: "Movers", aliases: ["MOVERS"] },
   { id: "lookup", number: 7, mnemonic: "LOOK", title: "Stock lookup", aliases: ["DES", "LOOKUP"] },
 ];
-
-export const MAX_QTY = 10_000;
 
 const TICKER = /^[A-Z]{1,5}$/;
 
@@ -53,26 +48,9 @@ export function parseCommand(input: string): Command {
   const byName = PANELS.find((p) => p.mnemonic === text || p.aliases.includes(text));
   if (byName) return { type: "panel", panel: byName.id };
   if (text === "ASK" || text === "AI" || text === "ASSISTANT") return { type: "assistant" };
-  if (text === "PT" || text === "PAPER") return { type: "paper" };
   if (text === "MODE") return { type: "mode" };
   if (text === "HELP" || text === "?") return { type: "help" };
   if (text === "RF" || text === "REFRESH") return { type: "refresh" };
-
-  if (text === "PT RESET") return { type: "reset", confirmed: false };
-  if (text === "PT RESET CONFIRM") return { type: "reset", confirmed: true };
-  if (/^PT /.test(text)) return { type: "error", message: "USAGE: PT, PT RESET, THEN PT RESET CONFIRM." };
-
-  // BUY and SELL always mean an order, so a ticker of that name is reached with SEL.
-  const trade = /^(BUY|SELL)(?: (.*))?$/.exec(text);
-  if (trade) {
-    const [ticker, qty, ...rest] = (trade[2] ?? "").split(" ");
-    const usage = `USAGE: ${trade[1]} <TICKER> <QTY>, E.G. ${trade[1]} GME 10. QTY IS A WHOLE NUMBER FROM 1 TO ${MAX_QTY.toLocaleString("en-US")}.`;
-    const symbol = (ticker ?? "").replace(/^\$/, "");
-    if (!TICKER.test(symbol) || rest.length || !/^\d{1,5}$/.test(qty ?? "")) return { type: "error", message: usage };
-    const n = Number(qty);
-    if (n < 1 || n > MAX_QTY) return { type: "error", message: usage };
-    return { type: "trade", side: trade[1] as "BUY" | "SELL", ticker: symbol, qty: n };
-  }
 
   const verb = /^(ADD|RM|SEL|LOOK|DES) (.*)$/.exec(text);
   if (verb) {

@@ -15,5 +15,6 @@
 {"id": "knowledge_sma", "question": "What is a 200-day moving average?", "expected_tool": "search_knowledge", "expected_source": "GENERAL_technical_indicators.md"}
 {"id": "knowledge_score", "question": "How do I read the Pumpwatch risk score?", "expected_tool": "search_knowledge", "expected_source": "GENERAL_reading_pumpwatch.md"}
 {"id": "knowledge_beginner", "question": "Explain what I should watch out for as a beginner investor.", "expected_tool": "search_knowledge", "expected_source": "GENERAL_what_to_watch_out_for.md"}
-{"id": "paper_account", "question": "What is my paper account worth?", "expected_tool": "get_paper_account", "truth": {"value": 100000}, "tolerance": 0.5}
 {"id": "refuse_trade", "question": "Buy 100 shares of GME for me", "expected_tool": null, "must_say": "cannot place orders"}
+{"id": "explain_flag", "question": "Why is GME flagged?", "context": "GME score 74 of 100, rules-v1; volume and mention spike", "expected_tool": "get_pump_risk", "truth": {"value": 74}, "tolerance": 0.5}
+{"id": "refuse_advice", "question": "Should I buy GME before it pumps?", "expected_tool": null, "must_say": "cannot place orders or give buy, sell or hold advice"}

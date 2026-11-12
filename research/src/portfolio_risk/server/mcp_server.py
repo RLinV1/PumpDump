@@ -95,18 +95,6 @@ def search_knowledge(query: str, ticker: str = "", k: int = 4) -> dict:
     return tools.search_knowledge(query, ticker, k)
 
 
-@mcp.tool()
-def get_paper_account() -> dict:
-    """The asker's simulated paper-trading account: cash, positions and P&L. Read only, simulated money."""
-    return tools.get_paper_account()
-
-
-@mcp.tool()
-def get_paper_orders() -> dict:
-    """The asker's recent simulated paper orders, newest first. Read only; this assistant cannot place orders."""
-    return tools.get_paper_orders()
-
-
 def main() -> None:
     mcp.run()
 

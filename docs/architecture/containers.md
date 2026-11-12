@@ -36,7 +36,6 @@ flowchart LR
     research["research :8090<br/>FastAPI, private"]
     proxy["proxy :80<br/>Caddy"]
     pg[("postgres :5432<br/>db pumpwatch, volume pgdata")]
-    sqlite[("SQLite paper accounts<br/>volume researchpaper")]
   end
 
   ki -. creates topics .-> k
@@ -65,7 +64,7 @@ flowchart LR
   proxy -->|"/api/v1/flags/stream"| api
   proxy -->|"everything else"| web
   web -->|"other /api (live mode)"| api
-  web -->|"/api/v1/lookup, paper,<br/>assistant"| research
+  web -->|"/api/v1/lookup,<br/>assistant"| research
   research -->|"tools read pump signals<br/>PUMPWATCH_API_URL"| web
   research --- sqlite
 
@@ -98,7 +97,7 @@ Compose file.
 | `pipeline` | root `Dockerfile`, `MODULE=pipeline` | `127.0.0.1:8082` | Kafka: `raw-posts`, `ticks`, `raw-news`, `raw-filings`, `source-health`, `mentions`, `features`, `scores` | Kafka: `mentions`, `features`, `scores`, `flags`; Streams internal topics; local state dir `/tmp/pumpwatch-streams` (no volume) | `/actuator/health` | `WATCHLIST`, `PIPELINE_PORT`, `STREAMS_REPLICATION`, `STREAMS_STATE_DIR`, `PIPELINE_MODEL_DIR`, `PIPELINE_VOL_MODEL_DIR`, `KAFKA_BOOTSTRAP` |
 | `api` | root `Dockerfile`, `MODULE=api` | `127.0.0.1:8083` | Kafka `scores`, `flags` (also `replay.<runId>.scores/flags`); Postgres read tables | Postgres: `api_scores`, `api_flags`, `alert_flags`, `alert_outbox`; webhooks when alerts are on | `/actuator/health` | `API_PORT`, `API_ALLOWED_ORIGINS`, `API_RATE_LIMIT_PER_MINUTE`, `API_TRUSTED_PROXIES`, `ALERTS_ENABLED`, `ALERTS_WEBHOOK_URLS`, `ALERTS_LINK_BASE`, `ALERTS_COOLDOWN`, `ALERTS_MAX_PER_MINUTE`, `KAFKA_BOOTSTRAP`, `POSTGRES_URL` |
 | `web` | `web/Dockerfile` (Node 22, Next.js build, runs `server.mjs`; pinned models fetched at build) | none (listens on 3000 inside the network) | `api` (via `API_ORIGIN`), `research` (via `RESEARCH_ORIGIN`), Alpaca news/movers/quotes, Jetstream, Bluesky AppView search | nothing durable; sentiment windows are in memory | Docker `HEALTHCHECK` fetching `/` | `DATA_MODE`, `API_ORIGIN`, `RESEARCH_ORIGIN`, `TRUST_PROXY_HEADERS`, `WATCHLIST`, `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY`, `ALPACA_FEED`, `SENTIMENT_ENABLED`, `NEWS_SENTIMENT_ENABLED`, `SENTIMENT_MODEL_DIR` |
-| `research` | `research/Dockerfile.service` (Python 3.13, FastAPI/uvicorn, Chroma library built into the image) | none (8090 inside the network) | `web` (via `PUMPWATCH_API_URL`), Gemini, yfinance when mock data is off | SQLite paper accounts on volume `researchpaper` (`/data`) | `/healthz` | `USE_MOCK_DATA` (set from `RESEARCH_USE_MOCK_DATA`), `USE_MOCK_LLM`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `PUMPWATCH_API_URL` |
+| `research` | `research/Dockerfile.service` (Python 3.13, FastAPI/uvicorn, Chroma library built into the image) | none (8090 inside the network) | `web` (via `PUMPWATCH_API_URL`), Gemini, yfinance when mock data is off | none | `/healthz` | `USE_MOCK_DATA` (set from `RESEARCH_USE_MOCK_DATA`), `USE_MOCK_LLM`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `PUMPWATCH_API_URL` |
 | `proxy` | `caddy:2-alpine`, mounts `deploy/Caddyfile` | `${PROXY_BIND:-127.0.0.1}:${PROXY_PORT:-80}` | `web`, `api` | nothing | none (waits for `web` and `api` healthy) | `PROXY_BIND`, `PROXY_PORT` |
 
 Notes:
@@ -120,8 +119,8 @@ Notes:
 2. `GET /api/v1/flags/stream` (the SSE flag stream) goes straight to `api:8083` with no buffering,
    so no Node hop is held per open stream.
 3. Everything else goes to `web:3000` (gzip on). `server.mjs` handles `/api` requests in this order:
-   - `assistant` routes (`/api/v1/assistant/...`) and `lookup`/`paper` routes
-     (`/api/v1/lookup/...`, `/api/v1/paper/...`) are validated, rate limited and forwarded to
+   - `assistant` routes (`/api/v1/assistant/...`) and `lookup` routes
+     (`/api/v1/lookup/...`) are validated, rate limited and forwarded to
      `research` at `RESEARCH_ORIGIN` (answered with 503 if it is unset).
    - In `DATA_MODE=mock`, every other `/api` request is answered by the built-in mock API.
    - In `DATA_MODE=live`, the context routes (movers, quotes, news, per-ticker news and sentiment)
@@ -240,7 +239,6 @@ Other switches are independent of `DATA_MODE`:
   `SEC_ENABLED`, `FINNHUB_ENABLED` and `RSS_ENABLED` each start one connector.
 - `research` prices lookups from `RESEARCH_USE_MOCK_DATA` (default `1`, mock; `0` uses yfinance) and
   answers with Gemini only if `GEMINI_API_KEY` is set and `USE_MOCK_LLM` is not forced to mock.
-  In live mode the paper-trading fill price comes from the web server's own Alpaca quote.
 - The public VM (`deploy/up.sh`) strips `ALPACA_` and `GEMINI_` lines from `.env`, forces
   `DATA_MODE=mock` (unless `DEPLOY_DATA_MODE=live` for load tests), `RESEARCH_USE_MOCK_DATA=1` and
   `USE_MOCK_LLM=1`. Real Alpaca data stays on the owner's machine.

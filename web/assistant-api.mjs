@@ -1,14 +1,14 @@
 // POST /api/v1/assistant/ask: the one public door to the research assistant (Research). It validates, rate-limits, then
 // forwards to the private service, so the service never sees an unchecked request and the Gemini key cannot be drained.
-// The assistant has read-only tools. The caller's paper-account token (if any) is passed through only so it can read that account.
+// The assistant has read-only tools. An optional context string (the flag on screen) rides along and is capped here.
 const NOTICE = "Not investment advice. Pumpwatch is a non-commercial project.";
 export const MAX_QUESTION = 300;
-const MAX_BODY = 2048;
+export const MAX_CONTEXT = 600;
+const MAX_BODY = 4096;
 const WINDOW_MS = 60_000;
 const PER_CLIENT = 5; // questions per minute per client address
 const ALL_CLIENTS = 30; // and per minute across everyone: the spend cap
 const MAX_TRACKED = 5000;
-const TOKEN = /^[A-Za-z0-9_-]{32,64}$/;
 
 export function createAssistantApi({ origin, fetchImpl = fetch, now = Date.now } = {}) {
   const hits = new Map(); // client -> request times inside the window; shortcut: in memory, resets on restart
@@ -46,18 +46,18 @@ export function createAssistantApi({ origin, fetchImpl = fetch, now = Date.now }
     });
     request.on("end", async () => {
       if (size > MAX_BODY) return;
-      let question;
-      try { question = JSON.parse(Buffer.concat(chunks).toString("utf8"))?.question; } catch { /* handled below */ }
+      let question, context;
+      try { ({ question, context } = JSON.parse(Buffer.concat(chunks).toString("utf8")) ?? {}); } catch { /* handled below */ }
       if (typeof question !== "string" || !question.trim() || /[\u0000-\u001f]/.test(question)) return json(400, null, "Send a question");
       question = question.trim();
+      if (context !== undefined && (typeof context !== "string" || context.length > MAX_CONTEXT || /[\u0000-\u001f]/.test(context))) return json(400, null, "Flag context is invalid");
       if (question.length > MAX_QUESTION) return json(400, null, `Questions are limited to ${MAX_QUESTION} characters`);
       // The server already replaced x-forwarded-for with the real peer (see server-headers.mjs).
       if (!allowed(request.headers["x-forwarded-for"] ?? "unknown")) return json(429, null, "Too many questions. Try again in a minute.", { "Retry-After": "60" });
       try {
-        const token = request.headers["x-paper-token"];
         const upstream = await fetchImpl(`${origin}/assistant/ask`, {
-          method: "POST", headers: { "Content-Type": "application/json", ...(typeof token === "string" && TOKEN.test(token) ? { "X-Paper-Token": token } : {}) },
-          body: JSON.stringify({ question }), signal: AbortSignal.timeout(45_000),
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(context?.trim() ? { question, context: context.trim() } : { question }), signal: AbortSignal.timeout(45_000),
         });
         if (upstream.status === 429) return json(429, null, "The assistant is busy. Try again in a minute.", { "Retry-After": "60" });
         const body = upstream.ok ? await upstream.json() : null;

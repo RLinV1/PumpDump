@@ -79,7 +79,7 @@ Then check the console for leftovers (ECS, load balancers, RDS, MSK, public IPs)
 
 ## Research
 
-`enable_research = true` adds the research assistant on mock data and the mock agent (no `ANTHROPIC_API_KEY`), registered in Cloud Map and wired to `web` through `RESEARCH_ORIGIN`. Its storage is ephemeral: if its paper-trading state must survive restarts, add an EFS file system and a `volume` mount to its task definition. Not done, because the stack is disposable. The image is built from `research/Dockerfile.service`.
+`enable_research = true` adds the research assistant on mock data and the mock agent (no `ANTHROPIC_API_KEY`), registered in Cloud Map and wired to `web` through `RESEARCH_ORIGIN`. It keeps no state worth saving, so its ephemeral storage is fine. The image is built from `research/Dockerfile.service`.
 
 ## Cost estimate
 

@@ -196,11 +196,11 @@ services:
       DATA_MODE: ${DATA_MODE:-mock} # live needs Alpaca keys; deploy/up.sh keeps the public VM on mock
       API_ORIGIN: http://api:8083
       TRUST_PROXY_HEADERS: "true" # web has no published port; Caddy is its only peer
-      RESEARCH_ORIGIN: http://research:8090 # web validates and rate-limits /api/v1/lookup and /api/v1/paper, then forwards here
+      RESEARCH_ORIGIN: http://research:8090 # web validates and rate-limits /api/v1/lookup and /api/v1/assistant, then forwards here
     restart: unless-stopped
 
-  # Stock lookup and simulated paper trading (Research). Private: only web talks to it, and it publishes no port.
-  # Paper accounts are anonymous tokens in a SQLite file on the researchpaper volume. deploy/up.sh pins it to mock data on the public VM.
+  # Stock lookup and the flag assistant (Research). Private: only web talks to it, and it publishes no port.
+  # deploy/up.sh pins it to mock data on the public VM.
   research:
     profiles: ["apps"]
     build:
@@ -212,8 +212,6 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
       USE_MOCK_LLM: ${USE_MOCK_LLM:-auto}
       PUMPWATCH_API_URL: http://web:3000
-    volumes:
-      - researchpaper:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8090/healthz >/dev/null || exit 1"]
@@ -239,4 +237,3 @@ services:
 volumes:
   pgdata:
   kafkadata:
-  researchpaper:

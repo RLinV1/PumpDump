@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextvars
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -11,9 +10,7 @@ import pandas as pd
 import pytest
 
 from evals import fixtures
-from portfolio_risk import config, paper, tools
-
-TOKEN = "t" * 40
+from portfolio_risk import tools
 
 
 @pytest.fixture
@@ -77,38 +74,6 @@ def test_one_day_move_keeps_single_observation_fallback(monkeypatch):
     assert result["move_pct"] == 0.0
 
 
-def test_mock_paper_account_has_current_valuation(db, monkeypatch):
-    monkeypatch.setenv("PAPER_DB", str(db))
-    paper.place_order(db, TOKEN, "BUY", "AAPL", 1, 10000)
-    tools.set_paper_token(TOKEN)
-    try:
-        account = tools.get_paper_account()
-        assert account["valuation_available"] is True
-        assert account["positions"][0]["markCents"] is not None
-        assert account["totalCents"] is not None
-    finally:
-        tools.set_paper_token("")
-
-
-def test_live_paper_answer_does_not_claim_unmarked_pnl(db, monkeypatch):
-    from portfolio_risk.agent import mock_agent
-
-    monkeypatch.setenv("PAPER_DB", str(db))
-    paper.place_order(db, TOKEN, "BUY", "AAPL", 1, 10000)
-    monkeypatch.setenv("USE_MOCK_DATA", "0")
-    tools.set_paper_token(TOKEN)
-    try:
-        account = tools.get_paper_account()
-        assert account["valuation_available"] is False
-        assert account["totalCents"] is None and account["pnlCents"] is None
-        assert account["positions"][0]["markCents"] is None
-        assert "priceCents" not in account["positions"][0]
-        answer = mock_agent.run("Show my paper account").answer
-        assert "unavailable" in answer.lower() and "P&L $" not in answer
-    finally:
-        tools.set_paper_token("")
-
-
 def test_mock_news_is_labelled_synthetic_and_flagged_untrusted():
     out = tools.get_ticker_news("AAPL", 3)
     assert len(out["articles"]) == 3 and "not a real article" in out["articles"][0]["summary"].lower()
@@ -144,24 +109,6 @@ def test_sentiment_counts_come_from_the_model_endpoint(sentiment_ready):
     assert risk["score"] == 74 and risk["sentiment"]["positive"] == 4  # attached, and the score is untouched
 
 
-def test_paper_tools_read_only(db, monkeypatch):
-    monkeypatch.setenv("PAPER_DB", str(db))
-    assert "no paper account" in tools.get_paper_account()["error"]
-    tools.set_paper_token(TOKEN)
-    acct = tools.get_paper_account()
-    assert acct["cashCents"] == paper.START_CASH_CENTS and acct["simulated"] is True
-    assert tools.get_paper_orders()["orders"] == []
-    assert not config.use_mock_data() or acct["data_mode"] == "mock"
-    tools.set_paper_token("")
-
-
 def test_no_tool_can_trade():
     assert all(n.startswith(("get_", "explain_", "compare_", "search_")) for n in tools.READ_ONLY_TOOLS)
     assert not [n for n in dir(tools) if n.startswith(("place_", "buy_", "sell_", "reset_"))]
-
-
-def test_standalone_paper_tools_use_environment_token(db, monkeypatch):
-    monkeypatch.setenv("PAPER_DB", str(db))
-    monkeypatch.setenv("RESEARCH_PAPER_TOKEN", TOKEN)
-    account = contextvars.Context().run(tools.get_paper_account)
-    assert account["cashCents"] == paper.START_CASH_CENTS
