@@ -169,6 +169,31 @@ class AlpacaConnectorTest {
     }
 
     @Test
+    void failedFirstTickWithNoCheckpointBackfillsFromTheSessionStart() throws Exception {
+        var s = new FakeStream();
+        s.stopOnClose = true;
+        s.connections.add(List.of("[" + trade("GME", "1", 1, "2026-01-02T15:00:01Z", 1) + "]"));
+        s.connections.add(List.of());
+        var failing = new FakeSeenItems() {
+            @Override
+            public boolean isSeen(String source, String itemId) {
+                throw new IllegalStateException("db down");
+            }
+        };
+        var asked = new ArrayList<Instant>();
+        TradeHistory history = (sy, start, end, tok) -> {
+            asked.add(start);
+            return new TradeHistory.Page(List.of(), null);
+        };
+        publisher.start();
+        var c = new AlpacaConnector(props(30, KEY, SECRET), List.of("GME"), publisher, s, history, failing, positions, CLOCK);
+        c.session();
+        c.session();
+
+        assertThat(asked).containsExactly(CLOCK.instant()); // the gap fill still runs although no tick was ever saved
+    }
+
+    @Test
     void failedSaveClosesTheConnectionAndTheGapFillStartsBeforeTheLostTick() throws Exception {
         var s = new FakeStream();
         s.stopOnClose = true;

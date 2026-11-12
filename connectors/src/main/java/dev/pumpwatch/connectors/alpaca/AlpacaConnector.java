@@ -143,6 +143,7 @@ public final class AlpacaConnector implements Connector {
     boolean session() throws Exception {
         var subscribed = new CompletableFuture<Void>();
         var closed = new CompletableFuture<Void>();
+        Instant started = clock.instant();
         try {
             current = stream.open(URI.create(streamUrl), new TradeStream.Listener() {
                 @Override
@@ -186,7 +187,8 @@ public final class AlpacaConnector implements Connector {
             current = null;
             if (c != null) c.close();
             synchronized (this) {
-                if (gapFrom == null) gapFrom = lastSeen;
+                // no saved tick yet (first trade failed, or none arrived): backfill from when this session started
+                if (gapFrom == null) gapFrom = lastSeen != null ? lastSeen : started;
             }
         }
     }
