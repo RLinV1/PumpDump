@@ -34,7 +34,7 @@ def write_card(model_dir: Path, info: dict, report: dict, df, train) -> Path:
         f"- Features: {', '.join(info['features'])}",
         f"- Model size: {(model_dir / 'model.txt').stat().st_size} bytes",
         "", "## Flag level",
-        f"- Level {info['flag_level']:.1f} of 100, chosen on {info['calibrated_on']['windows']} held-out windows "
+        f"- Level {'none' if info['flag_level'] is None else format(info['flag_level'], '.1f')} of 100, chosen on {info['calibrated_on']['windows']} held-out windows "
         f"({info['calibrated_on']['pump_episodes']} pump episodes), calibrated {info['calibrated_on']['date']}",
         f"- Target precision {info['target_precision']}; test precision among top flags per day "
         f"{m['precision_top_flags_per_day']['value']:.3f}, false flags per normal day "
