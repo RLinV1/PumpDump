@@ -5,6 +5,6 @@
 set -euo pipefail
 ROOT="$(dirname "$0")/.."
 ALLOW='POSTGRES_USER|POSTGRES_PASSWORD|TOPIC_PARTITIONS|WATCHLIST|API_ALLOWED_ORIGINS|API_RATE_LIMIT_PER_MINUTE|PROXY_PORT'
-grep -E "^[[:space:]]*($ALLOW)[[:space:]]*=" || true
+{ grep -E "^[[:space:]]*(export[[:space:]]+)?($ALLOW)[[:space:]]*=" || true; } | sed -E 's/^[[:space:]]*(export[[:space:]]+)?//'
 sed -nE 's/^[[:space:]]*([A-Z_]+_ENABLED)[[:space:]]*=.*/\1=false/p' "$ROOT/.env.example"
 printf 'DATA_MODE=%s\nRESEARCH_USE_MOCK_DATA=1\nUSE_MOCK_LLM=1\n' "${DEPLOY_DATA_MODE:-mock}"
