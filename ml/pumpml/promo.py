@@ -34,6 +34,7 @@ LIMITS = [
     "It has not been tested on stock posts (Reddit, Bluesky, StockTwits). Expect a domain shift; check before using it as a feature.",
     "Metrics are on a later period of the same groups. Resampling is over messages, which come in bursts, so the intervals are optimistic.",
     "Exact duplicate texts were removed before splitting, so templated announcements that repeat verbatim are counted once.",
+    "Labels are noisy in both directions: some unlabelled messages are real announcements, and some 'pump postponed' notices are labelled positive.",
     "The corpus is public Telegram channel posts. MIT is the archive's only stated license; it does not address Telegram's own terms.",
 ]
 
@@ -119,6 +120,111 @@ def fit(df: pd.DataFrame, embed=embed_texts, cs=(0.1, 1.0, 10.0)):
     return model, info
 
 
+def _device(device=None):
+    import torch
+    if device:
+        return device
+    if not torch.cuda.is_available():
+        raise SystemExit("--finetune needs a CUDA GPU and torch.cuda.is_available() is false; refusing to fall back to CPU.")
+    return "cuda"
+
+
+class _Net:
+    """Encoder + linear head on mean-pooled tokens (what sentence-transformers does for MiniLM, minus the normalisation)."""
+
+    def __init__(self, enc, head):
+        self.enc, self.head = enc, head
+
+    def logits(self, batch):
+        h = self.enc(**batch).last_hidden_state
+        m = batch["attention_mask"].unsqueeze(-1).to(h.dtype)
+        return self.head((h * m).sum(1) / m.sum(1).clamp(min=1)).squeeze(-1)
+
+
+def _predict(net, tok, texts, device, max_len, bs=256) -> np.ndarray:
+    import torch
+    texts = list(texts)
+    order = np.argsort([len(t) for t in texts])  # similar lengths per batch -> less padding
+    out = np.zeros(len(texts))
+    net.enc.eval()
+    with torch.no_grad(), torch.autocast(device, dtype=torch.float16, enabled=device == "cuda"):
+        for i in range(0, len(texts), bs):
+            idx = order[i:i + bs]
+            b = tok([texts[j] for j in idx], truncation=True, max_length=max_len, padding=True, return_tensors="pt").to(device)
+            out[idx] = torch.sigmoid(net.logits(b).float()).cpu().numpy()
+    return out
+
+
+def _load_net(enc_dir, coef, intercept, device):
+    import torch
+    from transformers import AutoModel
+    enc = AutoModel.from_pretrained(enc_dir).to(device)
+    head = torch.nn.Linear(enc.config.hidden_size, 1).to(device)
+    with torch.no_grad():
+        head.weight.copy_(torch.tensor(coef).unsqueeze(0))
+        head.bias.fill_(intercept)
+    return _Net(enc, head)
+
+
+def fit_finetune(df: pd.DataFrame, out: Path, base=EMBED_MODEL, device=None, epochs=3, batch=64, lr=2e-5,
+                 max_len=128, neg_per_pos=20, seed=0):
+    """Fine-tune the encoder + linear head. Imbalance: every epoch uses all train positives and a fresh random sample of
+    neg_per_pos negatives per positive (plain BCE). Keeps the epoch with the best validation PR-AUC, picks the threshold
+    on validation only, saves encoder/tokenizer under out/encoder, scores the test period from the saved weights."""
+    import torch
+    from transformers import AutoModel, AutoTokenizer
+    device = _device(device)
+    tr, va, te = time_split(df)
+    for name, part in (("train", tr), ("validation", va), ("test", te)):
+        if part["y"].nunique() < 2:
+            raise SystemExit(f"{name} period has one class; need more data")
+    torch.manual_seed(seed)
+    rng = np.random.default_rng(seed)
+    tok = AutoTokenizer.from_pretrained(base)
+    enc = AutoModel.from_pretrained(base).to(device)
+    net = _Net(enc, torch.nn.Linear(enc.config.hidden_size, 1).to(device))
+    opt = torch.optim.AdamW(list(enc.parameters()) + list(net.head.parameters()), lr=lr)
+    scaler = torch.amp.GradScaler(enabled=device == "cuda")
+    pos, neg = np.flatnonzero(tr["y"].to_numpy() == 1), np.flatnonzero(tr["y"].to_numpy() == 0)
+    X, y = tr["text"].to_numpy(), tr["y"].to_numpy(dtype="float32")
+    best, hist = None, []
+    if device == "cuda":
+        torch.cuda.reset_peak_memory_stats()
+    for ep in range(1, epochs + 1):
+        enc.train()
+        idx = rng.permutation(np.concatenate([pos, rng.choice(neg, min(len(neg), neg_per_pos * len(pos)), replace=False)]))
+        for i in range(0, len(idx), batch):
+            j = idx[i:i + batch]
+            b = tok(list(X[j]), truncation=True, max_length=max_len, padding=True, return_tensors="pt").to(device)
+            with torch.autocast(device, dtype=torch.float16, enabled=device == "cuda"):
+                loss = torch.nn.functional.binary_cross_entropy_with_logits(net.logits(b).float(), torch.tensor(y[j], device=device))
+            opt.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.step(opt)
+            scaler.update()
+        pv = _predict(net, tok, va["text"], device, max_len)
+        ap = float(average_precision_score(va["y"], pv))
+        hist.append(ap)
+        if best is None or ap > best[0]:
+            best = (ap, ep, pv)
+            out.mkdir(parents=True, exist_ok=True)
+            enc.save_pretrained(out / "encoder")
+            tok.save_pretrained(out / "encoder")
+            head = {"coef": net.head.weight.detach().float().cpu().numpy()[0].tolist(), "intercept": float(net.head.bias.item())}
+    pr, rc, th = precision_recall_curve(va["y"], best[2])
+    f1 = 2 * pr[:-1] * rc[:-1] / np.maximum(pr[:-1] + rc[:-1], 1e-12)
+    thr = float(th[int(np.argmax(f1))])  # F1-optimal on validation only
+    peak = torch.cuda.max_memory_allocated() / 2**20 if device == "cuda" else 0.0
+    net = _load_net(out / "encoder", head["coef"], head["intercept"], device)
+    metrics = bootstrap(te["y"].to_numpy(), _predict(net, tok, te["text"], device, max_len), thr)
+    parts = {"train": tr, "validation": va, "test": te}
+    return {"epoch": best[1], "val_pr_auc_by_epoch": hist, "epochs": epochs, "lr": lr, "batch": batch, "max_len": max_len,
+            "neg_per_pos": neg_per_pos, "threshold": thr, "metrics": metrics, "peak_gpu_mb": peak, **head,
+            "sizes": {k: len(p) for k, p in parts.items()},
+            "positives": {k: int(p["y"].sum()) for k, p in parts.items()},
+            "periods": {k: [str(p["date"].min().date()), str(p["date"].max().date())] for k, p in parts.items()}}
+
+
 def _ver(n):
     try:
         return version(n)
@@ -132,11 +238,15 @@ def write_card(out: Path, name: str, info: dict) -> Path:
     s, pos, per = info["sizes"], info["positives"], info["periods"]
     lines = [
         f"# Model card: {name}", "", f"Date: {datetime.date.today().isoformat()}", "",
-        "## Task", "Flags a short social message as a pump announcement. Logistic regression on sentence embeddings; "
-        f"embeddings come from {EMBED_MODEL}.", "",
+        "## Task", "Flags a short social message as a pump announcement. " + (
+            f"The encoder {EMBED_MODEL} was fine-tuned end to end with a linear head on mean-pooled tokens."
+            if "epoch" in info else f"Logistic regression on sentence embeddings; embeddings come from {EMBED_MODEL}."), "",
         "## Data", f"- {DATASET}; raw text is not stored or committed.",
         *[f"- {k}: {s[k]} messages ({pos[k]} pump announcements), {per[k][0]} to {per[k][1]}" for k in s],
-        f"- Regularisation C={info['C']} and threshold {info['threshold']:.3f} chosen on the validation period only.", "",
+        (f"- Fine-tuning: up to {info['epochs']} epochs, lr {info['lr']}, batch {info['batch']}, max length {info['max_len']}, "
+         f"{info['neg_per_pos']} sampled negatives per positive each epoch; epoch {info['epoch']} kept (best validation PR-AUC), "
+         if "epoch" in info else f"- Regularisation C={info['C']}, ") + f"threshold {info['threshold']:.3f} chosen on the validation period only.",
+        *(["- The fine-tuned weights derive from all-MiniLM-L6-v2 and keep its Apache-2.0 terms."] if "epoch" in info else []), "",
         "## Metrics on the held-out test period (later in time than training)",
         "| precision | recall | PR-AUC |", "| --- | --- | --- |", f"| {cell('precision')} | {cell('recall')} | {cell('pr_auc')} |", "",
         "Values show the estimate with a 95% bootstrap interval over messages.", "",
@@ -150,20 +260,28 @@ def write_card(out: Path, name: str, info: dict) -> Path:
     return p
 
 
-def train(data_dir: Path, out_dir: Path, version_name: str, embed=embed_texts) -> dict:
+def train(data_dir: Path, out_dir: Path, version_name: str, embed=embed_texts, finetune=False, **ft) -> dict:
     df = load_corpus(data_dir)
-    model, info = fit(df, embed)
     out = Path(out_dir) / f"promo-{version_name}"
     out.mkdir(parents=True, exist_ok=True)
-    (out / "model.json").write_text(json.dumps({
-        "embedding_model": EMBED_MODEL, "coef": model.coef_[0].tolist(), "intercept": float(model.intercept_[0]),
-        "threshold": info["threshold"], "license": MODEL_LICENSE}), encoding="utf-8")
+    if finetune:
+        info = fit_finetune(df, out, **ft)
+        meta = {"kind": "finetuned", "embedding_model": EMBED_MODEL, "encoder": "encoder", "max_length": info["max_len"],
+                "coef": info["coef"], "intercept": info["intercept"]}
+    else:
+        model, info = fit(df, embed)
+        meta = {"embedding_model": EMBED_MODEL, "coef": model.coef_[0].tolist(), "intercept": float(model.intercept_[0])}
+    (out / "model.json").write_text(json.dumps({**meta, "threshold": info["threshold"], "license": MODEL_LICENSE}), encoding="utf-8")
     write_card(out, out.name, info)
     return info
 
 
-def score(model_json: Path, texts, embed=embed_texts) -> np.ndarray:
-    """Probability each text is a pump announcement, from a saved model.json."""
+def score(model_json: Path, texts, embed=embed_texts, device=None) -> np.ndarray:
+    """Probability each text is a pump announcement, from a saved model.json (frozen or fine-tuned)."""
     m = json.loads(Path(model_json).read_text(encoding="utf-8"))
+    if m.get("kind") == "finetuned":
+        from transformers import AutoTokenizer
+        d, enc_dir = _device(device), Path(model_json).parent / m["encoder"]
+        return _predict(_load_net(enc_dir, m["coef"], m["intercept"], d), AutoTokenizer.from_pretrained(enc_dir), texts, d, m["max_length"])
     z = embed(texts) @ np.array(m["coef"]) + m["intercept"]
     return 1 / (1 + np.exp(-z))

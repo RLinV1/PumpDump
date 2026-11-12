@@ -67,3 +67,21 @@ def test_train_writes_card_with_licenses_and_no_raw_text(tmp_path):
     assert "coin0" not in card and "coin0" not in (mdir / "model.json").read_text(encoding="utf-8")
     s = promo.score(mdir / "model.json", ["The coin to pump is X on Bittrex", "good morning everyone"], fake_embed)
     assert s[0] > s[1]
+
+
+def test_finetune_roundtrip_offline(tmp_path):
+    from transformers import BertConfig, BertModel, BertTokenizerFast
+    words = sorted({w for t in ANN + CHAT for w in t.lower().replace("{c}", "coin").replace(".", "").split()} | {"coin"})
+    vocab = tmp_path / "vocab.txt"
+    vocab.write_text("\n".join(["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"] + words), encoding="utf-8")
+    base = tmp_path / "base"
+    BertTokenizerFast(str(vocab)).save_pretrained(base)
+    BertModel(BertConfig(vocab_size=5 + len(words), hidden_size=16, num_hidden_layers=1, num_attention_heads=2,
+                         intermediate_size=32)).save_pretrained(base)
+    out = tmp_path / "promo-ft"
+    info = promo.fit_finetune(frame(300), out, base=str(base), device="cpu", epochs=2, batch=16, lr=1e-3, max_len=16, neg_per_pos=3)
+    assert info["epoch"] in (1, 2) and 0 <= info["metrics"]["recall"]["value"] <= 1
+    (out / "model.json").write_text(json.dumps({"kind": "finetuned", "encoder": "encoder", "max_length": 16,
+                                                "coef": info["coef"], "intercept": info["intercept"]}), encoding="utf-8")
+    s = promo.score(out / "model.json", ["The coin to pump is X on Bittrex", "good morning everyone"], device="cpu")
+    assert s.shape == (2,) and ((s >= 0) & (s <= 1)).all()
