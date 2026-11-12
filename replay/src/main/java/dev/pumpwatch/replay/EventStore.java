@@ -3,6 +3,8 @@ package dev.pumpwatch.replay;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Repository;
@@ -11,9 +13,16 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class EventStore implements EventSource {
     private final JdbcTemplate jdbc;
+    private final int retentionDays;
 
     public EventStore(JdbcTemplate jdbc) {
+        this(jdbc, 30);
+    }
+
+    @Autowired
+    public EventStore(JdbcTemplate jdbc, @Value("${replay.retention-days:30}") int retentionDays) {
         this.jdbc = jdbc;
+        this.retentionDays = retentionDays;
     }
 
     /** Batch insert; redelivered records hit the unique constraint and are skipped. */
@@ -53,10 +62,10 @@ public class EventStore implements EventSource {
         return jdbc.queryForObject("SELECT count(*) FROM recorded_events", Long.class);
     }
 
-    static final int RETENTION_DAYS = 30;
-
+    /** Recordings are replay material, so {@code replay.retention-days} of 0 or less keeps everything. */
     @Scheduled(cron = "0 29 3 * * *")
     public int purgeOld() {
-        return jdbc.update("DELETE FROM recorded_events WHERE event_time < now() - make_interval(days => ?)", RETENTION_DAYS);
+        if (retentionDays <= 0) return 0;
+        return jdbc.update("DELETE FROM recorded_events WHERE event_time < now() - make_interval(days => ?)", retentionDays);
     }
 }
