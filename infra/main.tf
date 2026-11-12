@@ -29,11 +29,26 @@ resource "google_compute_firewall" "web" {
 resource "google_compute_firewall" "ssh" {
   name          = "pumpwatch-ssh"
   network       = "default"
+  priority      = 900
   source_ranges = [var.operator_cidr]
   target_tags   = ["pumpwatch"]
   allow {
     protocol = "tcp"
     ports    = ["22"]
+  }
+}
+
+# The default network ships default-allow-ssh/rdp (0.0.0.0/0, priority 65534) and rules add up, so deny them here; the owner /32 allow (900) wins.
+resource "google_compute_firewall" "deny_admin_ports" {
+  name          = "pumpwatch-deny-admin"
+  network       = "default"
+  priority      = 1000
+  direction     = "INGRESS"
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["pumpwatch"]
+  deny {
+    protocol = "tcp"
+    ports    = ["22", "3389"]
   }
 }
 
