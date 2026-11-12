@@ -161,7 +161,8 @@ test("expired samples leave the one-hour aggregate and malformed model labels ar
   assert.equal(service.snapshot("GME").lastPostAt, null);
   service.stop();
   const invalid = make({ classify: async () => ({ label: "guaranteed profit" }) }).service;
-  await invalid.start(); invalid.ingest(event());
+  await invalid.start();
+  for (let i = 0; i < 5; i++) invalid.ingest(event(`bad${i}`));
   await settle(() => invalid.snapshot("GME").modelStatus === "error");
   assert.equal(invalid.snapshot("GME").total, 0);
   invalid.stop();
@@ -215,15 +216,31 @@ test("stream messages are classified and reconnect resumes from the event cursor
   assert.equal(sockets.length, 2);
 });
 
-test("a stalled classifier reports an error and does not start overlapping inferences", async () => {
-  let calls = 0;
-  const { service } = make({ inferenceTimeoutMs: 5, classify: () => { calls++; return new Promise(() => {}); } });
+test("a run of stalled inferences reports an error and never overlaps inferences", async () => {
+  let calls = 0, active = 0, maxActive = 0;
+  const { service } = make({ inferenceTimeoutMs: 5, classify: () => { calls++; active++; maxActive = Math.max(maxActive, active); return new Promise(() => {}); } });
   await service.start();
-  service.ingest(event("one")); service.ingest(event("two"));
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  for (let i = 0; i < 5; i++) service.ingest(event(`p${i}`));
+  await new Promise((resolve) => setTimeout(resolve, 400));
   assert.equal(service.snapshot("GME").modelStatus, "error");
   assert.equal(service.snapshot("GME").total, 0);
-  assert.equal(service.snapshot("GME").dropped, 2);
-  assert.equal(calls, 1);
+  assert.equal(service.snapshot("GME").dropped, 5);
+  assert.equal(calls, 5);
+  service.stop();
+});
+
+test("one failed post is skipped, later posts still count, and success resets the failure run", async () => {
+  let calls = 0;
+  const { service } = make({ classify: async (text) => { calls++; if (text.includes("boom")) throw new Error("model hiccup"); return "positive"; } });
+  await service.start();
+  // Four failures, a success, four more failures: never five in a row, so the model stays ready.
+  for (let i = 0; i < 4; i++) service.ingest(event(`f${i}`, "$GME boom"));
+  service.ingest(event("ok1"));
+  for (let i = 4; i < 8; i++) service.ingest(event(`f${i}`, "$GME boom"));
+  service.ingest(event("ok2"));
+  await settle(() => service.snapshot("GME").positive === 2);
+  assert.equal(service.snapshot("GME").modelStatus, "ready");
+  assert.equal(service.snapshot("GME").dropped, 8);
+  assert.equal(calls, 10);
   service.stop();
 });

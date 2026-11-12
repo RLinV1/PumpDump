@@ -5,20 +5,10 @@ const NOTICE = "Educational only. Not investment advice.";
 const TICKER = /^[A-Z]{1,5}$/;
 const WINDOW_MS = 60_000;
 const LIMIT = { client: 60, all: 600 };
-const MAX_TRACKED = 5000;
+import { createRateLimiter } from "./rate-limit.mjs";
 
 export function createLookupApi({ origin, fetchImpl = fetch, now = Date.now } = {}) {
-  const hits = new Map(); // client -> request times inside the window; shortcut: in memory, resets on restart
-  let all = [];
-  const allowed = (client) => {
-    const t = now();
-    all = all.filter((x) => t - x < WINDOW_MS);
-    const mine = (hits.get(client) ?? []).filter((x) => t - x < WINDOW_MS);
-    if (mine.length >= LIMIT.client || all.length >= LIMIT.all) { hits.set(client, mine); return false; }
-    if (hits.size >= MAX_TRACKED) for (const [k, v] of hits) if (!v.some((x) => t - x < WINDOW_MS)) hits.delete(k);
-    mine.push(t); all.push(t); hits.set(client, mine);
-    return true;
-  };
+  const allowed = createRateLimiter({ perClient: LIMIT.client, all: LIMIT.all, windowMs: WINDOW_MS, now });
 
   return (request, response) => {
     const path = new URL(request.url, "http://localhost").pathname;

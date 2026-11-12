@@ -8,20 +8,10 @@ const MAX_BODY = 4096;
 const WINDOW_MS = 60_000;
 const PER_CLIENT = 5; // questions per minute per client address
 const ALL_CLIENTS = 30; // and per minute across everyone: the spend cap
-const MAX_TRACKED = 5000;
+import { createRateLimiter } from "./rate-limit.mjs";
 
 export function createAssistantApi({ origin, fetchImpl = fetch, now = Date.now } = {}) {
-  const hits = new Map(); // client -> request times inside the window; shortcut: in memory, resets on restart
-  let all = [];
-  const allowed = (client) => {
-    const t = now();
-    all = all.filter((x) => t - x < WINDOW_MS);
-    const mine = (hits.get(client) ?? []).filter((x) => t - x < WINDOW_MS);
-    if (mine.length >= PER_CLIENT || all.length >= ALL_CLIENTS) return false;
-    if (hits.size >= MAX_TRACKED) for (const [k, v] of hits) if (!v.some((x) => t - x < WINDOW_MS)) hits.delete(k);
-    mine.push(t); all.push(t); hits.set(client, mine);
-    return true;
-  };
+  const allowed = createRateLimiter({ perClient: PER_CLIENT, all: ALL_CLIENTS, windowMs: WINDOW_MS, now });
 
   return (request, response) => {
     const url = new URL(request.url, "http://localhost");

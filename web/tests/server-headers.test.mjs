@@ -38,6 +38,25 @@ test("normalized API paths cannot bypass the mock-mode boundary", () => {
   assert.equal(routing.isApiRequest("/live"), false);
 });
 
+test("API paths match case-insensitively like Next's proxy rule, and reach the doors in lowercase", () => {
+  for (const target of ["/API/v1/flags", "/Api/v1/flags?x=1", "/aPi", "http://web.test/API/v1/flags"]) assert.equal(routing.isApiRequest(target), true, target);
+  for (const target of ["/apix/v1", "/v1/api", "/"]) assert.equal(routing.isApiRequest(target), false, target);
+  assert.equal(routing.canonicalApiUrl("/API/V1/Flags?A=1"), "/api/V1/Flags?A=1");
+  assert.equal(routing.canonicalApiUrl("http://web.test/Api/v1/flags"), "http://web.test/api/v1/flags");
+  assert.equal(routing.canonicalApiUrl("/other/API"), "/other/API");
+});
+
+test("encoded and double-slash /api prefixes are API requests and canonicalise to /api", () => {
+  for (const target of ["/%41PI/v1/flags", "/%61pi/v1/flags", "/%61%70%69", "//api/v1/flags", "///API/v1/flags", "/api/%zz"])
+    assert.equal(routing.isApiRequest(target), true, target);
+  assert.equal(routing.isApiRequest("/%61pix/v1"), false);
+  assert.equal(routing.canonicalApiUrl("/%41PI/v1/flags?q=1"), "/api/v1/flags?q=1");
+  assert.equal(routing.canonicalApiUrl("//api/v1/flags"), "/api/v1/flags");
+  assert.equal(routing.canonicalApiUrl("//%61Pi/v1/flags"), "/api/v1/flags");
+  assert.equal(routing.canonicalApiUrl("http://web.test/%41pi/v1"), "http://web.test/api/v1");
+  assert.equal(new URL(routing.canonicalApiUrl("//api/v1/flags"), "http://localhost").pathname, "/api/v1/flags");
+});
+
 test("every web response carries the baseline security headers", () => {
   const set = {};
   routing.applySecurityHeaders({ setHeader: (name, value) => { set[name] = value; } });
