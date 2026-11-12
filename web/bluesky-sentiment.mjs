@@ -5,6 +5,7 @@ import { SOCIAL_MODEL, IRONY_MODEL, loadSocialClassifier } from "./text-models.m
 
 const MODEL = SOCIAL_MODEL.id;
 const WINDOW = 3600000;
+const MAX_FAILURES = 5;
 const LABELS = new Set(["positive", "negative", "neutral"]);
 
 // SENTIMENT_MODEL_DIR lets the Docker image keep the weights it downloaded at build time (see scripts/fetch-sentiment-model.mjs).
@@ -33,7 +34,7 @@ export function createBlueskySentiment({
   let modelStatus = enabled ? "loading" : "disabled";
   let running = false, connected = false, busy = false, generation = 0, dropped = 0;
   let socket, reconnectTimer, connectTimer, startPromise, cursor, reconnects = 0;
-  let inference = Promise.resolve(), queuedInference = 0;
+  let inference = Promise.resolve(), queuedInference = 0, failures = 0;
 
   function prune() {
     const cutoff = now() - WINDOW;
@@ -75,9 +76,11 @@ export function createBlueskySentiment({
         const result = Array.isArray(prediction) ? prediction[0] : prediction;
         const label = typeof result === "string" ? result.toLowerCase() : result?.label?.toLowerCase();
         if (!LABELS.has(label)) throw new Error("Invalid sentiment prediction");
+        failures = 0;
         return { label, irony: result?.irony === true };
       } catch (error) {
-        if (running && epoch === generation) modelStatus = "error";
+        // One bad post or timeout is skipped; only a run of failures marks the model as broken.
+        if (running && epoch === generation && ++failures >= MAX_FAILURES) modelStatus = "error";
         throw error;
       } finally { text = ""; queuedInference--; clearTimeout(timer); }
     });
@@ -105,13 +108,15 @@ export function createBlueskySentiment({
           }
           prune();
         } catch {
-          if (running && epoch === generation) {
-            modelStatus = "error";
+          if (running && epoch === generation && modelStatus === "error") {
             dropped += 1 + queue.length;
             for (const pending of queue.splice(0)) {
               pending.text = "";
               if (records.get(pending.id) === pending.record) records.delete(pending.id);
             }
+            if (records.get(item.id) === item.record) records.delete(item.id);
+          } else if (running && epoch === generation) {
+            dropped++;
             if (records.get(item.id) === item.record) records.delete(item.id);
           }
         } finally {
@@ -204,7 +209,7 @@ export function createBlueskySentiment({
     if (running) return startPromise;
     running = true;
     const epoch = ++generation;
-    modelStatus = "loading";
+    modelStatus = "loading"; failures = 0;
     startPromise = (async () => {
       try {
         classifier ??= await loadClassifier(cacheDir);
