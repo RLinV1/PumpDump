@@ -13,7 +13,7 @@ public final class JdkTradeStream implements TradeStream {
         this.client = client;
     }
 
-    private record Conn(WebSocket ws) implements Connection {
+    private record Conn(WebSocket ws, AtomicBoolean closedOnce, Listener listener) implements Connection {
         @Override
         public void send(String text) {
             ws.sendText(text, true).join();
@@ -22,6 +22,8 @@ public final class JdkTradeStream implements TradeStream {
         @Override
         public void close() {
             ws.abort();
+            // abort() fires neither onClose nor onError, so tell the listener here or its session waits forever
+            if (closedOnce.compareAndSet(false, true)) listener.onClose("closed locally");
         }
     }
 
@@ -36,7 +38,7 @@ public final class JdkTradeStream implements TradeStream {
                 if (last) {
                     var msg = text.toString();
                     text.setLength(0);
-                    listener.onText(new Conn(w), msg); // blocks while the publisher is full: no request(1) until done
+                    listener.onText(new Conn(w, closedOnce, listener), msg); // blocks while the publisher is full: no request(1) until done
                 }
                 w.request(1);
                 return null;
@@ -52,6 +54,6 @@ public final class JdkTradeStream implements TradeStream {
             public void onError(WebSocket w, Throwable error) {
                 if (closedOnce.compareAndSet(false, true)) listener.onClose("error " + error);
             }
-        }).join());
+        }).join(), closedOnce, listener);
     }
 }

@@ -192,7 +192,7 @@ class AlpacaConnectorTest {
         publisher.start();
         var c = new AlpacaConnector(props(30, KEY, SECRET), List.of("GME"), publisher, s, history, failing, positions, CLOCK);
         c.session();
-        assertThat(s.closes).isGreaterThan(0);
+        assertThat(s.closes).isEqualTo(2); // the error-path close plus the session cleanup close
         c.session();
 
         assertThat(asked).containsExactly(Instant.parse("2026-01-02T15:00:01Z")); // not past the failed tick

@@ -181,7 +181,7 @@ class AlpacaNewsSourceTest {
         };
         var src = source(s, history, true, List.of());
         src.run(flaky);
-        assertThat(s.closes).isGreaterThan(0);
+        assertThat(s.closes).isEqualTo(2); // the error-path close plus the session cleanup close
         src.run(flaky);
 
         assertThat(asked).containsExactly(NOW.minusSeconds(3600), Instant.parse("2026-01-02T15:00:01Z"));

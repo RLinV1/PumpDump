@@ -195,8 +195,8 @@ public final class AlpacaNewsSource implements NewsSource {
             log.warn("Alpaca News article skipped: {}", e.toString());
             return;
         }
-        sink.publish(a);
-        if (lastSeen == null || a.eventTime().isAfter(lastSeen)) lastSeen = a.eventTime(); // only after a successful publish
+        // false means stopped or interrupted (or already seen): keep the checkpoint so the next backfill covers it
+        if (sink.publish(a) && (lastSeen == null || a.eventTime().isAfter(lastSeen))) lastSeen = a.eventTime();
     }
 
     /** Works for both the stream frame and the REST item. Invalid symbols (e.g. crypto pairs) are dropped. */
