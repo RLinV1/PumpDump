@@ -30,7 +30,7 @@
 ## 5. Training and evaluation (`ml/`)
 
 - [x] 5.1 Create the Python project with pinned versions and a one-command training entry point
-- [ ] 5.2 Train the promotional-language classifier on embeddings from an Apache-2.0 model; record model names and licenses
+- [x] 5.2 Train the promotional-language classifier on embeddings from an Apache-2.0 model; record model names and licenses
 - [x] 5.2b Train version 1 on market and catalyst features only, because historical social data is not available for free
 - [x] 5.3 Train LightGBM with monotone-decreasing constraints on catalyst features and time-based cross-validation
 - [x] 5.4 Calibrate with isotonic regression and choose the flag level on held-out data

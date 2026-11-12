@@ -19,6 +19,13 @@ def main(argv=None):
         s.add_argument("--version", default="dev")
         if name == "evaluate":
             s.add_argument("--current", help="model dir of the currently promoted model")
+    pr = sub.add_parser("promo-train", help="promotional-language classifier; default and --finetune need requirements-embed.txt, --tfidf needs only requirements.txt")
+    pr.add_argument("--data", required=True, help="folder of PumpSense chat_data CSVs (date, text, Pump); stays local")
+    pr.add_argument("--out", default="models")
+    pr.add_argument("--version", default="dev")
+    g = pr.add_mutually_exclusive_group()
+    g.add_argument("--finetune", action="store_true", help="fine-tune the MiniLM encoder (CUDA GPU required)")
+    g.add_argument("--tfidf", action="store_true", help="TF-IDF word 1-2 grams + logistic regression (no embedding model)")
     v = sub.add_parser("vol-baseline")
     v.add_argument("--bars", help="one-minute bars CSV")
     v.add_argument("--synthetic", action="store_true")
@@ -38,6 +45,11 @@ def main(argv=None):
     e.add_argument("--calm", nargs=2, metavar=("START", "END"), help="explicit calm dates (default: percentile rule)")
     e.add_argument("--stressed", nargs=2, metavar=("START", "END"), help="explicit stressed dates")
     a = p.parse_args(argv)
+
+    if a.cmd == "promo-train":
+        from . import promo
+        print(json.dumps(promo.train(Path(a.data), Path(a.out), a.version, finetune=a.finetune, tfidf=a.tfidf)["metrics"], indent=2))
+        return
 
     if a.cmd == "vol-evaluate":
         if a.synthetic == bool(a.bars):
